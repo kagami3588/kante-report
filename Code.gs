@@ -16,8 +16,7 @@
  *   setupKagamiSystem()      初回構築（作成済みなら何も複製せず案内だけ出す）
  *   updateKagamiSystem()     既存システムの更新（シート・数式・グラフを再生成。回答は消えない）
  *   createNewKagamiSystem()  あえて「別の新しいシステム」を作る（旧IDは履歴に残す）
- *   issueSubjectIds()        対象者IDを発行（設定シートの発行数ぶん）＋事前入力URLを作成
- *   fillPrefilledUrls()      未作成の事前入力URLを補完
+ *   issueSubjectIds()        対象者IDを発行（回答が届いてID未割当の人に順番に割り当て）
  *   recalculateAll()         回答ログ・個人別分析を再計算（回答送信時は自動実行）
  *   showFormUrls()           6フォームのURLをログに表示
  *
@@ -169,10 +168,10 @@ const idItem = () => ({
   help: '担当者からお知らせした「KGM-0000」の形式のIDを、半角で入力してください。（専用URLからは自動で入力されています）',
 });
 /** お名前・メールアドレス（全フォーム共通。対象者IDの直後に置く） */
-const nameItem = () => ({ q: 0, type: 'name', text: 'お名前', role: ROLE.CONTACT, key: 'name', required: true,
-  help: '回答の確認と、ご連絡のためにだけ使います。（お子様の回答では、お子様のお名前を入力してください）' });
-const emailItem = () => ({ q: 0, type: 'email', text: 'メールアドレス', role: ROLE.CONTACT, key: 'email', required: true,
-  help: '3ヶ月後のアンケートのご案内など、ご連絡のためにだけ使います。' });
+const nameItem = (who) => ({ q: 0, type: 'name', text: 'お名前', role: ROLE.CONTACT, key: 'name', required: true,
+  help: '回答の確認と、ご連絡のためにだけ使います。' + (who === 'c' ? '（お子様ご本人のお名前を入力してください）' : '（保護者様のお名前を入力してください）') });
+const emailItem = (who) => ({ q: 0, type: 'email', text: 'メールアドレス', role: ROLE.CONTACT, key: 'email', required: true,
+  help: '3ヶ月後のアンケートのご案内や、回答の確認のためにだけ使います。' + (who === 'c' ? '（保護者様のメールアドレスを入力してください）' : ''), });
 const FREE_TEXT = (q, text, long, key) =>
   ({ q: q, type: 'text', text: text, key: key || 'text', long: !!long, required: false, role: ROLE.FREE });
 const CHECKS = (q, text, choices, key, role) =>
@@ -227,7 +226,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜鑑定前アンケート｜お子様',
     description: '鑑定を受ける前の、今の気持ちを教えてください。あとで「鑑定のあとで何が変わったか」を知るために使います。\n' +
       '正解・不正解はありません。今の気持ちに一番近いものを選んでください。（所要時間：約3分）',
-    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('c', 2, '', '今の')),
+    sections: [{ title: '基本情報', items: [nameItem('c'), emailItem('c')] }].concat(stateSections_('c', 2, '', '今の')),
   },
   // ========================= FORM F 鑑定前｜保護者様 =========================
   {
@@ -235,7 +234,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜鑑定前アンケート｜保護者様',
     description: '鑑定を受ける前の、現在のお気持ちをお聞かせください。あとで「鑑定のあとで何が変わったか」を知るために使います。\n' +
       '正解・不正解はありません。現在のお気持ちに最も近いものをお選びください。（所要時間：約3分）',
-    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('p', 2, '', '現在の')),
+    sections: [{ title: '基本情報', items: [nameItem('p'), emailItem('p')] }].concat(stateSections_('p', 2, '', '現在の')),
   },
   // ========================= FORM A 鑑定直後｜お子様 =========================
   {
@@ -243,7 +242,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜鑑定直後アンケート｜お子様',
     description: '今日の面談で「自分のこと」を知って、これからの進路を考えるきっかけになったかを知るためのアンケートです。\n' +
       '正解・不正解はありません。今の気持ちに一番近いものを選んでください。（所要時間：約4分）',
-    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('c', 2, '', '鑑定後の現在の'), [
+    sections: [{ title: '基本情報', items: [nameItem('c'), emailItem('c')] }].concat(stateSections_('c', 2, '', '鑑定後の現在の'), [
       { title: '今回の鑑定について', help: PICK_HELP, items: [
         ord(11, '今回の鑑定内容に納得できた', ROLE.USE, { score: 'value' }),
         ord(12, '今回の鑑定で知った自分の特徴は、今後の進路を考えるうえで参考になりそうだ', ROLE.USE, { score: 'value' }),
@@ -258,7 +257,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜鑑定直後アンケート｜保護者様',
     description: '本日の面談を通じて、お子様への理解や進路への向き合い方がどう整理されたかを知るためのアンケートです。\n' +
       '正解・不正解はありません。現在のお気持ちに最も近いものをお選びください。（所要時間：約4分）',
-    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('p', 2, '', '鑑定後の現在の'), [
+    sections: [{ title: '基本情報', items: [nameItem('p'), emailItem('p')] }].concat(stateSections_('p', 2, '', '鑑定後の現在の'), [
       { title: '今回の鑑定について', help: PICK_HELP, items: [
         ord(11, '今回の鑑定内容に納得できた', ROLE.USE, { score: 'value' }),
         ord(12, '今回の鑑定で知った子どもの特徴は、今後の進路を考えるうえで参考になりそうだ', ROLE.USE, { score: 'value' }),
@@ -274,7 +273,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜3ヶ月後アンケート｜お子様',
     description: '鑑定から3ヶ月がたちました。この3ヶ月での「自分のこと」や「進路」についての変化を教えてください。\n' +
       '正解・不正解はありません。今の気持ちに一番近いものを選んでください。（所要時間：約6分）',
-    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('c', 2, '現在、', '現在の'), [
+    sections: [{ title: '基本情報', items: [nameItem('c'), emailItem('c')] }].concat(stateSections_('c', 2, '現在、', '現在の'), [
       { title: '鑑定内容の活用', help: PICK_HELP, items: [
         ord(11, '鑑定で知った自分の特徴を、進路について考えるときに意識した', ROLE.USE, { key: 'use' }),
       ] },
@@ -297,7 +296,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜3ヶ月後アンケート｜保護者様',
     description: '鑑定から3ヶ月がたちました。この3ヶ月でのお子様の変化と、保護者としての向き合い方についてお聞かせください。\n' +
       '正解・不正解はありません。現在のお気持ちに最も近いものをお選びください。（所要時間：約6分）',
-    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('p', 2, '現在、', '現在の'), [
+    sections: [{ title: '基本情報', items: [nameItem('p'), emailItem('p')] }].concat(stateSections_('p', 2, '現在、', '現在の'), [
       { title: '現在の親子関係', help: PICK_HELP, items: [
         ord(11, '現在、子どもと進路について話しやすい', ROLE.TALK, { score: 'talk', pair: 'T1' }),
       ] },
@@ -429,7 +428,7 @@ function validateConfig_() {
       if (spec.phase === 'post' && it.text.indexOf('鑑定前') >= 0) errors.push(spec.key + ' Q' + it.q + ': 3ヶ月後で「鑑定前」を聞いてはいけません');
       if (spec.phase === 'base' && it.type !== 'name' && it.type !== 'email' && (it.key || (it.score && !scoreMeta_(it.score)))) errors.push(spec.key + ' Q' + it.q + ': 鑑定前に鑑定内容・行動・結果の質問は置けません');
     });
-    if (items[0].type !== 'id') errors.push(spec.key + ': 先頭は対象者IDにしてください');
+    if (items[0].type !== 'name' || items[1].type !== 'email') errors.push(spec.key + ': 先頭は お名前・メールアドレス にしてください');
   });
 
   // 3時点で比較ペアが対応しているか（同じ回答者区分どうし）
@@ -518,7 +517,6 @@ function buildSystem_(state) {
   removeDefaultSheet_(ss);
   recalculateAll();
   reorderSheets_(ss);
-  fillPrefilledUrls();
 
   log_('✅ 完了：' + ss.getUrl());
   showFormUrls();
@@ -705,15 +703,12 @@ function buildSettings_(ss) {
 /** 対象者管理の列定義（1始まり） */
 const SUBJ = {
   FIRST: 2,
-  COLS: ['対象者ID', '発行日', '鑑定日（入力）', '3ヶ月後案内予定日（目安）', 'お子様のお名前（任意）', '保護者のお名前（任意）',
-    '連絡先メールアドレス（保護者）', '学年区分（任意）', '初回アンケートの主な悩み（カテゴリ）', '初回アンケートの悩み（要約）',
+  COLS: ['対象者ID', '発行日', '鑑定日（入力）', '3ヶ月後案内予定日（目安）', 'お子様のお名前', '保護者のお名前',
+    'メールアドレス', '学年区分（任意）', '初回アンケートの主な悩み（カテゴリ）', '初回アンケートの悩み（要約）',
     '事例掲載の許可', 'メモ',
-    '鑑定前・子ども', '鑑定前・保護者', '直後・子ども', '直後・保護者', '3ヶ月後・子ども', '3ヶ月後・保護者',
-    '事前入力URL｜E 鑑定前・子ども', '事前入力URL｜F 鑑定前・保護者', '事前入力URL｜A 直後・子ども',
-    '事前入力URL｜B 直後・保護者', '事前入力URL｜C 3ヶ月後・子ども', '事前入力URL｜D 3ヶ月後・保護者'],
+    '鑑定前・子ども', '鑑定前・保護者', '直後・子ども', '直後・保護者', '3ヶ月後・子ども', '3ヶ月後・保護者'],
   ID: 1, ISSUED: 2, DATE: 3, DUE: 4, CNAME: 5, PNAME: 6, MAIL: 7, GRADE: 8, CONCERN: 9, SUMMARY: 10, PERMIT: 11, MEMO: 12,
   STATUS: 13, // 13〜18：回答状況 6列
-  URL: 19,    // 19〜24：事前入力URL 6列
 };
 
 function buildSubjects_(ss) {
@@ -744,7 +739,6 @@ function buildSubjects_(ss) {
   sh.getRange(2, SUBJ.STATUS, n, 6).setHorizontalAlignment('center').setFontColor('#38761d').setFontWeight('bold');
   sh.getRange(1, SUBJ.CNAME, 1, 3).setBackground('#990000');                        // 個人情報の列（赤）
   sh.getRange(1, SUBJ.GRADE, 1, 5).setBackground('#38761d');                        // 手入力の属性列（緑）
-  sh.getRange(1, SUBJ.URL, 1, 6).setBackground('#7f6000');
   [110, 90, 100, 120, 130, 130, 190, 100, 180, 220, 90, 220, 70, 70, 70, 70, 80, 80, 160, 160, 160, 160, 160, 160]
     .forEach((w, i) => sh.setColumnWidth(i + 1, w));
   sh.getRange(1, SUBJ.CNAME).setNote('氏名・メールアドレスはこの台帳にだけ保存します（回答フォームでは聞きません）。\n' +
@@ -752,55 +746,44 @@ function buildSubjects_(ss) {
   sh.getRange('A1').setNote('IDは issueSubjectIds() で発行してください。手入力する場合も KGM-0001 の形式（半角）で。');
 }
 
-/** 対象者IDを発行（設定シートの発行数ぶん） */
+/**
+ * 対象者IDを発行する。
+ *  ・回答が届いて「ID未割当」の行（お名前・メールだけが入った行）に、順番にIDを割り当てる
+ *  ・割り当て待ちが無いときは、設定シートの発行数ぶん空のIDを新しく発行する
+ * 回答者がIDを入力する必要はありません。IDは運営側があとから発行します。
+ */
 function issueSubjectIds() {
   const ss = openSs_();
-  const sh = ss.getSheetByName(SHEET.SUBJECTS);
-  const count = Math.max(1, parseInt(ss.getRangeByName('KAGAMI_ISSUE_COUNT').getValue(), 10) || APP.DEFAULT_ISSUE_COUNT);
-  const ids = sh.getRange(2, 1, APP.MAX_SUBJECTS, 1).getValues().map(r => normalizeId_(r[0]));
-  let maxNum = 0, lastIdx = -1;
-  const re = new RegExp('^' + APP.ID_PREFIX + '-([0-9]+)$');
-  ids.forEach((id, i) => {
-    if (id) { lastIdx = i; const m = re.exec(id); if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10)); }
-  });
-  if (lastIdx + 1 + count > APP.MAX_SUBJECTS) throw new Error('対象者管理の上限(' + APP.MAX_SUBJECTS + '件)を超えます。');
-  const startRow = lastIdx + 3;
-  const today = new Date();
-  const newRows = [];
-  for (let i = 1; i <= count; i++) newRows.push([formatId_(maxNum + i), today]);
-  sh.getRange(startRow, 1, count, 2).setValues(newRows);
-  log_('発行したID: ' + newRows.map(r => r[0]).join(', '));
-  fillPrefilledUrls();
-  recalculateAll();
-}
-
-/** 事前入力URL（IDが自動入力されるURL）を、未作成の行だけ作る */
-function fillPrefilledUrls() {
-  const ss = openSs_();
-  const st = getState_();
+  recalculateAll(); // 先に最新の回答者を台帳へ取り込む
   const sh = ss.getSheetByName(SHEET.SUBJECTS);
   const n = APP.MAX_SUBJECTS;
-  const idVals = sh.getRange(2, 1, n, 1).getValues();
-  const urlRange = sh.getRange(2, SUBJ.URL, n, 6);
-  const urls = urlRange.getValues();
-  let changed = false;
-  FORM_ORDER.forEach((k, ci) => {
-    const need = idVals.some((r, i) => normalizeId_(r[0]) && !urls[i][ci]);
-    if (!need) return;
-    let form, idItem;
-    try {
-      form = FormApp.openById(st.forms[k]);
-      idItem = form.getItems(FormApp.ItemType.TEXT).filter(i => i.getTitle() === '対象者ID')[0].asTextItem();
-    } catch (e) { log_('事前入力URL(' + k + ')を作れません: ' + e); return; }
-    idVals.forEach((r, i) => {
-      const id = normalizeId_(r[0]);
-      if (id && !urls[i][ci]) {
-        urls[i][ci] = form.createResponse().withItemResponse(idItem.createResponse(id)).toPrefilledUrl();
-        changed = true;
-      }
-    });
+  const block = sh.getRange(2, 1, n, SUBJ.MAIL).getValues();
+  let maxNum = 0, lastIdx = -1;
+  const re = new RegExp('^' + APP.ID_PREFIX + '-([0-9]+)$');
+  block.forEach((r, i) => {
+    const id = normalizeId_(r[0]);
+    if (id) { const m = re.exec(id); if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10)); }
+    if (id || r[SUBJ.CNAME - 1] || r[SUBJ.PNAME - 1] || r[SUBJ.MAIL - 1]) lastIdx = i;
   });
-  if (changed) urlRange.setValues(urls);
+  const today = new Date();
+  const issued = [];
+  block.forEach((r, i) => {
+    const hasPerson = r[SUBJ.CNAME - 1] || r[SUBJ.PNAME - 1] || r[SUBJ.MAIL - 1];
+    if (!normalizeId_(r[0]) && hasPerson) {
+      maxNum++;
+      sh.getRange(i + 2, 1, 1, 2).setValues([[formatId_(maxNum), today]]);
+      issued.push(formatId_(maxNum));
+    }
+  });
+  if (!issued.length) {
+    const count = Math.max(1, parseInt(ss.getRangeByName('KAGAMI_ISSUE_COUNT').getValue(), 10) || APP.DEFAULT_ISSUE_COUNT);
+    if (lastIdx + 1 + count > n) throw new Error('対象者管理の上限(' + n + '件)を超えます。');
+    const rows = [];
+    for (let i = 1; i <= count; i++) { maxNum++; rows.push([formatId_(maxNum), today]); issued.push(formatId_(maxNum)); }
+    sh.getRange(lastIdx + 3, 1, count, 2).setValues(rows);
+  }
+  log_('発行したID: ' + issued.join(', '));
+  recalculateAll();
 }
 
 function buildQuestionList_(ss) {
@@ -863,9 +846,8 @@ function collectResponses_(ss) {
     });
     for (let r = 1; r < values.length; r++) {
       const row = values[r];
-      const id = normalizeId_(row[colOf[0]]);
-      if (!id) continue;
-      const rec = { spec: spec, ts: row[0] instanceof Date ? row[0] : new Date(row[0]), id: id, scores: {}, keys: {} };
+      if (!String(row[colOf[0]] || '').trim() && !String(row[colOf[1]] || '').trim()) continue; // お名前もメールも空の行は無視
+      const rec = { spec: spec, ts: row[0] instanceof Date ? row[0] : new Date(row[0]), id: '', scores: {}, keys: {} };
       const sums = {};
       items.forEach((it, i) => {
         const raw = row[colOf[i]];
@@ -892,6 +874,7 @@ function collectResponses_(ss) {
 function pickLatest_(responses) {
   const latest = {};
   responses.forEach(rec => {
+    if (!rec.id) return; // ID未割当の回答は、IDを発行してから集計に入る
     const k = rec.spec.key + '|' + rec.id;
     if (!latest[k] || rec.ts.getTime() >= latest[k].ts.getTime()) latest[k] = rec;
   });
@@ -902,36 +885,62 @@ function pickLatest_(responses) {
 function recalculateAll() {
   const ss = openSs_();
   const responses = collectResponses_(ss);
+  resolveRespondents_(ss, responses);
   const latest = pickLatest_(responses);
   const registered = readRegisteredIds_(ss);
   const regSet = {}; registered.forEach(id => regSet[id] = true);
 
   writeLog_(ss, responses, latest, regSet);
   writePersonValues_(ss, responses, latest, registered, regSet);
-  fillLedgerContacts_(ss, latest);
   SpreadsheetApp.flush();
   log_('再計算完了：回答 ' + responses.length + ' 件 / 最新 ' + Object.keys(latest).length + ' 件');
 }
 
-/** 回答で届いた氏名・メールを、対象者管理の空欄にだけ転記（手入力した値は上書きしない） */
-function fillLedgerContacts_(ss, latest) {
+const normEmail_ = (v) => String(v == null ? '' : v).normalize('NFKC').replace(/\s+/g, '').toLowerCase();
+const normName_ = (v) => String(v == null ? '' : v).normalize('NFKC').replace(/[\s\u3000]+/g, '').toLowerCase();
+
+/**
+ * 回答（お名前・メール）を、対象者管理の行に結びつけてIDを決める。
+ *  1) メールアドレスが台帳と一致  2) 同じ回答者区分のお名前が一致  → その行のID
+ *  どちらも無い人は、台帳に「ID未割当」の行として自動で追加する（お名前・メールだけ入る）。
+ * 台帳の空欄にだけ転記し、手入力した値は上書きしない。
+ */
+function resolveRespondents_(ss, responses) {
   const sh = ss.getSheetByName(SHEET.SUBJECTS);
   const n = APP.MAX_SUBJECTS;
-  const ids = sh.getRange(2, 1, n, 1).getValues().map(r => normalizeId_(r[0]));
-  const pick = (who, key) => {
-    const m = {};
-    Object.keys(latest).map(k => latest[k]).filter(r => r.spec.who === who && r.keys[key])
-      .sort((a, b) => a.ts - b.ts).forEach(r => { m[r.id] = r.keys[key]; });
-    return m;
+  const block = sh.getRange(2, 1, n, SUBJ.MAIL).getValues();
+  const byMail = {}, byC = {}, byP = {};
+  let last = -1;
+  const index = (i) => {
+    const r = block[i];
+    const m = normEmail_(r[SUBJ.MAIL - 1]), c = normName_(r[SUBJ.CNAME - 1]), p = normName_(r[SUBJ.PNAME - 1]);
+    if (m && byMail[m] === undefined) byMail[m] = i;
+    if (c && byC[c] === undefined) byC[c] = i;
+    if (p && byP[p] === undefined) byP[p] = i;
   };
-  [[SUBJ.CNAME, 'c', 'name'], [SUBJ.PNAME, 'p', 'name'], [SUBJ.MAIL, 'p', 'email']].forEach(t => {
-    const src = pick(t[1], t[2]);
-    const rg = sh.getRange(2, t[0], n, 1);
-    const cur = rg.getValues();
-    let changed = false;
-    ids.forEach((id, i) => { if (id && !cur[i][0] && src[id]) { cur[i][0] = src[id]; changed = true; } });
-    if (changed) rg.setValues(cur);
+  block.forEach((r, i) => {
+    if (normalizeId_(r[0]) || r[SUBJ.CNAME - 1] || r[SUBJ.PNAME - 1] || r[SUBJ.MAIL - 1]) { last = i; index(i); }
   });
+  let dirty = false;
+  responses.slice().sort((a, b) => a.ts - b.ts).forEach(rec => {
+    const name = String(rec.keys.name || '').trim(), mail = String(rec.keys.email || '').trim();
+    const nm = normName_(name), em = normEmail_(mail);
+    const isChild = rec.spec.who === 'c';
+    let i = em && byMail[em] !== undefined ? byMail[em] : (nm && (isChild ? byC : byP)[nm] !== undefined ? (isChild ? byC : byP)[nm] : undefined);
+    if (i === undefined) {
+      if (last + 1 >= n) { log_('⚠ 対象者管理の上限を超えたため、新しい回答者を追加できません'); return; }
+      i = ++last;
+      block[i] = new Array(SUBJ.MAIL).fill('');
+      dirty = true;
+    }
+    const r = block[i];
+    const fill = (col, v) => { if (v && !r[col - 1]) { r[col - 1] = v; dirty = true; } };
+    fill(isChild ? SUBJ.CNAME : SUBJ.PNAME, name);
+    fill(SUBJ.MAIL, mail);
+    index(i);
+    rec.id = normalizeId_(r[0]);
+  });
+  if (dirty) sh.getRange(2, SUBJ.CNAME, n, 3).setValues(block.map(r => [r[SUBJ.CNAME - 1], r[SUBJ.PNAME - 1], r[SUBJ.MAIL - 1]]));
 }
 
 function readRegisteredIds_(ss) {
@@ -951,13 +960,13 @@ function writeLog_(ss, responses, latest, regSet) {
   if (!responses.length) return;
   const sorted = responses.slice().sort((a, b) => a.ts - b.ts);
   const rows = sorted.map(rec => {
-    const isLatest = latest[rec.spec.key + '|' + rec.id] === rec ? 1 : 0;
+    const isLatest = rec.id && latest[rec.spec.key + '|' + rec.id] === rec ? 1 : 0;
     const k = rec.keys;
-    return [rec.ts, rec.id, rec.spec.whoLabel, rec.spec.surveyType, rec.spec.key + ' ' + rec.spec.title]
+    return [rec.ts, rec.id || '（ID未割当）', rec.spec.whoLabel, rec.spec.surveyType, rec.spec.key + ' ' + rec.spec.title]
       .concat(ALL_SCORE_KEYS.map(sk => rec.scores[sk] !== undefined ? rec.scores[sk] : ''))
       .concat([k.action !== undefined ? k.action : '', k.status !== undefined ? k.status : '',
         k.use !== undefined ? k.use : '', k.impact !== undefined ? k.impact : '',
-        isLatest, regSet[rec.id] ? '登録済' : '未登録（要確認）']);
+        isLatest, !rec.id ? 'ID未割当' : (regSet[rec.id] ? '登録済' : '未登録（要確認）')]);
   });
   ensureSize_(sh, rows.length + 1, LOG_HEAD.length);
   sh.getRange(2, 1, rows.length, LOG_HEAD.length).setValues(rows);
@@ -1110,7 +1119,7 @@ function writePersonValues_(ss, responses, latest, registered, regSet) {
   // 行の並び：登録済みID（対象者管理の順）→ 未登録ID（回答にだけ存在）
   const unreg = [];
   const seen = {};
-  responses.forEach(r => { if (!regSet[r.id] && !seen[r.id]) { seen[r.id] = true; unreg.push(r.id); } });
+  responses.forEach(r => { if (r.id && !regSet[r.id] && !seen[r.id]) { seen[r.id] = true; unreg.push(r.id); } });
   unreg.sort();
   const ids = registered.concat(unreg);
   if (ids.length > N) log_('⚠ 対象者数が上限(' + N + ')を超えています。超過分は表示されません。');
@@ -1767,7 +1776,7 @@ function buildUrlSheet_(ss, state) {
   styleHeader_(sh.getRange(1, 1, 1, head.length));
   sh.getRange(2, 1, rows.length, head.length).setValues(rows).setVerticalAlignment('top');
   [300, 70, 80, 420, 420, 130, 300].forEach((w, i) => sh.setColumnWidth(i + 1, w));
-  sh.getRange(rows.length + 3, 1).setValue('※ 配布は「回答用URL」ではなく、対象者管理シートの「事前入力URL」（IDが自動入力される）を推奨します。編集用URLは共有しないでください。')
+  sh.getRange(rows.length + 3, 1).setValue('※ 回答者にはID入力は求めません。回答用URL（またはウェブアプリのサイト）を配布してください。編集用URLは共有しないでください。')
     .setFontColor('#990000');
   sh.setFrozenRows(1);
 }
@@ -1792,10 +1801,10 @@ function buildReadmeSheet_(ss) {
     ['鑑定前 → 鑑定直後 → 3ヶ月後 の3時点を同じ対象者IDで結び、「鑑定 → 自己理解 → 判断軸 → 進路の明確さ → 主体的な行動 → 進路の具体化」の流れを数字で検証します。', ''],
     ['', ''],
     ['■ 運用の流れ', 'h'],
-    ['1. 対象者ID発行：Apps Script で issueSubjectIds() を実行（発行数は「設定」シート）。対象者管理にIDと事前入力URLが並びます。', ''],
-    ['2. 鑑定前：「事前入力URL E（子ども）／F（保護者）」を送る。', ''],
-    ['3. 鑑定当日：「事前入力URL A／B」を送る。対象者管理の「鑑定日」を入力すると3ヶ月後の案内予定日（目安）が出ます。', ''],
-    ['4. 3ヶ月後：「事前入力URL C／D」を送る。', ''],
+    ['1. 回答者には対象者IDを入力してもらいません。フォームのURL（またはウェブアプリのサイト）を送り、お名前とメールアドレスだけ入力してもらいます。', ''],
+    ['2. 回答が届くと、対象者管理に「ID未割当」の行（お名前・メールだけ）が自動で追加されます。同じメールアドレス（またはお名前）の人は同じ行に結びつきます。', ''],
+    ['3. 運営側で issueSubjectIds() を実行すると、ID未割当の行に KGM-0001 から順にIDが割り当てられ、鑑定前・直後・3ヶ月後の回答が同じIDでつながります。', ''],
+    ['4. 対象者管理の「鑑定日」を入力すると、3ヶ月後の案内予定日（目安）が出ます。', ''],
     ['5. 回答が送信されると自動で 回答ログ・個人別分析・全体集計・クロス集計・ケーススタディ・ダッシュボード が更新されます。', ''],
     ['', ''],
     ['■ シートの役割', 'h'],
@@ -1812,7 +1821,7 @@ function buildReadmeSheet_(ss) {
     ['■ 注意', 'h'],
     ['・回答シート・回答ログ・個人別分析の「入力列」は自動更新されます。手で書き換えないでください。', ''],
     ['・全フォームでお名前・メールアドレスを聞き、対象者管理（空欄のみ）と個人別分析に転記します。集計はIDで結びます。共有範囲は最小限にしてください。', ''],
-    ['・ID未登録の回答は個人別分析で「未登録（要確認）」と表示されます。同じIDが同じフォームに複数回答した場合は最新の1件を集計します。', ''],
+    ['・ID未割当の回答は、IDを発行するまで集計に入りません（回答ログに「ID未割当」と出ます）。メールアドレスの入力違いで別人になったときは、対象者管理の行を手で統合してください。同じIDが同じフォームに複数回答した場合は最新の1件を集計します。', ''],
     ['・広告・LPでは断定表現を使わず、ダッシュボード7の表現例のように実データに基づいて書いてください。', ''],
   ];
   L.forEach((l, i) => {
