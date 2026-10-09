@@ -1822,3 +1822,62 @@ function buildReadmeSheet_(ss) {
   });
   sh.setColumnWidth(1, 980);
 }
+
+// ############################################################################
+// ## 16. 回答ポータル（1つのサイトから「お子様／保護者」→「鑑定前／鑑定直後／3ヶ月後」を選んで回答）
+// ############################################################################
+// 使い方：Apps Script の「デプロイ」→「新しいデプロイ」→ 種類「ウェブアプリ」
+//   次のユーザーとして実行：自分 ／ アクセスできるユーザー：全員 → 発行されたURLを配布する。
+// フォームを更新しても、このURLは変わりません（コードを変えたときは「デプロイを管理」で新バージョンに更新）。
+
+function doGet() {
+  const st = getState_();
+  if (!st || !st.forms) return HtmlService.createHtmlOutput('システムが未作成です。');
+  const map = {};
+  FORM_SPECS.forEach(spec => {
+    try { map[spec.who + '_' + spec.phase] = FormApp.openById(st.forms[spec.key]).getPublishedUrl(); } catch (e) { /* noop */ }
+  });
+  const html = [
+    '<!DOCTYPE html><html lang="ja"><head><base target="_top"><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1">',
+    '<title>KAGAMI アンケート</title><style>',
+    'body{margin:0;font-family:"Hiragino Sans","Noto Sans JP",sans-serif;background:#f4f6fb;color:#222}',
+    '.wrap{max-width:720px;margin:0 auto;padding:24px 16px}',
+    'h1{font-size:22px;color:#1f3a5f;margin:8px 0}.lead{color:#555;font-size:14px;margin-bottom:20px}',
+    '.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.1);margin-bottom:16px}',
+    '.btns{display:flex;gap:12px;flex-wrap:wrap}',
+    'button{flex:1;min-width:160px;padding:16px;font-size:16px;border:2px solid #1f3a5f;border-radius:10px;background:#fff;color:#1f3a5f;cursor:pointer}',
+    'button:hover,button.on{background:#1f3a5f;color:#fff}',
+    'small{color:#777;display:block;margin-top:4px;font-size:12px;font-weight:normal}',
+    '.back{background:none;border:none;color:#1f3a5f;text-decoration:underline;font-size:14px;min-width:0;padding:4px;flex:none}',
+    'iframe{width:100%;height:80vh;border:0;border-radius:8px;background:#fff}',
+    '.hide{display:none}</style></head><body><div class="wrap">',
+    '<h1>KAGAMI 進路・自己理解アンケート</h1>',
+    '<p class="lead">ご回答の種類をお選びください。正解・不正解はありません。</p>',
+    '<div id="s1" class="card"><b>① どなたの回答ですか？</b><div class="btns" style="margin-top:12px">',
+    '<button onclick="pick(\'c\')">お子様<small>ご本人の回答</small></button>',
+    '<button onclick="pick(\'p\')">保護者様<small>お子様の保護者の回答</small></button></div></div>',
+    '<div id="s2" class="card hide"><button class="back" onclick="back1()">← 選び直す</button><br><b id="who"></b>',
+    '<div style="margin-top:8px"><b>② いつのアンケートですか？</b></div><div class="btns" style="margin-top:12px">',
+    '<button onclick="go(\'base\')">鑑定前<small>鑑定を受ける前</small></button>',
+    '<button onclick="go(\'imm\')">鑑定直後<small>鑑定を受けた直後</small></button>',
+    '<button onclick="go(\'post\')">3ヶ月後<small>鑑定から3ヶ月後</small></button></div></div>',
+    '<div id="s3" class="card hide"><button class="back" onclick="back2()">← 選び直す</button> ',
+    '<a id="ext" target="_blank" style="font-size:13px;margin-left:12px">別のタブで開く</a><div id="ttl" style="margin:8px 0;font-weight:bold"></div>',
+    '<iframe id="fr"></iframe></div>',
+    '</div><script>',
+    'var U=' + JSON.stringify(map) + ';var who="";',
+    'var WL={c:"お子様",p:"保護者様"},PL={base:"鑑定前",imm:"鑑定直後",post:"3ヶ月後"};',
+    'function $(i){return document.getElementById(i)}',
+    'function pick(w){who=w;$("s1").className="card hide";$("s2").className="card";$("who").textContent="ご回答者：" + WL[w]}',
+    'function back1(){$("s2").className="card hide";$("s1").className="card"}',
+    'function go(p){var u=U[who+"_"+p];if(!u){alert("このアンケートは準備中です");return}',
+    '$("s2").className="card hide";$("s3").className="card";$("ttl").textContent=WL[who]+"｜"+PL[p]+"アンケート";',
+    '$("fr").src=u+(u.indexOf("?")<0?"?":"&")+"embedded=true";$("ext").href=u;window.scrollTo(0,0)}',
+    'function back2(){$("fr").src="about:blank";$("s3").className="card hide";$("s2").className="card"}',
+    '</script></body></html>',
+  ].join('');
+  return HtmlService.createHtmlOutput(html).setTitle('KAGAMI アンケート')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
