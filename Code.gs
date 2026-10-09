@@ -156,6 +156,7 @@ const ROLE = {
   IMPACT: '鑑定の影響度を測る',
   TALK: '自己決定を測る（親子対話）',
   FREE: '数値で分からない変化を拾う',
+  CONTACT: '連絡・本人確認',
 };
 
 // ---- 質問ヘルパー -------------------------------------------------------------
@@ -167,6 +168,11 @@ const idItem = () => ({
   q: 1, type: 'id', text: '対象者ID', role: ROLE.LINK, required: true,
   help: '担当者からお知らせした「KGM-0000」の形式のIDを、半角で入力してください。（専用URLからは自動で入力されています）',
 });
+/** お名前・メールアドレス（全フォーム共通。対象者IDの直後に置く） */
+const nameItem = () => ({ q: 0, type: 'name', text: 'お名前', role: ROLE.CONTACT, key: 'name', required: true,
+  help: '回答の確認と、ご連絡のためにだけ使います。（お子様の回答では、お子様のお名前を入力してください）' });
+const emailItem = () => ({ q: 0, type: 'email', text: 'メールアドレス', role: ROLE.CONTACT, key: 'email', required: true,
+  help: '3ヶ月後のアンケートのご案内など、ご連絡のためにだけ使います。' });
 const FREE_TEXT = (q, text, long, key) =>
   ({ q: q, type: 'text', text: text, key: key || 'text', long: !!long, required: false, role: ROLE.FREE });
 const CHECKS = (q, text, choices, key, role) =>
@@ -221,7 +227,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜鑑定前アンケート｜お子様',
     description: '鑑定を受ける前の、今の気持ちを教えてください。あとで「鑑定のあとで何が変わったか」を知るために使います。\n' +
       '正解・不正解はありません。今の気持ちに一番近いものを選んでください。（所要時間：約3分）',
-    sections: [{ title: '基本情報', items: [idItem()] }].concat(stateSections_('c', 2, '', '今の')),
+    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('c', 2, '', '今の')),
   },
   // ========================= FORM F 鑑定前｜保護者様 =========================
   {
@@ -229,7 +235,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜鑑定前アンケート｜保護者様',
     description: '鑑定を受ける前の、現在のお気持ちをお聞かせください。あとで「鑑定のあとで何が変わったか」を知るために使います。\n' +
       '正解・不正解はありません。現在のお気持ちに最も近いものをお選びください。（所要時間：約3分）',
-    sections: [{ title: '基本情報', items: [idItem()] }].concat(stateSections_('p', 2, '', '現在の')),
+    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('p', 2, '', '現在の')),
   },
   // ========================= FORM A 鑑定直後｜お子様 =========================
   {
@@ -237,7 +243,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜鑑定直後アンケート｜お子様',
     description: '今日の面談で「自分のこと」を知って、これからの進路を考えるきっかけになったかを知るためのアンケートです。\n' +
       '正解・不正解はありません。今の気持ちに一番近いものを選んでください。（所要時間：約4分）',
-    sections: [{ title: '基本情報', items: [idItem()] }].concat(stateSections_('c', 2, '', '鑑定後の現在の'), [
+    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('c', 2, '', '鑑定後の現在の'), [
       { title: '今回の鑑定について', help: PICK_HELP, items: [
         ord(11, '今回の鑑定内容に納得できた', ROLE.USE, { score: 'value' }),
         ord(12, '今回の鑑定で知った自分の特徴は、今後の進路を考えるうえで参考になりそうだ', ROLE.USE, { score: 'value' }),
@@ -252,7 +258,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜鑑定直後アンケート｜保護者様',
     description: '本日の面談を通じて、お子様への理解や進路への向き合い方がどう整理されたかを知るためのアンケートです。\n' +
       '正解・不正解はありません。現在のお気持ちに最も近いものをお選びください。（所要時間：約4分）',
-    sections: [{ title: '基本情報', items: [idItem()] }].concat(stateSections_('p', 2, '', '鑑定後の現在の'), [
+    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('p', 2, '', '鑑定後の現在の'), [
       { title: '今回の鑑定について', help: PICK_HELP, items: [
         ord(11, '今回の鑑定内容に納得できた', ROLE.USE, { score: 'value' }),
         ord(12, '今回の鑑定で知った子どもの特徴は、今後の進路を考えるうえで参考になりそうだ', ROLE.USE, { score: 'value' }),
@@ -268,7 +274,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜3ヶ月後アンケート｜お子様',
     description: '鑑定から3ヶ月がたちました。この3ヶ月での「自分のこと」や「進路」についての変化を教えてください。\n' +
       '正解・不正解はありません。今の気持ちに一番近いものを選んでください。（所要時間：約6分）',
-    sections: [{ title: '基本情報', items: [idItem()] }].concat(stateSections_('c', 2, '現在、', '現在の'), [
+    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('c', 2, '現在、', '現在の'), [
       { title: '鑑定内容の活用', help: PICK_HELP, items: [
         ord(11, '鑑定で知った自分の特徴を、進路について考えるときに意識した', ROLE.USE, { key: 'use' }),
       ] },
@@ -291,7 +297,7 @@ const FORM_SPECS = [
     title: 'KAGAMI｜3ヶ月後アンケート｜保護者様',
     description: '鑑定から3ヶ月がたちました。この3ヶ月でのお子様の変化と、保護者としての向き合い方についてお聞かせください。\n' +
       '正解・不正解はありません。現在のお気持ちに最も近いものをお選びください。（所要時間：約6分）',
-    sections: [{ title: '基本情報', items: [idItem()] }].concat(stateSections_('p', 2, '現在、', '現在の'), [
+    sections: [{ title: '基本情報', items: [idItem(), nameItem(), emailItem()] }].concat(stateSections_('p', 2, '現在、', '現在の'), [
       { title: '現在の親子関係', help: PICK_HELP, items: [
         ord(11, '現在、子どもと進路について話しやすい', ROLE.TALK, { score: 'talk', pair: 'T1' }),
       ] },
@@ -309,6 +315,9 @@ const FORM_SPECS = [
     ]),
   },
 ];
+
+// 質問番号は定義順に自動で振り直す（名前・メール追加などで番号がずれないように）
+FORM_SPECS.forEach(spec => flatItems_(spec).forEach((it, i) => { it.q = i + 1; }));
 
 /** フォームを配布する順番（鑑定前→直後→3ヶ月後）。対象者管理の列の並びにも使う */
 const FORM_ORDER = ['E', 'F', 'A', 'B', 'C', 'D'];
@@ -418,7 +427,7 @@ function validateConfig_() {
         errors.push(spec.key + ' Q' + it.q + ': 逆転項目の可能性があります');
       }
       if (spec.phase === 'post' && it.text.indexOf('鑑定前') >= 0) errors.push(spec.key + ' Q' + it.q + ': 3ヶ月後で「鑑定前」を聞いてはいけません');
-      if (spec.phase === 'base' && (it.key || (it.score && !scoreMeta_(it.score)))) errors.push(spec.key + ' Q' + it.q + ': 鑑定前に鑑定内容・行動・結果の質問は置けません');
+      if (spec.phase === 'base' && it.type !== 'name' && it.type !== 'email' && (it.key || (it.score && !scoreMeta_(it.score)))) errors.push(spec.key + ' Q' + it.q + ': 鑑定前に鑑定内容・行動・結果の質問は置けません');
     });
     if (items[0].type !== 'id') errors.push(spec.key + ': 先頭は対象者IDにしてください');
   });
@@ -575,6 +584,13 @@ function addQuestion_(form, it) {
         .build());
       break;
     }
+    case 'name':
+      item = form.addTextItem();
+      break;
+    case 'email':
+      item = form.addTextItem();
+      item.setValidation(FormApp.createTextValidation().setHelpText('メールアドレスの形式で入力してください').requireTextIsEmail().build());
+      break;
     case 'single':
     case 'ordinal':
       item = form.addMultipleChoiceItem();
@@ -690,7 +706,7 @@ function buildSettings_(ss) {
 const SUBJ = {
   FIRST: 2,
   COLS: ['対象者ID', '発行日', '鑑定日（入力）', '3ヶ月後案内予定日（目安）', 'お子様のお名前（任意）', '保護者のお名前（任意）',
-    '連絡先メールアドレス（任意）', '学年区分（任意）', '初回アンケートの主な悩み（カテゴリ）', '初回アンケートの悩み（要約）',
+    '連絡先メールアドレス（保護者）', '学年区分（任意）', '初回アンケートの主な悩み（カテゴリ）', '初回アンケートの悩み（要約）',
     '事例掲載の許可', 'メモ',
     '鑑定前・子ども', '鑑定前・保護者', '直後・子ども', '直後・保護者', '3ヶ月後・子ども', '3ヶ月後・保護者',
     '事前入力URL｜E 鑑定前・子ども', '事前入力URL｜F 鑑定前・保護者', '事前入力URL｜A 直後・子ども',
@@ -797,7 +813,7 @@ function buildQuestionList_(ss) {
       const sc = CORE_SCORES.concat(EXTRA_SCORES).filter(s => s.key === it.score)[0];
       rows.push([
         spec.key + '｜' + spec.surveyType + '｜' + spec.whoLabel, 'Q' + it.q, it.text,
-        { id: '記述(ID)', single: '単一選択', ordinal: '4段階/順序選択', checkbox: '複数選択', text: it.long ? '長文記述' : '短文記述' }[it.type],
+        { id: '記述(ID)', name: '記述(お名前)', email: '記述(メール)', single: '単一選択', ordinal: '4段階/順序選択', checkbox: '複数選択', text: it.long ? '長文記述' : '短文記述' }[it.type],
         it.required ? '必須' : '任意', it.role, sc ? sc.label : '', it.pair || '', (it.choices || []).join(' / '),
       ]);
     });
@@ -859,7 +875,7 @@ function collectResponses_(ss) {
             if (it.score) { (sums[it.score] = sums[it.score] || []).push(n); }
             if (it.key) rec.keys[it.key] = n;
           }
-        } else if ((it.type === 'checkbox' || it.type === 'text' || it.type === 'single') && it.key) {
+        } else if ((it.type === 'checkbox' || it.type === 'text' || it.type === 'single' || it.type === 'name' || it.type === 'email') && it.key) {
           rec.keys[it.key] = String(raw == null ? '' : raw);
         }
       });
@@ -892,8 +908,30 @@ function recalculateAll() {
 
   writeLog_(ss, responses, latest, regSet);
   writePersonValues_(ss, responses, latest, registered, regSet);
+  fillLedgerContacts_(ss, latest);
   SpreadsheetApp.flush();
   log_('再計算完了：回答 ' + responses.length + ' 件 / 最新 ' + Object.keys(latest).length + ' 件');
+}
+
+/** 回答で届いた氏名・メールを、対象者管理の空欄にだけ転記（手入力した値は上書きしない） */
+function fillLedgerContacts_(ss, latest) {
+  const sh = ss.getSheetByName(SHEET.SUBJECTS);
+  const n = APP.MAX_SUBJECTS;
+  const ids = sh.getRange(2, 1, n, 1).getValues().map(r => normalizeId_(r[0]));
+  const pick = (who, key) => {
+    const m = {};
+    Object.keys(latest).map(k => latest[k]).filter(r => r.spec.who === who && r.keys[key])
+      .sort((a, b) => a.ts - b.ts).forEach(r => { m[r.id] = r.keys[key]; });
+    return m;
+  };
+  [[SUBJ.CNAME, 'c', 'name'], [SUBJ.PNAME, 'p', 'name'], [SUBJ.MAIL, 'p', 'email']].forEach(t => {
+    const src = pick(t[1], t[2]);
+    const rg = sh.getRange(2, t[0], n, 1);
+    const cur = rg.getValues();
+    let changed = false;
+    ids.forEach((id, i) => { if (id && !cur[i][0] && src[id]) { cur[i][0] = src[id]; changed = true; } });
+    if (changed) rg.setValues(cur);
+  });
 }
 
 function readRegisteredIds_(ss) {
@@ -951,6 +989,10 @@ function pcols_() {
   });
   CORE_SCORES.forEach(s => add('gap_' + s.key, s.label, 'formula', '親子差（3ヶ月後：保護者−お子様）', '+0.00;-0.00;0.00'));
   add('match_status', '進路状況の一致(1=一致)', 'formula', '親子差（3ヶ月後：保護者−お子様）');
+  add('c_name', 'お子様 お名前', 'input', '連絡先（最新回答）', '@');
+  add('c_email', 'お子様 メール', 'input', '連絡先（最新回答）', '@');
+  add('p_name', '保護者 お名前', 'input', '連絡先（最新回答）', '@');
+  add('p_email', '保護者 メール', 'input', '連絡先（最新回答）', '@');
   add('c_imm_value', 'お子様 納得・参考度', 'input', '補助｜鑑定直後', '0.00');
   add('p_imm_value', '保護者 納得・参考度', 'input', '補助｜鑑定直後', '0.00');
   add('p_imm_talk', '保護者 親子対話(直後)', 'input', '補助｜親子対話', '0.00');
@@ -1075,12 +1117,13 @@ function writePersonValues_(ss, responses, latest, registered, regSet) {
 
   // ID別に値をまとめる
   const byId = {};
-  Object.keys(latest).forEach(k => {
+  Object.keys(latest).sort((a, b) => latest[a].ts - latest[b].ts).forEach(k => {
     const rec = latest[k];
     const w = rec.spec.who, ph = rec.spec.phase;
     const o = byId[rec.id] = byId[rec.id] || {};
     Object.keys(rec.scores).forEach(sk => { o[w + '_' + ph + '_' + sk] = rec.scores[sk]; });
     Object.keys(rec.keys).forEach(kk => {
+      if (rec.keys[kk] === '') return;
       o[kk === 'text' ? (w + '_' + ph + '_text') : (w + '_' + kk)] = rec.keys[kk];
     });
   });
@@ -1768,7 +1811,7 @@ function buildReadmeSheet_(ss) {
     ['', ''],
     ['■ 注意', 'h'],
     ['・回答シート・回答ログ・個人別分析の「入力列」は自動更新されます。手で書き換えないでください。', ''],
-    ['・氏名・メールアドレスは、対象者管理シートにだけ（任意で）保存します。回答フォームでは聞かず、IDだけで結びます。対象者管理は共有範囲を最小限にしてください。', ''],
+    ['・全フォームでお名前・メールアドレスを聞き、対象者管理（空欄のみ）と個人別分析に転記します。集計はIDで結びます。共有範囲は最小限にしてください。', ''],
     ['・ID未登録の回答は個人別分析で「未登録（要確認）」と表示されます。同じIDが同じフォームに複数回答した場合は最新の1件を集計します。', ''],
     ['・広告・LPでは断定表現を使わず、ダッシュボード7の表現例のように実データに基づいて書いてください。', ''],
   ];
