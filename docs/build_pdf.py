@@ -30,12 +30,23 @@ note = S("note", fontSize=8.5, leading=13, backColor=colors.HexColor("#fff6e0"),
          borderPadding=5, spaceBefore=4, spaceAfter=6)
 
 story = []
-P = lambda t, s=body: story.append(Paragraph(t, s))
+HTML = []
+def _h(t): return t.replace("<br/>", "<br>")
+def P(t, s=body):
+    story.append(Paragraph(t, s))
+    t = _h(t)
+    if s is h1: HTML.append("<h1>%s</h1>" % t)
+    elif s is h2: HTML.append("<h2>%s</h2>" % t)
+    elif s is title: HTML.append('<h1>%s</h1>' % t)
+    elif s is sub: HTML.append('<p>%s</p>' % t)
+    elif s is note: HTML.append('<p><i>%s</i></p>' % t)
+    else: HTML.append("<p>%s</p>" % t)
 def H1(t): story.append(Spacer(1, 2)); P(t, h1)
 def H2(t): P(t, h2)
 def SP(h=4): story.append(Spacer(1, h))
 def BL(items):
-    for i in items: P("・" + i)
+    for i in items: story.append(Paragraph("・" + i, body))
+    HTML.append("<ul>" + "".join("<li>%s</li>" % _h(i) for i in items) + "</ul>")
 def NOTE(t): P(t, note)
 
 def TBL(rows, widths, header=True):
@@ -52,6 +63,12 @@ def TBL(rows, widths, header=True):
         style += [("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT])]
     t.setStyle(TableStyle(style))
     story.append(t); SP(6)
+    th = ""
+    for r, row in enumerate(rows):
+        tag = "th" if (header and r == 0) else "td"
+        bg = ""
+        th += "<tr>" + "".join("<%s%s>%s</%s>" % (tag, bg, _h(str(c)), tag) for c in row) + "</tr>"
+    HTML.append('<table border="1">' + th + "</table><p></p>")
 
 # ---------------- 表紙 ----------------
 SP(60)
@@ -741,4 +758,6 @@ doc = SimpleDocTemplate("/home/user/kante-report/docs/sanmeigaku_research_design
                         leftMargin=17 * mm, rightMargin=17 * mm, topMargin=16 * mm, bottomMargin=17 * mm,
                         title="算命学×進路 実証研究 設計書", author="")
 doc.build(story, onFirstPage=footer, onLaterPages=footer)
+open("/home/user/kante-report/docs/sanmeigaku_research_design.html", "w", encoding="utf-8").write(
+    '<html><head><meta charset="utf-8"><title>算命学×進路 実証研究 設計書</title></head><body>' + "\n".join(HTML) + "</body></html>")
 print("ok")
