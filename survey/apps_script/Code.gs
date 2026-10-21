@@ -26,13 +26,15 @@ var SHEETS = {
   safety: '安全対応ログ',
   links: 'リンク一覧',
   codebook: 'コードブック',
-  tests: 'テスト結果'
+  tests: 'テスト結果',
+  reminders: 'リマインドログ'
 };
 
 var HEAD = {
   submissions: ['submission_id', '回答日時', '研究用ID', '回答者区分', 'フォームID', '時点', '分析採用', 'フラグ', '回答数', '未回答数', '非表示数', '自由記述あり数', 'テスト'],
   long: ['submission_id', '研究用ID', '回答者区分', 'フォームID', '時点', '設問ID', '回答内容', '数値コード', '回答日時', '状態', '自由記述あり', '分析採用'],
   options: ['submission_id', '研究用ID', 'フォームID', '設問ID', '選択肢'],
+  reminders: ['日付', '研究用ID', 'フォームID', '回目', '通知先'],
   safety: ['受信日時', '研究用ID', 'フォームID', '理由', '通知先', '通知結果', '対応期限', '対応状況', '対応日時', '対応担当者', '対応メモ(研究データと分けて管理)']
 };
 
@@ -172,6 +174,34 @@ function processSubmission_(formKey, namedValues, tsIso, sid, ctx) {
   var submission = [sid, tsIso, rid, roleOf_(formKey), formKey, def.time, adopted ? 'TRUE' : 'FALSE', flags.join(' / '), nAns, nMiss, nHidden, nFree, isTest ? 'TRUE' : 'FALSE'];
   var reasons = safetyReasons_(formKey, answers);
   return { rid: rid, isTest: isTest, adopted: adopted, flags: flags, submission: submission, rows: rows, optionRows: optionRows, reasons: reasons, answers: answers };
+}
+
+/** リマインド: 鑑定日からの日数で最大2回。T0=-5・-3日、T1=+1・+3日、T2=+93・+97日(T2案内は+90日ごろ) */
+var REMINDER_RULES = { T0: [-5, -3], T1: [1, 3], T2: [93, 97] };
+
+function dayDiff_(a, b) {
+  var pa = String(a).split('-'), pb = String(b).split('-');
+  return Math.round((Date.UTC(+pa[0], +pa[1] - 1, +pa[2]) - Date.UTC(+pb[0], +pb[1] - 1, +pb[2])) / 86400000);
+}
+
+/**
+ * roster: [{id, sessionDate:'yyyy-MM-dd', status}]  adoptedKeys: {'F0001|CT0': true}  today:'yyyy-MM-dd'
+ * 参加中(または空欄)・鑑定日が入力済み・未回答のフォームだけを対象にする。辞退・完了・テストIDは対象外。
+ */
+function remindersDue_(roster, adoptedKeys, today) {
+  var out = [];
+  roster.forEach(function (r) {
+    if (!r.id || !r.sessionDate || r.id === CONFIG.TEST_ID) return;
+    if (r.status && String(r.status).trim() !== '' && String(r.status).trim() !== '参加中') return;
+    var d = dayDiff_(today, r.sessionDate);
+    SURVEY.formKeys.forEach(function (k) {
+      var days = REMINDER_RULES[SURVEY.forms[k].time];
+      var n = days.indexOf(d);
+      if (n === -1 || adoptedKeys[r.id + '|' + k]) return;
+      out.push({ id: r.id, form: k, nth: n + 1, offset: d });
+    });
+  });
+  return out;
 }
 
 /** 設問定義の整合性チェック(エラー文字列の配列。空なら問題なし) */
@@ -373,6 +403,7 @@ function setup() {
   initSheets_(ss);
   ScriptApp.newTrigger('onFormSubmit').forSpreadsheet(ss).onFormSubmit().create();
   ScriptApp.newTrigger('checkOverdue').timeBased().everyHours(1).create();
+  ScriptApp.newTrigger('checkReminders').timeBased().everyDays(1).atHour(9).create();
 
   Logger.log('回答DB: ' + ss.getUrl());
   SURVEY.formKeys.forEach(function (k) { Logger.log(k + ' 編集: ' + FormApp.openById(formIds[k]).getEditUrl()); });
@@ -384,19 +415,20 @@ function initSheets_(ss) {
     if (header) { sh.clear(); sh.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold'); sh.setFrozenRows(1); }
     return sh;
   }
-  var roster = mk(SHEETS.roster, ['研究用ID', '登録日', '備考(個人名は書かない)']);
-  roster.getRange('A1:C1').setFontWeight('bold');
+  var roster = mk(SHEETS.roster, ['研究用ID', '鑑定日(yyyy-mm-dd)', '参加状況(参加中/辞退/完了)', '登録日', '備考(個人名は書かない)']);
   var settings = mk(SHEETS.settings, ['項目', '値', '説明']);
-  settings.getRange(2, 1, 4, 3).setValues([
+  settings.getRange(2, 1, 5, 3).setValues([
     ['安全対応担当者メール', '', '回答に確認が必要な内容があった場合の通知先(1名)'],
     ['安全対応担当者メール(代理)', '', '担当者不在時の通知先'],
     ['同意・個人名の対応表の場所', '', '研究用IDと個人を結ぶ表は、この回答DBとは別の、アクセスを制限したファイルで管理してください'],
-    ['注意', '', 'この回答DBは、研究担当者のみに共有してください。子ども・保護者・鑑定師には共有しないでください']
+    ['注意', '', 'この回答DBは、研究担当者のみに共有してください。子ども・保護者・鑑定師には共有しないでください'],
+    ['運営メール(リマインド通知先)', 'kagami.3588@gmail.com', '毎朝9時に、その日にリマインドする家庭の一覧が届きます。辞退した家庭は、参加者台帳の「参加状況」を「辞退」にしてください(リマインドが止まります)']
   ]);
   mk(SHEETS.submissions, HEAD.submissions);
   mk(SHEETS.long, HEAD.long);
   mk(SHEETS.options, HEAD.options);
   mk(SHEETS.safety, HEAD.safety);
+  mk(SHEETS.reminders, HEAD.reminders);
   mk(SHEETS.summary, ['(buildSummary() を実行すると作成されます)']);
   mk(SHEETS.links, ['研究用ID', 'CT0', 'CT1', 'CT2', 'PT0', 'PT1', 'PT2']);
   mk(SHEETS.tests, ['テスト', '結果', '詳細']);
@@ -520,6 +552,45 @@ function checkOverdue() {
   if (overdue.length && to.length) {
     MailApp.sendEmail(to.join(','), '[研究アンケート] 対応期限を過ぎた確認依頼があります', '次の確認依頼が、24時間以内に「対応済」になっていません:\n- ' + overdue.join('\n- ') + '\n' + ss.getUrl());
   }
+}
+
+/** 毎朝9時に、その日にリマインドする家庭の一覧を運営にメールする(家庭へ直接は送らない) */
+function checkReminders() {
+  var ss = getSS_();
+  var today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+  var rv = ss.getSheetByName(SHEETS.roster).getDataRange().getValues();
+  rv.shift();
+  var roster = rv.map(function (r) {
+    var d = r[1];
+    var ds = (d instanceof Date) ? Utilities.formatDate(d, 'Asia/Tokyo', 'yyyy-MM-dd') : String(d).trim();
+    return { id: String(r[0]).trim(), sessionDate: ds, status: r[2] };
+  });
+  var sub = ss.getSheetByName(SHEETS.submissions).getDataRange().getValues();
+  sub.shift();
+  var adopted = {};
+  sub.forEach(function (r) { if (r[6] === 'TRUE') adopted[r[2] + '|' + r[4]] = true; });
+  var due = remindersDue_(roster, adopted, today);
+  if (!due.length) return;
+  var links = {};
+  var lv = ss.getSheetByName(SHEETS.links).getDataRange().getValues();
+  lv.shift();
+  lv.forEach(function (r) { links[r[0]] = { CT0: r[1], CT1: r[2], CT2: r[3], PT0: r[4], PT1: r[5], PT2: r[6] }; });
+  var to = String(ss.getSheetByName(SHEETS.settings).getRange('B6').getValue()).trim();
+  var lines = due.map(function (d) {
+    return d.id + ' / ' + d.form + '(' + (d.form.charAt(0) === 'C' ? '子ども' : '保護者') + ')/ ' + d.nth + '回目\n  ' + ((links[d.id] || {})[d.form] || '(リンク一覧にリンクなし)');
+  });
+  var log = ss.getSheetByName(SHEETS.reminders);
+  due.forEach(function (d) { log.appendRow([today, d.id, d.form, d.nth, to]); });
+  if (!to) { Logger.log('リマインド通知先(設定シートB6)が未設定です'); return; }
+  MailApp.sendEmail(to, '[研究アンケート] 本日のリマインド対象 ' + due.length + '件(' + today + ')',
+    '次の家庭・フォームが未回答です。声かけをお願いします。リマインドは1つのフォームにつき最大2回です。\n' +
+    '辞退された家庭には送らないでください(参加者台帳の「参加状況」を「辞退」にすると、通知が止まります)。\n\n' + lines.join('\n') +
+    '\n\n--- 文面の例(強制にならないようにしてください) ---\nアンケートへのご協力ありがとうございます。まだ回答がお済みでないようでしたら、お時間のあるときに、できる範囲でご回答いただけると助かります。答えにくい質問は飛ばしていただいて大丈夫です。\n' + ss.getUrl());
+}
+
+/** 既にセットアップ済みの環境で、リマインドのトリガーだけ追加する場合に実行 */
+function installReminderTrigger() {
+  ScriptApp.newTrigger('checkReminders').timeBased().everyDays(1).atHour(9).create();
 }
 
 // ======================================================================

@@ -205,6 +205,30 @@ t('A型の対応(R3↔PR1)', cb.find(x => x[0] === 'R3')[12].indexOf('PR1[A]') !
 const counts = run('SURVEY.formKeys.map(k => k + ":" + questionsOf_(k).filter(q=>!q.system).length).join(",")');
 t('設問数 CT0=29 CT1=17 CT2=17 PT0=13 PT1=9 PT2=9', counts === 'CT0:29,CT1:17,CT2:17,PT0:13,PT1:9,PT2:9', counts);
 
+// 9. リマインド
+const rem = (roster, adopted, today) => vm.runInContext('remindersDue_', ctx)(roster, adopted, today);
+const R1 = [{ id: 'F0001', sessionDate: '2026-11-10', status: '参加中' }];
+let d = rem(R1, {}, '2026-11-05');
+t('鑑定5日前 → T0の子ども・保護者(1回目)', d.length === 2 && d.every(x => x.nth === 1 && /T0|CT0|PT0/.test(x.form)));
+d = rem(R1, {}, '2026-11-07');
+t('鑑定3日前 → T0の2回目', d.length === 2 && d.every(x => x.nth === 2));
+d = rem(R1, { 'F0001|CT0': true }, '2026-11-05');
+t('回答済みのフォームにはリマインドしない', d.length === 1 && d[0].form === 'PT0');
+d = rem(R1, {}, '2026-11-06');
+t('対象日以外(鑑定4日前)は対象なし', d.length === 0);
+d = rem(R1, {}, '2026-11-11');
+t('鑑定+1日 → T1(1回目)', d.length === 2 && d.every(x => /T1$/.test(x.form) || /1$/.test(x.form)));
+t('鑑定+103日は対象外(最大2回で終了)', rem(R1, {}, '2027-02-21').length === 0);
+d = rem(R1, {}, '2027-02-11');
+t('鑑定+93日 → T2(1回目)', d.length === 2 && d.every(x => /2$/.test(x.form)), JSON.stringify(d));
+t('辞退した家庭にはリマインドしない', rem([{ id: 'F0001', sessionDate: '2026-11-10', status: '辞退' }], {}, '2026-11-05').length === 0);
+t('完了した家庭にはリマインドしない', rem([{ id: 'F0001', sessionDate: '2026-11-10', status: '完了' }], {}, '2026-11-05').length === 0);
+t('参加状況が空欄なら参加中として扱う', rem([{ id: 'F0001', sessionDate: '2026-11-10', status: '' }], {}, '2026-11-05').length === 2);
+t('鑑定日が未入力の家庭は対象外', rem([{ id: 'F0001', sessionDate: '', status: '参加中' }], {}, '2026-11-05').length === 0);
+t('テストIDは対象外', rem([{ id: 'F9999', sessionDate: '2026-11-10', status: '' }], {}, '2026-11-05').length === 0);
+t('1フォームのリマインドは最大2回', JSON.stringify(run('REMINDER_RULES')) === JSON.stringify({ T0: [-5, -3], T1: [1, 3], T2: [93, 97] }));
+t('月をまたぐ日数計算(2026-11-30 → 2026-12-02 = 2日)', run('dayDiff_("2026-12-02","2026-11-30")') === 2);
+
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
 
