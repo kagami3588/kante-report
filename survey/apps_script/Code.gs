@@ -11,7 +11,7 @@
 
 var CONFIG = {
   SS_NAME: '研究アンケート回答DB',
-  CONTACT_TEXT: '【要記入:運営の連絡先】',
+  CONTACT_TEXT: '運営の連絡先:kagami.3588@gmail.com',
   TEST_ID: 'F9999',
   OVERDUE_HOURS: 24
 };
