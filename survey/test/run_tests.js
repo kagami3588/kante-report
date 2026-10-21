@@ -229,6 +229,14 @@ t('テストIDは対象外', rem([{ id: 'F9999', sessionDate: '2026-11-10', stat
 t('1フォームのリマインドは最大2回', JSON.stringify(run('REMINDER_RULES')) === JSON.stringify({ T0: [-5, -3], T1: [1, 3], T2: [93, 97] }));
 t('月をまたぐ日数計算(2026-11-30 → 2026-12-02 = 2日)', run('dayDiff_("2026-12-02","2026-11-30")') === 2);
 
+// 10. 匿名での感想利用の同意(任意)
+r = vm.runInContext('processSubmission_', ctx)('CT0', nv('CT0', { CONSENT: '同意します', CONSENT_AD: '同意します', RID: 'F0001' }), 't', 'sid20', ctxOk);
+t('匿名感想の同意あり → Submissionsに TRUE', r.submission[13] === 'TRUE' && r.flags.length === 0);
+r = vm.runInContext('processSubmission_', ctx)('CT0', nv('CT0', { CONSENT: '同意します', RID: 'F0001' }), 't', 'sid21', ctxOk);
+t('匿名感想の同意なし → FALSE。研究参加の同意だけで送信でき、フラグなし', r.submission[13] === 'FALSE' && r.flags.length === 0);
+r = vm.runInContext('processSubmission_', ctx)('CT1', nv('CT1', { RID: 'F0001' }), 't', 'sid22', ctxOk);
+t('同意ページのないフォームでは空欄', r.submission[13] === '');
+t('CT0・PT0に研究参加の同意(必須)と匿名感想の同意(任意)の2項目', ['CT0', 'PT0'].every(k => run(`questionsOf_("${k}").filter(q=>q.kind==="consent").map(q=>q.id+":"+!!q.required).join(",")`) === 'CONSENT:true,CONSENT_AD:false'));
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
 

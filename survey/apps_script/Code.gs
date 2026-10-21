@@ -31,7 +31,7 @@ var SHEETS = {
 };
 
 var HEAD = {
-  submissions: ['submission_id', '回答日時', '研究用ID', '回答者区分', 'フォームID', '時点', '分析採用', 'フラグ', '回答数', '未回答数', '非表示数', '自由記述あり数', 'テスト'],
+  submissions: ['submission_id', '回答日時', '研究用ID', '回答者区分', 'フォームID', '時点', '分析採用', 'フラグ', '回答数', '未回答数', '非表示数', '自由記述あり数', 'テスト', '匿名での感想利用の同意'],
   long: ['submission_id', '研究用ID', '回答者区分', 'フォームID', '時点', '設問ID', '回答内容', '数値コード', '回答日時', '状態', '自由記述あり', '分析採用'],
   options: ['submission_id', '研究用ID', 'フォームID', '設問ID', '選択肢'],
   reminders: ['日付', '研究用ID', 'フォームID', '回目', '通知先'],
@@ -171,7 +171,8 @@ function processSubmission_(formKey, namedValues, tsIso, sid, ctx) {
     rows.push([sid, rid, roleOf_(formKey), formKey, def.time, q.id, v, code === null ? '' : code, tsIso, status, isFree, adopted ? 'TRUE' : 'FALSE']);
   });
 
-  var submission = [sid, tsIso, rid, roleOf_(formKey), formKey, def.time, adopted ? 'TRUE' : 'FALSE', flags.join(' / '), nAns, nMiss, nHidden, nFree, isTest ? 'TRUE' : 'FALSE'];
+  var submission = [sid, tsIso, rid, roleOf_(formKey), formKey, def.time, adopted ? 'TRUE' : 'FALSE', flags.join(' / '), nAns, nMiss, nHidden, nFree, isTest ? 'TRUE' : 'FALSE',
+    def.blocks.some(function (b) { return b.type === 'q' && b.id === 'CONSENT_AD'; }) ? (answers.CONSENT_AD ? 'TRUE' : 'FALSE') : ''];
   var reasons = safetyReasons_(formKey, answers);
   return { rid: rid, isTest: isTest, adopted: adopted, flags: flags, submission: submission, rows: rows, optionRows: optionRows, reasons: reasons, answers: answers };
 }
@@ -340,7 +341,7 @@ function buildForm_(key, ss) {
     } else if (b.kind === 'consent') {
       it = form.addCheckboxItem().setTitle(title);
       it.setChoices([it.createChoice(b.choices[0])]);
-      it.setRequired(true);
+      it.setRequired(!!b.required);
     } else if (b.kind === 'age') {
       it = form.addTextItem().setTitle(title);
       it.setValidation(FormApp.createTextValidation().requireNumberBetween(5, 25).setHelpText('数字(歳)で入力してください。').build());
