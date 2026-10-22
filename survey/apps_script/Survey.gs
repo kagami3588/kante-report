@@ -364,7 +364,8 @@ var APPLY_EXPLAIN_3 = '【6. 想定される負担と、気持ちへの影響】
 var CHILD_EXPLAIN = 'これは なんの おねがい?\nさんめいがくの かんていを うけたあと、じぶんの ことや かぞくの ことを どう おもうように なったかを しりたいので、アンケートに こたえて ほしいのです。\n・アンケートは、「あたって いるか」を しらべる テストでは ありません。\n・かんていは、あなたの みらいを きめる ものでは ありません。じぶんの ことを かんがえる、きっかけの ひとつです。\n\nなにを するの?\n・アンケートに 3かい こたえます。(かんていの まえ、かんていの すぐあと、かんていから 3か月 ぐらい あと)\n・1かいは 10ぷん ぐらいです。スマホや パソコンで こたえます。\n・おとうさん・おかあさんとは、べつの ところで こたえて ください。\n・せいかいは ありません。おもった とおりに こたえて ください。\n\nこたえたく ないときは?\n・こたえたく ない しつもんは、とばして だいじょうぶです。\n・とちゅうで やめたく なったら、やめても だいじょうぶです。やめても、こまる ことは ありません。\n・できれば さいごまで こたえて もらえると、とても たすかります。\n・やめた ときは、それまでに こたえた ところは、けんきゅうに つかわせて もらいます。\n・こたえを けして ほしい ときは、おとうさん・おかあさんに つたえて ください。うんえいに おねがいすれば、けします。\n\nあなたの こたえは、だれが みるの?\n・あなたの こたえは、おとうさん・おかあさんには みせません。おとうさん・おかあさんの こたえも、あなたには みせません。\n・こたえは、かんていを するまで、みません。かんていの あとは、せきにんしゃの ' + RESPONSIBLE + ' が みます。\n・でも、あなたの あんぜんが しんぱいな ときは、あなたに さきに しらせて から、ひつような おとなに そうだんする ことが あります。\n\nなまえなどの たいせつな じょうほうは?\n・あなたの なまえや れんらくさきは、たいせつに まもります。アンケートの こたえとは、べつの ところに おいて、うんえいの ひとだけが みます。\n・これから、けんきゅうの けっかを しょうかいする ときは、なまえや れんらくさきは ださず、「ねんれい」と「せいべつ」と「こたえの すうじ」だけを つかう ことが あります。(「とくめい」とは、だれの ことか わからない ように する ことです。)\n\nききたい ことが あるときは?\nおとうさん・おかあさんに きいて ください。または、' + CONTACT_MAIL + ' に メールして ください。';
 
 function CHK_(id, text, purpose) {
-  return Q_({ id: id, text: text, kind: 'check', axis: AXIS.ID, system: true, required: true, choices: [text.indexOf('公式LINE') !== -1 ? '追加しました' : '確認しました'], purpose: purpose });
+  return Q_({ id: id, text: text, kind: 'check', axis: AXIS.ID, system: true, required: true, choices: [text.indexOf('公式LINE') !== -1 ? '追加しました' : '確認しました'], purpose: purpose,
+    help: text.indexOf('公式LINE') !== -1 ? 'まだの方は、こちらから追加してください:' + LINE_URL : '' });
 }
 function SEL_(id, text, choices, required, purpose) {
   return Q_({ id: id, text: text, kind: 'single', axis: AXIS.ID, system: true, required: !!required, choices: choices, purpose: purpose });
@@ -373,7 +374,23 @@ function BD_(id, text, purpose) {
   return Q_({ id: id, text: text, kind: 'birth', axis: AXIS.ID, system: true, required: true, purpose: purpose });
 }
 
-var GENDERS = ['女性', '男性', 'その他'];
+
+// 公式LINE・お振込先・鑑定料(申込後の画面・受付確認メール・フォームの完了画面に表示する)
+var LINE_URL = 'https://lin.ee/ewijo32';
+var PAYMENT = {
+  accountType: '普通預金',
+  bank: 'PayPay銀行',
+  branch: '005ビジネス営業部',
+  number: '7332659',
+  holder: 'EnReaLizeハヤシリュウスケ'
+};
+var FEE = { career: 30000, general: 30000 };
+var CORP_PLANS = [
+  { label: '代表のみ 50,000円', fee: 50000, headcount: 1 },
+  { label: '代表+幹部2名 100,000円', fee: 100000, headcount: 3 }
+];
+
+var GENDERS = ['男性', '女性'];
 var EXTRA_PLANS = ['レポートのみ 5,000円', 'オンライン鑑定希望 10,000円'];
 
 SURVEY.apply = {
@@ -411,14 +428,13 @@ SURVEY.apply = {
     P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、研究への参加とは関係ありません。)' }),
     Q_({ id: 'EX1', text: '追加の鑑定をしてほしい人の名前', kind: 'text1', axis: AXIS.ID, system: true, required: false, purpose: '追加の鑑定の対象者(任意。個人情報)' }),
     SEL_('EX2', '追加の鑑定のご希望の内容', EXTRA_PLANS, false, '追加の鑑定の希望内容(任意)'),
-    P_('同意の確認', { desc: '上の説明(「1」から「9」)をお読みのうえ、次の項目をご確認ください。すべてにチェックをいただいた場合に、お申込みできます。\n\n責任者:' + RESPONSIBLE + '(KAGAMI)\n連絡先:' + CONTACT_MAIL + (CONSENT_DOC_URL ? '\n\n同意書・説明書(上の説明と同じ内容)は、こちらからもご覧いただけます:' + CONSENT_DOC_URL : '') }),
+    P_('同意の確認', { desc: '前のページまでに表示された説明書(【1. 研究の目的】から【9. お問い合わせ】まで)をお読みのうえ、次の項目をご確認ください。すべてにチェックをいただいた場合に、お申込みできます。\n\n責任者:' + RESPONSIBLE + '(KAGAMI)\n連絡先:' + CONTACT_MAIL + (CONSENT_DOC_URL ? '\n\n同意書・説明書(上の説明と同じ内容)は、こちらからもご覧いただけます:' + CONSENT_DOC_URL : '') }),
     CK_('CONSENT', '説明書を読み、内容を理解したうえで、お子様とともに、この研究に協力することに同意します。', '研究参加の同意(保護者)'),
     CK_('CONSENT_CHILD', 'お子様にも内容を説明し、お子様が参加することを確認しました。', '子どもへの説明・本人の意思の確認(保護者による確認)'),
     CK_('CONSENT_PI', 'お名前・メールアドレス・生年月日などを、鑑定のご提供(日程調整、ご連絡、アンケートのご案内)のために使うことに同意します。', '個人情報の取扱いへの同意'),
-    CK_('CONSENT_ANON', '今後、必要になった場合に、個人情報(お名前・連絡先)は一切お渡しせず、匿名の年齢と性別の表記と、データの数値のみを表示することがあることに同意します。(上の「8」)', '匿名の数値の表示への同意')
+    CK_('CONSENT_ANON', '今後、必要になった場合に、個人情報(お名前・連絡先)は一切お渡しせず、匿名の年齢と性別の表記と、データの数値のみを表示することがあることに同意します。(説明書の【8. 匿名の数値の表示について】)', '匿名の数値の表示への同意')
   ]
 };
-SURVEY.apply.confirm = 'お申込みを受け付けました。受付確認のメールをお送りします。数分たっても届かない場合は、迷惑メールフォルダをご確認のうえ、' + CONTACT_MAIL + ' までご連絡ください。日程の調整は、運営から改めてご連絡します。';
 
 // ---------- 一般鑑定者用・法人鑑定者用の申込フォーム(研究アンケートと研究の同意は付けない。個人情報の利用の同意のみ) ----------
 var CATEGORY_LABEL = { career: '進路相談用', general: '一般鑑定者用', corp: '法人鑑定者用' };
@@ -438,8 +454,8 @@ function PARA_(id, text, purpose, required) {
 
 SURVEY.applyG = {
   key: 'APPLY_G', category: 'general',
-  title: '算命学の鑑定 お申込みフォーム(一般の方)',
-  intro: 'このフォームは、算命学の鑑定へのお申込み用です(一般の方向け)。\n\n・最初に個人情報の取り扱いをお読みいただき、そのあと、ご情報をご入力ください。入力は、この1回だけです。\n・お申込み後、運営から、日程調整のご連絡をします。',
+  title: '算命学の鑑定 お申込みフォーム(個人)',
+  intro: 'このフォームは、算命学の鑑定へのお申込み用です(個人でのお申込み用)。\n\n・最初に個人情報の取り扱いをお読みいただき、そのあと、ご情報をご入力ください。入力は、この1回だけです。\n・お申込み後、運営から、日程調整のご連絡をします。',
   blocks: [
     P_('個人情報の取り扱い', { desc: PRIVACY_TEXT }),
     P_('お申込み者の情報'),
@@ -454,16 +470,15 @@ SURVEY.applyG = {
     Q_({ id: 'GE9', text: '紹介者氏名(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)', kind: 'katakana', axis: AXIS.ID, system: true, required: true, purpose: '紹介者(個人情報)' }),
     PARA_('GE10', 'ご希望の内容(任意)', '鑑定の希望内容(任意)', false),
     PARA_('GE11', '自由記入欄(質問がありましたら、内容をご記入ください)', '連絡事項・質問(任意)', false),
-    P_('同意の確認', { desc: '上の「個人情報の取り扱い」をお読みのうえ、ご確認ください。チェックをいただいた場合に、お申込みできます。' }),
+    P_('同意の確認', { desc: '前のページの【個人情報の取り扱い】をお読みのうえ、ご確認ください。チェックをいただいた場合に、お申込みできます。' }),
     CK_('CONSENT_PI', 'お名前・メールアドレス・生年月日などを、鑑定のご提供(日程調整、ご連絡、鑑定書のお渡し)のために使うことに同意します。', '個人情報の取扱いへの同意')
   ]
 };
-SURVEY.applyG.confirm = 'お申込みを受け付けました。受付確認のメールをお送りします。数分たっても届かない場合は、迷惑メールフォルダをご確認のうえ、' + CONTACT_MAIL + ' までご連絡ください。日程の調整は、運営から改めてご連絡します。';
 
 SURVEY.applyB = {
   key: 'APPLY_B', category: 'corp',
-  title: '算命学の鑑定 お申込みフォーム(法人の方)',
-  intro: 'このフォームは、算命学の鑑定へのお申込み用です(法人の方向け)。\n\n・最初に個人情報の取り扱いをお読みいただき、そのあと、法人様と、鑑定を受ける方のご情報をご入力ください。\n・お申込み後、運営から、日程調整のご連絡をします。',
+  title: '算命学の鑑定 お申込みフォーム(法人・団体)',
+  intro: 'このフォームは、算命学の鑑定へのお申込み用です(法人・団体でのお申込み用)。\n\n・最初に個人情報の取り扱いをお読みいただき、そのあと、法人様と、鑑定を受ける方のご情報をご入力ください。\n・お申込み後、運営から、日程調整のご連絡をします。',
   blocks: [
     P_('個人情報の取り扱い', { desc: PRIVACY_TEXT }),
     P_('法人様・ご担当者様の情報'),
@@ -477,18 +492,51 @@ SURVEY.applyB = {
     CHK_('CO8', '林 竜輔の公式LINEを追加しましたか?', '公式LINEの追加確認'),
     Q_({ id: 'CO9', text: '紹介者氏名(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)', kind: 'katakana', axis: AXIS.ID, system: true, required: true, purpose: '紹介者(個人情報)' }),
     P_('鑑定を受ける方の情報'),
-    INT_('CO10', '鑑定を受ける人数(半角の数字)', '鑑定を受ける人数'),
-    PARA_('CO11', '鑑定を受ける方の、お名前・性別・生年月日(1行に1名ずつ。例:山田 太郎/男性/19850612)', '鑑定を受ける方の氏名・性別・生年月日(個人情報)', true),
+    SEL_('CO10', 'ご希望のプラン', CORP_PLANS.map(function (p) { return p.label; }), true, '鑑定のプラン(代表のみ/代表+幹部2名)。鑑定料が変わる'),
+    PARA_('CO11', '鑑定を受ける方の、お名前・性別・生年月日(1行に1名ずつ。例:山田 太郎/男性/19850612。代表のみの場合は1名、代表+幹部2名の場合は3名)', '鑑定を受ける方の氏名・性別・生年月日(個人情報)', true),
     PARA_('CO12', 'ご希望の内容(任意)', '鑑定の希望内容(任意)', false),
     T1_('CO13', '請求書・領収書の宛名(任意)', '請求書・領収書の宛名(任意)', false),
     PARA_('CO14', '自由記入欄(質問がありましたら、内容をご記入ください)', '連絡事項・質問(任意)', false),
-    P_('同意の確認', { desc: '上の「個人情報の取り扱い」をお読みのうえ、ご確認ください。すべてにチェックをいただいた場合に、お申込みできます。' }),
+    P_('同意の確認', { desc: '前のページの【個人情報の取り扱い】をお読みのうえ、ご確認ください。すべてにチェックをいただいた場合に、お申込みできます。' }),
     CK_('CONSENT_PI', '担当者様と、鑑定を受ける方のお名前・性別・生年月日・連絡先などを、鑑定のご提供(日程調整、ご連絡、鑑定書のお渡し)のために使うことに同意します。', '個人情報の取扱いへの同意'),
     CK_('CONSENT_TARGET', '鑑定を受ける方に、個人情報(お名前・性別・生年月日)を運営にお渡しすることを説明し、ご本人の了解を得ています。', '鑑定を受ける方への説明と了解の確認')
   ]
 };
-SURVEY.applyB.confirm = SURVEY.applyG.confirm;
 
 SURVEY.apply.category = 'career';
 SURVEY.applyForms = { career: SURVEY.apply, general: SURVEY.applyG, corp: SURVEY.applyB };
 SURVEY.applyFormKeys = ['APPLY', 'APPLY_G', 'APPLY_B'];
+
+// ---------- お振込先・鑑定料の表示文(申込後の画面・受付確認メール・フォームの完了画面) ----------
+function yen_(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '円'; }
+
+function findPlan_(label) {
+  for (var i = 0; i < CORP_PLANS.length; i++) if (CORP_PLANS[i].label === label) return CORP_PLANS[i];
+  return null;
+}
+
+/** 鑑定料の行。法人は、プランが分かればその金額、分からなければ(フォームの完了画面)両方のプランを出す */
+function feeLines_(category, plan) {
+  if (category === 'corp') {
+    if (plan) return ['ご希望のプラン:' + plan.label, '鑑定料:' + yen_(plan.fee)];
+    return ['鑑定料(ご希望のプランの金額をお振込みください):'].concat(CORP_PLANS.map(function (p) { return '・' + p.label.replace(/ (?=[0-9])/, ':'); }));
+  }
+  return ['鑑定料:' + yen_(FEE[category])];
+}
+
+function bankLines_() {
+  return ['口座種別:' + PAYMENT.accountType, '金融機関名:' + PAYMENT.bank, '支店名:' + PAYMENT.branch, '口座番号:' + PAYMENT.number, '口座名義:' + PAYMENT.holder];
+}
+
+function paymentText_(category, plan) {
+  return feeLines_(category, plan).concat(['', '【お振込先】'], bankLines_(), ['', 'お支払い方法は、口座振込のみです。']).join('\n');
+}
+
+function confirmMessage_(category) {
+  return 'お申込みを受け付けました。受付確認のメールをお送りします。数分たっても届かない場合は、迷惑メールフォルダをご確認のうえ、' + CONTACT_MAIL + ' までご連絡ください。日程の調整は、運営から改めてご連絡します。\n\n' +
+    paymentText_(category, null) + '\n\n林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください:' + LINE_URL;
+}
+
+SURVEY.apply.confirm = confirmMessage_('career');
+SURVEY.applyG.confirm = confirmMessage_('general');
+SURVEY.applyB.confirm = confirmMessage_('corp');

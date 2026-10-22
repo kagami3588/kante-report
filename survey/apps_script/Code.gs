@@ -40,7 +40,7 @@ var SHEETS = {
 };
 
 var HEAD = {
-  roster: ['研究用ID', '申込日時', '保護者名(申込者名)', '保護者(申込者)の性別', '保護者(申込者)の生年月日', '保護者(申込者)メール', 'LINE検索ID', 'Instagram', '公式LINE追加', '紹介者', 'お子様名', 'お子様の性別', 'お子様の生年月日', 'お子様メール', '鑑定日(yyyy-mm-dd)', '参加状況(参加中/辞退/完了)', 'T0送信日時', 'T1送信日時', 'T2送信日時', '追加鑑定の対象者名', '追加鑑定の希望', '連絡事項(保護者・申込者)', 'お子様の連絡事項', 'メモ', '区分', '法人名', '部署・役職', '電話番号', '鑑定を受ける人数', '鑑定を受ける方(名前・性別・生年月日)', '請求書・領収書の宛名', 'ご希望の内容'],
+  roster: ['研究用ID', '申込日時', '保護者名(申込者名)', '保護者(申込者)の性別', '保護者(申込者)の生年月日', '保護者(申込者)メール', 'LINE検索ID', 'Instagram', '公式LINE追加', '紹介者', 'お子様名', 'お子様の性別', 'お子様の生年月日', 'お子様メール', '鑑定日(yyyy-mm-dd)', '参加状況(参加中/辞退/完了)', 'T0送信日時', 'T1送信日時', 'T2送信日時', '追加鑑定の対象者名', '追加鑑定の希望', '連絡事項(保護者・申込者)', 'お子様の連絡事項', 'メモ', '区分', '法人名', '部署・役職', '電話番号', '鑑定を受ける人数', '鑑定を受ける方(名前・性別・生年月日)', '請求書・領収書の宛名', 'ご希望の内容', 'プラン'],
   pending: ['受付日時', '区分', '名前', 'メールアドレス', 'お子様名 / 法人名', '要確認の理由', '連絡事項'],
   sendlog: ['日時', '研究用ID', '時点', '送信先', '結果'],
   submissions: ['submission_id', '回答日時', '研究用ID', '回答者区分', 'フォームID', '時点', '分析採用', 'フラグ', '回答数', '未回答数', '非表示数', '自由記述あり数', 'テスト'],
@@ -384,7 +384,7 @@ function processCareerApplication_(namedValues, existing, tsIso) {
     return { ok: false, reason: problems.join(' / '), pendingRow: [tsIso, CATEGORY_LABEL.career, a.AP1, a.AP2, a.CH1, problems.join(' / '), a.AP5] };
   }
   var id = nextId_((existing || []).map(function (e) { return e.id; }), 'F');
-  var row = [id, tsIso, a.AP1, a.AP6, a.AP7, a.AP2, a.AP8, a.AP9, a.AP10, a.AP11, a.CH1, a.CH2, a.CH3, a.CH4, '', '参加中', '', '', '', a.EX1, a.EX2, a.AP5, a.CH6, '', 'career', '', '', '', '', '', '', ''];
+  var row = [id, tsIso, a.AP1, a.AP6, a.AP7, a.AP2, a.AP8, a.AP9, a.AP10, a.AP11, a.CH1, a.CH2, a.CH3, a.CH4, '', '参加中', '', '', '', a.EX1, a.EX2, a.AP5, a.CH6, '', 'career', '', '', '', '', '', '', '', ''];
   return { ok: true, category: 'career', id: id, name: a.AP1, email: a.AP2, childName: a.CH1, childEmail: a.CH4, row: row };
 }
 
@@ -398,7 +398,7 @@ function readAnswers_(formDef, namedValues) {
   return a;
 }
 
-function blankRow_() { var r = []; for (var i = 0; i < 32; i++) r.push(''); return r; }
+function blankRow_() { var r = []; for (var i = 0; i < 33; i++) r.push(''); return r; }
 
 /** 一般鑑定者用の申込を処理する */
 function processGeneralApplication_(namedValues, existing, tsIso) {
@@ -436,7 +436,8 @@ function processCorpApplication_(namedValues, existing, tsIso) {
   if (!a.CO7) problems.push('LINE検索IDが未入力');
   if (!a.CO8) problems.push('公式LINEの追加が未確認');
   if (!isKatakana_(a.CO9)) problems.push('紹介者氏名がカタカナではない(いない場合は「ナシ」)');
-  if (!/^[0-9]{1,3}$/.test(a.CO10) || Number(a.CO10) < 1) problems.push('鑑定を受ける人数が不正(1以上の半角数字)');
+  var plan = findPlan_(a.CO10);
+  if (!plan) problems.push('ご希望のプランが未選択');
   if (!a.CO11) problems.push('鑑定を受ける方の情報が未入力');
   ['CONSENT_PI', 'CONSENT_TARGET'].forEach(function (id) { if (!a[id]) problems.push('同意未確認:' + id); });
   var dup = (existing || []).filter(function (e) { return e.category === 'corp'; }).some(function (e) { return normEmail_(e.email) === normEmail_(a.CO4) && normName_(e.company) === normName_(a.CO1); });
@@ -447,9 +448,9 @@ function processCorpApplication_(namedValues, existing, tsIso) {
   var row = blankRow_();
   row[RC.id] = id; row[RC.ts] = tsIso; row[RC.pname] = a.CO3; row[RC.pemail] = a.CO4; row[RC.line] = a.CO7; row[RC.officialLine] = a.CO8; row[RC.referrer] = a.CO9;
   row[RC.status] = '参加中'; row[RC.pnote] = a.CO14; row[RC.category] = 'corp'; row[RC.company] = a.CO1; row[RC.dept] = a.CO2; row[RC.phone] = a.CO6;
-  row[RC.headcount] = a.CO10; row[RC.targets] = a.CO11; row[RC.invoice] = a.CO13; row[RC.request] = a.CO12;
-  if (lines !== Number(a.CO10)) row[RC.memo] = '人数(' + a.CO10 + ')と、記入された行数(' + lines + ')が一致しません。確認してください。';
-  return { ok: true, category: 'corp', id: id, name: a.CO3, email: a.CO4, company: a.CO1, row: row };
+  row[RC.headcount] = String(plan.headcount); row[RC.plan] = plan.label; row[RC.targets] = a.CO11; row[RC.invoice] = a.CO13; row[RC.request] = a.CO12;
+  if (lines !== plan.headcount) row[RC.memo] = 'プラン(' + plan.label + ')の人数(' + plan.headcount + ')と、記入された行数(' + lines + ')が一致しません。確認してください。';
+  return { ok: true, category: 'corp', id: id, name: a.CO3, email: a.CO4, company: a.CO1, plan: plan, row: row };
 }
 
 /** 区分に応じて申込を処理する */
@@ -471,7 +472,7 @@ function dropRowsById_(values, idCol, id) {
 }
 
 // 名簿の列の位置(0始まり。シートの列番号は +1)
-var RC = { id: 0, ts: 1, pname: 2, pgender: 3, pbirth: 4, pemail: 5, line: 6, insta: 7, officialLine: 8, referrer: 9, cname: 10, cgender: 11, cbirth: 12, cemail: 13, session: 14, status: 15, T0: 16, T1: 17, T2: 18, exName: 19, exPlan: 20, pnote: 21, cnote: 22, memo: 23, category: 24, company: 25, dept: 26, phone: 27, headcount: 28, targets: 29, invoice: 30, request: 31 };
+var RC = { id: 0, ts: 1, pname: 2, pgender: 3, pbirth: 4, pemail: 5, line: 6, insta: 7, officialLine: 8, referrer: 9, cname: 10, cgender: 11, cbirth: 12, cemail: 13, session: 14, status: 15, T0: 16, T1: 17, T2: 18, exName: 19, exPlan: 20, pnote: 21, cnote: 22, memo: 23, category: 24, company: 25, dept: 26, phone: 27, headcount: 28, targets: 29, invoice: 30, request: 31, plan: 32 };
 
 var LINK_TIMES = ['T0', 'T1', 'T2'];
 function isParticipating_(status) { var s = String(status || '').trim(); return s === '' || s === '参加中'; }
@@ -547,26 +548,48 @@ function buildReceiptEmail_(formKey, p) {
   };
 }
 
+function escHtml_(s) {
+  return String(s === undefined || s === null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** 申込の受付確認メール(文字版と、見た目を整えたHTML版)。お振込先・鑑定料・次のステップ・公式LINEを載せる */
 function buildApplyReceiptEmail_(p, category) {
   var foot = '\n\n' + CONFIG.SENDER_NAME + '\n' + CONFIG.CONTACT_MAIL;
-  if (category === 'corp') {
-    return {
-      subject: '【お申込みを受け付けました】算命学の鑑定(法人)',
-      body: p.name + ' 様\n\n' + p.company + ' 様のお申込みを受け付けました。ありがとうございます。\n\n・日程の調整は、運営から改めてご連絡します。\n・このメールに心当たりがない場合は、お手数ですが、ご返信ください。' + foot
-    };
-  }
-  if (category === 'general') {
-    return {
-      subject: '【お申込みを受け付けました】算命学の鑑定',
-      body: p.name + ' 様\n\nお申込みありがとうございます。お申込みを受け付けました。\n\n・日程の調整は、運営から改めてご連絡します。\n・このメールに心当たりがない場合は、お手数ですが、ご返信ください。' + foot
-    };
-  }
-  return {
-    subject: '【お申込みを受け付けました】算命学の鑑定',
-    body: p.name + ' 様\n\nお申込みありがとうございます。お申込みを受け付けました。(お子様:' + p.childName + ' さん)\n\n' +
-      '・日程の調整は、運営から改めてご連絡します。\n・アンケートのご案内は、日程が決まったあとに、保護者様とお子様のそれぞれのメールアドレスにお送りします。\n' +
-      '・このメールに心当たりがない場合は、お手数ですが、ご返信ください。' + foot
-  };
+  var who, detail;
+  if (category === 'corp') { who = p.name + ' 様'; detail = ['法人名:' + p.company, 'ご担当者:' + p.name]; }
+  else if (category === 'career') { who = p.name + ' 様'; detail = ['保護者:' + p.name, 'お子様:' + p.childName + ' さん']; }
+  else { who = p.name + ' 様'; detail = ['お名前:' + p.name]; }
+  var plan = (category === 'corp') ? (p.plan || null) : null;
+  var steps = ['日程の調整は、運営から改めてご連絡します。'];
+  if (category === 'career') steps.push('アンケートのご案内は、日程が決まったあとに、保護者様とお子様のそれぞれのメールアドレスにお送りします。');
+  steps.push('このメールに心当たりがない場合は、お手数ですが、ご返信ください。');
+
+  var text = who + '\n\nお申込みありがとうございます。お申込みを受け付けました。\n\n' +
+    '■ お申込み内容\n' + detail.join('\n') + '\n\n' +
+    '■ 鑑定料・お振込先\n' + feeLines_(category, plan).join('\n') + '\n\n' + bankLines_().join('\n') + '\nお支払い方法は、口座振込のみです。\n\n' +
+    '■ 次のステップ\n' + steps.map(function (x) { return '・' + x; }).join('\n') + '\n\n' +
+    '■ 林 竜輔の公式LINE\nまだ追加していない方は、こちらから追加してください。\n' + LINE_URL + foot;
+
+  var box = 'background:#f6f7f9;border-radius:10px;padding:14px 18px;margin:18px 0;';
+  var row = function (a, b) { return '<tr><td style="padding:3px 14px 3px 0;color:#6b7785;white-space:nowrap;">' + escHtml_(a) + '</td><td style="padding:3px 0;">' + escHtml_(b) + '</td></tr>'; };
+  var kv = function (lines) { return lines.map(function (l) { var i = l.indexOf(':'); return i < 0 ? row('', l) : row(l.slice(0, i), l.slice(i + 1)); }).join(''); };
+  var html = '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Hiragino Sans\',\'Noto Sans JP\',sans-serif;color:#1f2933;line-height:1.75;max-width:560px;margin:0 auto;padding:20px 16px;">' +
+    '<div style="font-size:12px;letter-spacing:.08em;color:#6b7785;">KAGAMI</div>' +
+    '<h2 style="font-size:20px;margin:4px 0 16px;color:#1f2933;">お申込みを受け付けました</h2>' +
+    '<p style="margin:0 0 6px;">' + escHtml_(who) + '</p>' +
+    '<p style="margin:0;">お申込みありがとうございます。内容を確認のうえ、運営から改めてご連絡します。</p>' +
+    '<div style="' + box + '"><div style="font-weight:700;margin-bottom:6px;">お申込み内容</div><table style="border-collapse:collapse;font-size:14px;">' + kv(detail) + '</table></div>' +
+    '<div style="border:2px solid #2e6da4;border-radius:10px;padding:14px 18px;margin:18px 0;">' +
+    '<div style="font-weight:700;margin-bottom:6px;color:#2e6da4;">鑑定料・お振込先</div>' +
+    '<div style="font-size:22px;font-weight:700;margin:2px 0 8px;">' + escHtml_(feeLines_(category, plan).filter(function (l) { return l.indexOf('鑑定料:') === 0; }).map(function (l) { return l.replace('鑑定料:', ''); }).join(' / ') || feeLines_(category, plan).join(' ')) + '</div>' +
+    (category === 'corp' && !plan ? '' : '') +
+    '<table style="border-collapse:collapse;font-size:14px;">' + kv(bankLines_()) + '</table>' +
+    '<div style="font-size:12px;color:#6b7785;margin-top:8px;">お支払い方法は、口座振込のみです。</div></div>' +
+    '<div style="margin:18px 0;"><div style="font-weight:700;margin-bottom:4px;">次のステップ</div><ol style="margin:0;padding-left:20px;">' + steps.map(function (x) { return '<li>' + escHtml_(x) + '</li>'; }).join('') + '</ol></div>' +
+    '<div style="' + box + 'text-align:center;"><div style="margin-bottom:10px;">林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください。</div>' +
+    '<a href="' + escHtml_(LINE_URL) + '" style="display:inline-block;background:#06c755;color:#ffffff;text-decoration:none;font-weight:700;padding:11px 26px;border-radius:24px;">公式LINEを追加する</a></div>' +
+    '<p style="font-size:13px;color:#6b7785;margin:18px 0 0;">ご不明な点があれば、このメールにご返信ください。<br>' + escHtml_(CONFIG.SENDER_NAME) + '(' + escHtml_(CONFIG.CONTACT_MAIL) + ')</p></div>';
+  return { subject: '【お申込みを受け付けました】算命学の鑑定', body: text, html: html };
 }
 
 // ======================================================================
@@ -689,6 +712,7 @@ function renameNewSheet_(ss, beforeIds, name) {
 
 /** セットアップをやり直す前に実行する(記録された設定だけを消す。作成済みのファイルやフォームは消えません) */
 function resetSetup() {
+  ownerOnly_();
   var props = PropertiesService.getScriptProperties();
   ['SS_ID', 'REG_SS_ID', 'FORM_IDS'].forEach(function (k) { props.deleteProperty(k); });
   ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
@@ -696,6 +720,7 @@ function resetSetup() {
 }
 
 function setup() {
+  ownerOnly_();
   var props = PropertiesService.getScriptProperties();
   if (props.getProperty('SS_ID')) throw new Error('すでにセットアップ済みです。やり直す場合は、スクリプトプロパティ SS_ID・REG_SS_ID・FORM_IDS を削除してください(既存の回答は消えません)。');
   var errors = validateSurveyDefinition_();
@@ -796,7 +821,7 @@ function readRoster_(reg) {
       sessionDate: ds(r[RC.session]), status: r[RC.status], sent: { T0: ts(r[RC.T0]), T1: ts(r[RC.T1]), T2: ts(r[RC.T2]) },
       exName: t(r[RC.exName]), exPlan: t(r[RC.exPlan]), pNote: t(r[RC.pnote]), cNote: t(r[RC.cnote]), memo: t(r[RC.memo]),
       category: t(r[RC.category]) || 'career', company: t(r[RC.company]), dept: t(r[RC.dept]), phone: t(r[RC.phone]), headcount: t(r[RC.headcount]),
-      targets: t(r[RC.targets]), invoice: t(r[RC.invoice]), request: t(r[RC.request]) };
+      targets: t(r[RC.targets]), invoice: t(r[RC.invoice]), request: t(r[RC.request]), plan: t(r[RC.plan]) };
   }).filter(function (r) { return r.id; });
 }
 
@@ -811,8 +836,10 @@ function getPrefilledUrl_(formKey, id) {
   return c.form.createResponse().withItemResponse(c.item.asTextItem().createResponse(id)).toPrefilledUrl();
 }
 
-function sendMail_(to, subject, body) {
-  MailApp.sendEmail({ to: to, subject: subject, body: body, name: CONFIG.SENDER_NAME, replyTo: CONFIG.CONTACT_MAIL });
+function sendMail_(to, subject, body, html) {
+  var o = { to: to, subject: subject, body: body, name: CONFIG.SENDER_NAME, replyTo: CONFIG.CONTACT_MAIL };
+  if (html) o.htmlBody = html;
+  MailApp.sendEmail(o);
 }
 
 // ======================================================================
@@ -831,18 +858,12 @@ function onApplySubmit(e) {
     var tsIso = nowStr_();
     var existing = readRoster_(reg).map(function (r) { return { id: r.id, email: r.email, childName: r.childName, name: r.name, company: r.company, category: r.category }; });
     var res = processApplication_(e.namedValues, existing, tsIso, category);
-    var op = opMail_(reg);
     var label = CATEGORY_LABEL[category];
     if (res.ok) {
-      reg.getSheetByName(SHEETS.roster).appendRow(res.row);
-      var mail = buildApplyReceiptEmail_(res, category);
-      var result = '送信済み';
-      try { sendMail_(res.email, mail.subject, mail.body); } catch (err) { result = '【送信失敗】' + err; }
-      reg.getSheetByName(SHEETS.sendlog).appendRow([tsIso, res.id, '申込受付(' + label + ')', res.email, result]);
-      var who = category === 'corp' ? res.company + ' / 担当:' + res.name : (category === 'career' ? '保護者:' + res.name + ' / お子様:' + res.childName : res.name);
-      if (op) sendMail_(op, '[研究アンケート] 新しい申込がありました(' + label + ' / ' + res.id + ')', res.id + ' / ' + who + '\n日程調整のうえ、名簿の「鑑定日」を入力してください。\n' + reg.getUrl());
+      finishApplication_(reg, category, res, tsIso);
     } else {
       reg.getSheetByName(SHEETS.pending).appendRow(res.pendingRow);
+      var op = opMail_(reg);
       if (op) sendMail_(op, '[研究アンケート] 確認が必要な申込があります(' + label + ')', '理由: ' + res.reason + '\n「申込要確認」シートをご確認ください。(IDは発行していません)\n' + reg.getUrl());
     }
   } finally {
@@ -890,6 +911,7 @@ function sendLinksToFamilies_(reg, time, due) {
 
 /** 確認ダイアログのあと、対象の家庭にアンケートのリンクをメールで送る(ボタン=メニューから実行) */
 function sendLinks_(time, mode) {
+  ownerOnly_();
   var reg = regSS_();
   var ui = SpreadsheetApp.getUi();
   var selected = (mode === 'selected') ? getSelectedRows_(reg) : null;
@@ -944,6 +966,7 @@ function deleteFamilyCore_(reg, db, fam) {
 
 /** 削除のお申し出があったとき(メニューから): 研究用IDの回答データを回答DBから削除し、名簿の個人情報も消す */
 function deleteFamilyData() {
+  ownerOnly_();
   var ui = SpreadsheetApp.getUi();
   var r = ui.prompt('削除するID', '削除を申し出た方のID(例:F0001)を入力してください。この操作は元に戻せません。', ui.ButtonSet.OK_CANCEL);
   if (r.getSelectedButton() !== ui.Button.OK) return;
@@ -1142,7 +1165,7 @@ function buildDashboardData_(roster, pending, subs, safety, today) {
       officialLine: f.officialLine, referrer: f.referrer, childName: f.childName, cGender: f.cGender, cBirth: f.cBirth, childEmail: f.childEmail,
       sessionDate: f.sessionDate, status: String(f.status || '参加中'), sent: f.sent, resp: resp, exName: f.exName, exPlan: f.exPlan,
       pNote: f.pNote, cNote: f.cNote, memo: f.memo, company: f.company, dept: f.dept, phone: f.phone, headcount: f.headcount,
-      targets: f.targets, invoice: f.invoice, request: f.request, next: nextAction_(f, resp, today) };
+      targets: f.targets, invoice: f.invoice, request: f.request, plan: f.plan, next: nextAction_(f, resp, today) };
   });
   var active = roster.filter(function (f) { return isParticipating_(f.status); });
   var careerActive = active.filter(function (f) { return (f.category || 'career') === 'career'; });
@@ -1336,7 +1359,7 @@ var DASHBOARD_HTML = [
   'function fields(f){var base=[["ID",f.id],["区分",f.category==="career"?"進路相談用":f.category==="general"?"一般鑑定者用":"法人鑑定者用"],["申込日時",f.appliedAt]];var mid;',
   'if(f.category==="career")mid=[["保護者",f.name+"("+f.pGender+" / "+f.pBirth+")"],["保護者メール",f.email],["LINE検索ID",f.line],["Instagram",f.insta||"-"],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["お子様",f.childName+"("+f.cGender+" / "+f.cBirth+")"],["お子様メール",f.childEmail],["追加の鑑定",(f.exName||"-")+" "+(f.exPlan||"")],["保護者の連絡事項",f.pNote||"-"],["お子様の連絡事項",f.cNote||"-"]];',
   'else if(f.category==="general")mid=[["お名前",f.name+"("+f.pGender+" / "+f.pBirth+")"],["メール",f.email],["LINE検索ID",f.line],["Instagram",f.insta||"-"],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["ご希望の内容",f.request||"-"],["自由記入欄",f.pNote||"-"]];',
-  'else mid=[["法人名",f.company],["部署・役職",f.dept||"-"],["ご担当者",f.name],["メール",f.email],["電話番号",f.phone],["LINE検索ID",f.line],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["鑑定を受ける人数",f.headcount],["鑑定を受ける方",f.targets],["ご希望の内容",f.request||"-"],["請求書・領収書の宛名",f.invoice||"-"],["自由記入欄",f.pNote||"-"]];',
+  'else mid=[["法人名",f.company],["部署・役職",f.dept||"-"],["ご担当者",f.name],["メール",f.email],["電話番号",f.phone],["LINE検索ID",f.line],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["プラン",f.plan||"-"],["鑑定を受ける人数",f.headcount],["鑑定を受ける方",f.targets],["ご希望の内容",f.request||"-"],["請求書・領収書の宛名",f.invoice||"-"],["自由記入欄",f.pNote||"-"]];',
   'var tail=[["鑑定日",f.sessionDate||"未入力"],["参加状況",f.status]];if(f.category==="career")tail.push(["送信日時 T0/T1/T2",[f.sent.T0,f.sent.T1,f.sent.T2].map(function(x){return x||"-"}).join(" / ")]);tail.push(["メモ",f.memo||"-"]);return base.concat(mid,tail)}',
   'function dl(f){var d=el("dl","dl");fields(f).forEach(function(r){d.appendChild(el("dt",null,r[0]));d.appendChild(el("dd",null,r[1]))});return d}',
   'function renderFam(v){var q=document.getElementById("q").value.trim().toLowerCase(),st=document.getElementById("st").value;',
@@ -1361,14 +1384,190 @@ function dashboardPage_(data) {
   return DASHBOARD_HTML.replace('__DATA__', function () { return safeJson_(data); });
 }
 
-/** ウェブアプリ: 申込・進捗を確認する画面(閲覧専用)。デプロイは「自分のみ」にする */
-function doGet() {
+/** ウェブアプリ: 管理者が開くと申込・進捗のダッシュボード。それ以外の人(公開のデプロイ)が開くと申込ページ。?page=apply で、管理者も申込ページを確認できる */
+function doGet(e) {
   var props = PropertiesService.getScriptProperties();
   if (!props.getProperty('REG_SS_ID')) return HtmlService.createHtmlOutput('セットアップが済んでいません。setup() を実行してください。');
+  var page = (e && e.parameter && e.parameter.page) || '';
   var reg = regSS_();
   var ok = isAllowedViewer_(Session.getActiveUser().getEmail(), Session.getEffectiveUser().getEmail(), [opMail_(reg)]);
-  if (!ok) return HtmlService.createHtmlOutput('この画面を見る権限がありません。').setTitle('権限がありません');
+  if (page === 'apply' || !ok) {
+    return HtmlService.createHtmlOutput(applyPage_()).setTitle('算命学の鑑定 お申込み').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
   return HtmlService.createHtmlOutput(dashboardPage_(dashboardData_(reg))).setTitle('申込・進捗ダッシュボード').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+
+// ======================================================================
+// 申込用の専用サイト(公開ページ)。Googleフォームと同じ名簿・通知の仕組みに入れる
+// ======================================================================
+
+/** 管理者だけが実行できる操作の入口で呼ぶ。公開ページ(誰でも開ける)から、google.script.run で呼ばれても、拒否する */
+function ownerOnly_() {
+  var a = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
+  var e = String(Session.getEffectiveUser().getEmail() || '').trim().toLowerCase();
+  if (!a || a !== e) throw new Error('この操作は、管理者のみ実行できます');
+}
+
+var SITE_CATEGORIES = [
+  { key: 'career', def: 'apply', label: '親子', sub: '保護者さまとお子様の、お申込み', desc: 'お子様の進路・自己理解のための鑑定です。研究アンケートへのご協力をお願いしています。', fee: '鑑定料 30,000円' },
+  { key: 'general', def: 'applyG', label: '個人', sub: 'ご自身の、お申込み', desc: 'ご自身の鑑定のお申込みです。', fee: '鑑定料 30,000円' },
+  { key: 'corp', def: 'applyB', label: '法人・団体', sub: '会社・団体の、お申込み', desc: '代表の方、または代表と幹部の方の鑑定のお申込みです。', fee: '代表のみ 50,000円 / 代表+幹部2名 100,000円' }
+];
+
+/** 公開サイトに埋め込むデータ(設問の定義だけ。お振込先は、申込のあとにだけ返す) */
+function publicSiteData_() {
+  return {
+    line: LINE_URL, contact: CONTACT_MAIL,
+    cats: SITE_CATEGORIES.map(function (c) {
+      var d = SURVEY[c.def];
+      return {
+        key: c.key, label: c.label, sub: c.sub, desc: c.desc, fee: c.fee,
+        blocks: d.blocks.map(function (b) {
+          if (b.type === 'page') return { type: 'page', title: b.title, desc: b.desc || '', conditional: !!b.conditional };
+          return { type: 'q', id: b.id, text: b.text, kind: b.kind, required: !!b.required, choices: b.choices || null, help: b.help || '', gate: !!b.gate };
+        })
+      };
+    })
+  };
+}
+
+/** 申込の回答(設問ID→値)を、安全な形に整える。知らない項目は捨て、長さを制限し、同意は選択肢の文字に直す */
+function sanitizeAnswers_(category, answers) {
+  var def = SURVEY[(SITE_CATEGORIES.filter(function (c) { return c.key === category; })[0] || {}).def];
+  if (!def) throw new Error('区分が正しくありません');
+  var out = {};
+  answers = answers || {};
+  def.blocks.filter(function (b) { return b.type === 'q'; }).forEach(function (q) {
+    var v = answers[q.id];
+    if (q.kind === 'consent' || q.kind === 'check') { out[q.id] = (v === true || v === 'true' || v === q.choices[0]) ? q.choices[0] : ''; return; }
+    v = (v === undefined || v === null) ? '' : String(v);
+    v = v.replace(/\u0000/g, '').trim();
+    if (v.length > (q.kind === 'text' ? 3000 : 300)) v = v.slice(0, q.kind === 'text' ? 3000 : 300);
+    if (q.kind === 'single' && v !== '' && (q.choices || []).indexOf(v) === -1) v = '';
+    out[q.id] = v;
+  });
+  return out;
+}
+
+function answersToNamedValues_(category, answers) {
+  var def = SURVEY[(SITE_CATEGORIES.filter(function (c) { return c.key === category; })[0] || {}).def];
+  var nv = {};
+  def.blocks.filter(function (b) { return b.type === 'q'; }).forEach(function (q) { nv[qTitle_(q)] = [answers[q.id] === undefined ? '' : answers[q.id]]; });
+  return nv;
+}
+
+function friendlyReasons_(reason) {
+  return String(reason).split(' / ').map(function (r) {
+    if (/^同意未確認/.test(r)) return '必須の同意の項目に、チェックをお願いします';
+    if (/^重複申込/.test(r)) return 'すでに、同じ内容のお申込みを受け付けています。ご不明な点は、' + CONTACT_MAIL + ' までご連絡ください';
+    return r;
+  });
+}
+
+/** 一定の時間内の送信回数を制限する(連続送信・いたずらの防止)。cache は CacheService のキャッシュ */
+function rateLimited_(cache, key, max, ttlSec) {
+  var n = Number(cache.get(key) || 0);
+  if (n >= max) return true;
+  cache.put(key, String(n + 1), ttlSec);
+  return false;
+}
+
+
+var APPLY_HTML = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
+'<title>算命学の鑑定 お申込み | KAGAMI</title><style>' +
+':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
+'@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
+'*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 "Hiragino Sans","Yu Gothic",Meiryo,sans-serif}' +
+'header{text-align:center;padding:40px 16px 20px}header .brand{letter-spacing:.4em;color:var(--accent2);font-size:13px}header h1{font:600 24px/1.5 "Hiragino Mincho ProN","Yu Mincho",serif;margin:6px 0}header p{color:var(--mute);margin:0;font-size:14px}' +
+'main{max-width:680px;margin:0 auto;padding:0 16px 64px}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 18px}' +
+'.tab{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;font:inherit;color:var(--ink)}.tab b{display:block;font-size:15px}.tab small{color:var(--mute);font-size:11px;line-height:1.3;display:block}.tab.on{border:2px solid var(--accent);padding:11px 5px}' +
+'.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}.card h2{font-size:17px;margin:0 0 6px;color:var(--accent)}.desc{white-space:pre-wrap;color:var(--mute);font-size:14px;margin:0 0 12px}' +
+'.fee{display:inline-block;background:rgba(138,109,59,.12);color:var(--accent2);border-radius:999px;padding:2px 12px;font-size:13px;margin-top:6px}' +
+'.q{margin:18px 0 0}.q label.t{display:block;font-weight:600;font-size:15px}.req{color:var(--err);font-size:12px;margin-left:6px}.help{color:var(--mute);font-size:13px;margin-top:2px;white-space:pre-wrap}.help a{color:var(--accent)}' +
+'input[type=text],input[type=email],input[type=tel],textarea{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);margin-top:6px}textarea{min-height:96px}input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}' +
+'.opt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-top:6px;cursor:pointer;background:var(--bg)}.opt input{margin-top:6px}' +
+'.err{color:var(--err);font-size:13px;margin-top:4px;display:none}.q.bad .err{display:block}.q.bad input[type=text],.q.bad input[type=email],.q.bad input[type=tel],.q.bad textarea,.q.bad .opt{border-color:var(--err)}' +
+'.btn{display:block;width:100%;border:0;border-radius:12px;background:var(--accent);color:#fff;font:600 16px inherit;padding:15px;cursor:pointer}.btn:disabled{opacity:.5}@media(prefers-color-scheme:dark){.btn{color:#101018}}' +
+'.hp{position:absolute;left:-9999px;height:0;overflow:hidden}.banner{border-radius:10px;padding:12px 14px;margin-bottom:14px;background:rgba(179,38,30,.1);color:var(--err);font-size:14px;display:none;white-space:pre-wrap}' +
+'.bank{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:15px;white-space:pre-wrap}.big{font-size:26px;font-weight:700;color:var(--accent)}.line{display:block;text-align:center;background:#06c755;color:#fff;border-radius:12px;padding:14px;text-decoration:none;font-weight:600;margin-top:10px}.ok{color:var(--ok);font-size:34px;text-align:center}' +
+'footer{text-align:center;color:var(--mute);font-size:12px;padding:10px 16px 40px}</style></head><body>' +
+'<header><div class="brand">KAGAMI</div><h1>算命学の鑑定 お申込み</h1><p>必要事項を入力して、送信してください。送信後に、お振込先をご案内します。</p></header>' +
+'<main><div id="app"></div></main><footer id="foot"></footer>' +
+'<script>var SITE = __DATA__;' +
+'var el=function(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e;};' +
+'var cur=null,fields={},app=document.getElementById("app");' +
+'function linkify(box,text){String(text).split(/(https?:\\/\\/[^\\s]+)/).forEach(function(p){if(/^https?:/.test(p)){var a=el("a","",p);a.href=p;a.target="_blank";a.rel="noopener";box.appendChild(a);}else box.appendChild(document.createTextNode(p));});}' +
+'var checks={email:function(v){return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v);},birth:function(v){if(!/^[0-9]{8}$/.test(v))return false;var y=+v.slice(0,4),m=+v.slice(4,6),d=+v.slice(6,8),t=new Date(y,m-1,d);return y>1900&&t.getFullYear()===y&&t.getMonth()===m-1&&t.getDate()===d&&t<=new Date();},phone:function(v){return /^[0-9\\-]{9,13}$/.test(v);},katakana:function(v){return /^[ァ-ヺー・\\s　]+$/.test(v);},int:function(v){return /^[0-9]{1,3}$/.test(v);}};' +
+'var msg={email:"メールアドレスの形式が正しくありません",birth:"生年月日は8桁の半角数字で入力してください(例:20000218)",phone:"電話番号は、数字とハイフンで入力してください",katakana:"カタカナで入力してください",int:"半角数字で入力してください"};' +
+'function show(key){cur=SITE.cats.filter(function(c){return c.key===key;})[0];fields={};app.innerHTML="";' +
+' var tabs=el("div","tabs");SITE.cats.forEach(function(c){var b=el("button","tab"+(c.key===key?" on":""));b.type="button";b.appendChild(el("b","",c.label));b.appendChild(el("small","",c.sub));b.onclick=function(){show(c.key);window.scrollTo(0,0);};tabs.appendChild(b);});app.appendChild(tabs);' +
+' var banner=el("div","banner");app.appendChild(banner);var card=null;' +
+' cur.blocks.forEach(function(b,i){if(b.type==="page"){if(b.conditional)return;card=el("div","card");card.appendChild(el("h2","",b.title));if(b.desc)card.appendChild(el("div","desc",b.desc));if(i===0){card.appendChild(el("span","fee",cur.fee));}app.appendChild(card);return;}' +
+'  if(b.id==="AP_VIEW")return;if(!card){card=el("div","card");app.appendChild(card);}' +
+'  var q=el("div","q"),l=el("label","t",b.text);if(b.required){l.appendChild(el("span","req","必須"));}q.appendChild(l);if(b.help){var h=el("div","help");linkify(h,b.help);q.appendChild(h);}' +
+'  var f={b:b,q:q,get:null};' +
+'  if(b.kind==="single"){var name="r_"+b.id;(b.choices||[]).forEach(function(c){var lab=el("label","opt"),r=document.createElement("input");r.type="radio";r.name=name;r.value=c;lab.appendChild(r);lab.appendChild(el("span","",c));q.appendChild(lab);});f.get=function(){var x=q.querySelector("input:checked");return x?x.value:"";};}' +
+'  else if(b.kind==="consent"||b.kind==="check"){var lab=el("label","opt"),r=document.createElement("input");r.type="checkbox";lab.appendChild(r);lab.appendChild(el("span","",b.choices[0]));q.appendChild(lab);f.get=function(){return r.checked?b.choices[0]:"";};}' +
+'  else{var inp=b.kind==="text"?document.createElement("textarea"):document.createElement("input");if(b.kind!=="text")inp.type=b.kind==="email"?"email":b.kind==="phone"?"tel":"text";if(b.kind==="birth")inp.inputMode="numeric";inp.autocomplete="off";q.appendChild(inp);f.get=function(){return inp.value.trim();};}' +
+'  q.appendChild(el("div","err"));card.appendChild(q);fields[b.id]=f;});' +
+' var hp=el("div","hp");var hpi=document.createElement("input");hpi.type="text";hpi.tabIndex=-1;hpi.autocomplete="off";hp.appendChild(hpi);app.appendChild(hp);' +
+' var btn=el("button","btn","同意して、送信する");btn.type="button";app.appendChild(btn);' +
+' btn.onclick=function(){var ans={},bad=null;Object.keys(fields).forEach(function(id){var f=fields[id],v=f.get(),e=null;ans[id]=v;if(f.b.required&&!v)e=f.b.kind==="consent"||f.b.kind==="check"?"チェックをお願いします":"入力してください";else if(v&&checks[f.b.kind]&&!checks[f.b.kind](v))e=msg[f.b.kind];f.q.classList.toggle("bad",!!e);f.q.querySelector(".err").textContent=e||"";if(e&&!bad)bad=f.q;});' +
+'  ["AP2:AP3","CH4:CH5","GE4:GE5","CO4:CO5"].forEach(function(p){var a=p.split(":");if(fields[a[0]]&&ans[a[0]]&&ans[a[1]]&&ans[a[0]]!==ans[a[1]]){var f=fields[a[1]];f.q.classList.add("bad");f.q.querySelector(".err").textContent="上のメールアドレスと一致していません";if(!bad)bad=f.q;}});' +
+'  if(bad){banner.style.display="block";banner.textContent="入力内容を、ご確認ください(赤い項目)";bad.scrollIntoView({behavior:"smooth",block:"center"});return;}' +
+'  banner.style.display="none";btn.disabled=true;btn.textContent="送信しています…";' +
+'  google.script.run.withSuccessHandler(function(r){if(r&&r.ok){done(r);}else{btn.disabled=false;btn.textContent="同意して、送信する";banner.style.display="block";banner.textContent=((r&&r.errors)||["送信できませんでした"]).join("\\n");window.scrollTo(0,0);}}).withFailureHandler(function(){btn.disabled=false;btn.textContent="同意して、送信する";banner.style.display="block";banner.textContent="送信できませんでした。通信状況をご確認のうえ、もう一度お試しください。";}).submitApplication(cur.key,ans,hpi.value);};' +
+'}' +
+'function done(r){app.innerHTML="";var c=el("div","card");c.appendChild(el("div","ok","✓"));c.appendChild(el("h2","","お申込みを受け付けました"));c.appendChild(el("div","desc",r.silent?"":(r.email||"")+" 宛に、受付確認のメールをお送りしました。届かない場合は、迷惑メールのフォルダもご確認ください。"));' +
+' if(!r.silent){c.appendChild(el("h2","","鑑定料・お振込先"));var b=el("div","bank");b.appendChild(el("div","big",(r.fee||[])[0]||""));var rest=(r.fee||[]).slice(1).concat([""]).concat(r.bank||[]);b.appendChild(document.createTextNode(rest.join("\\n")));c.appendChild(b);c.appendChild(el("div","desc","お支払い方法は、口座振込のみです。日程の調整は、運営から改めてご連絡します。"));' +
+' c.appendChild(el("div","desc","林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください。"));var a=el("a","line","公式LINEを追加する");a.href=r.line;a.target="_blank";a.rel="noopener";c.appendChild(a);}' +
+' app.appendChild(c);window.scrollTo(0,0);}' +
+'document.getElementById("foot").textContent="運営: KAGAMI / 責任者: " + "' + RESPONSIBLE + '" + " / お問い合わせ: " + SITE.contact;' +
+'var qs=(location.search||"").match(/cat=(career|general|corp)/);show(qs?qs[1]:SITE.cats[0].key);' +
+'</script></body></html>';
+
+function applyPage_() {
+  return APPLY_HTML.replace('__DATA__', function () { return safeJson_(publicSiteData_()); });
+}
+
+/** 申込を名簿に登録し、受付確認メール(お振込先つき)を申込者に、新規申込の通知を運営に送る(フォーム・専用サイトの共通処理) */
+function finishApplication_(reg, category, res, tsIso) {
+  reg.getSheetByName(SHEETS.roster).appendRow(res.row);
+  var mail = buildApplyReceiptEmail_(res, category);
+  var result = '送信済み';
+  try { sendMail_(res.email, mail.subject, mail.body, mail.html); } catch (err) { result = '【送信失敗】' + err; }
+  var label = CATEGORY_LABEL[category];
+  reg.getSheetByName(SHEETS.sendlog).appendRow([tsIso, res.id, '申込受付(' + label + ')', res.email, result]);
+  var op = opMail_(reg);
+  var who = category === 'corp' ? res.company + ' / 担当:' + res.name + ' / ' + (res.plan ? res.plan.label : '') : (category === 'career' ? '保護者:' + res.name + ' / お子様:' + res.childName : res.name);
+  if (op) sendMail_(op, '[研究アンケート] 新しい申込がありました(' + label + ' / ' + res.id + ')', res.id + ' / ' + who + '\n日程調整のうえ、名簿の「鑑定日」を入力してください。\n' + reg.getUrl());
+  return result;
+}
+
+/** 専用サイトからの申込(誰でも呼べる)。入力を確認し、問題があれば修正点を返し、問題なければ登録して、お振込先を返す */
+function submitApplication(category, answers, honeypot) {
+  if (['career', 'general', 'corp'].indexOf(category) === -1) throw new Error('区分が正しくありません');
+  if (honeypot) return { ok: true, silent: true };
+  var clean = sanitizeAnswers_(category, answers);
+  var cache = CacheService.getScriptCache();
+  if (rateLimited_(cache, 'apply_all_' + Math.floor(Date.now() / 60000), 40, 120)) return { ok: false, errors: ['ただいま、混み合っています。しばらくしてから、もう一度お試しください'] };
+  var emailKey = String(clean.AP2 || clean.GE4 || clean.CO4 || '').toLowerCase();
+  if (emailKey && rateLimited_(cache, 'apply_mail_' + emailKey.slice(0, 80), 5, 3600)) return { ok: false, errors: ['同じメールアドレスからの送信が多すぎます。しばらくしてから、もう一度お試しください'] };
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var reg = regSS_();
+    var existing = readRoster_(reg).map(function (r) { return { id: r.id, email: r.email, childName: r.childName, name: r.name, company: r.company, category: r.category }; });
+    var tsIso = nowStr_();
+    var res = processApplication_(answersToNamedValues_(category, clean), existing, tsIso, category);
+    if (!res.ok) return { ok: false, errors: friendlyReasons_(res.reason) };
+    finishApplication_(reg, category, res, tsIso);
+    var plan = res.plan || null;
+    return { ok: true, fee: feeLines_(category, plan), bank: bankLines_(), line: LINE_URL, email: res.email };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ======================================================================
@@ -1376,6 +1575,7 @@ function doGet() {
 // ======================================================================
 
 function buildSummary() {
+  ownerOnly_();
   var ss = dbSS_();
   var sh = ss.getSheetByName(SHEETS.summary);
   var data = ss.getSheetByName(SHEETS.long).getDataRange().getValues();
@@ -1410,6 +1610,7 @@ function buildSummary() {
 
 /** CSV出力(UTF-8 BOM付き)。個人情報は含まない回答DBのみ。Drive のフォルダ「研究アンケート_CSV出力」に保存 */
 function exportCsv() {
+  ownerOnly_();
   var ss = dbSS_();
   var folders = DriveApp.getFoldersByName('研究アンケート_CSV出力');
   var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('研究アンケート_CSV出力');
@@ -1446,6 +1647,7 @@ function exportCsv() {
 // ======================================================================
 
 function runStaticTests() {
+  ownerOnly_();
   var reg = regSS_();
   var res = [];
   function add(name, ok, detail) { res.push([name, ok ? 'OK' : 'NG', detail || '']); }
@@ -1505,6 +1707,7 @@ function runStaticTests() {
 
 /** テスト送信(研究用ID F9999)。実行後1分ほど待ってから verifyDataTests() を実行する */
 function runDataTests() {
+  ownerOnly_();
   var formIds = getFormIds_();
   function submit(key, map) {
     var form = FormApp.openById(formIds[key]);
@@ -1527,6 +1730,7 @@ function runDataTests() {
 }
 
 function verifyDataTests() {
+  ownerOnly_();
   var db = dbSS_();
   var reg = regSS_();
   var long = db.getSheetByName(SHEETS.long).getDataRange().getValues();

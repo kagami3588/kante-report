@@ -35,7 +35,7 @@ class SS {
 }
 
 function makeEnv(activeEmail) {
-  const sent = [];
+  const sent = [], cache = {};
   const reg = new SS('reg'), db = new SS('db');
   const ctxEnv = { console, Logger: { log() {} } };
   const env = vm.createContext(ctxEnv);
@@ -50,7 +50,7 @@ function makeEnv(activeEmail) {
   const resp = db.add('resp_CT0', ['タイムスタンプ', 'RID. 研究用ID(運営から届いた専用リンクで自動入力されます。変更しないでください)', 'S1. x']);
   const rc = (n) => vm.runInContext('RC.' + n, env);
   function addFamily(o) {
-    const row = new Array(32).fill('');
+    const row = new Array(33).fill('');
     Object.entries({ id: 'F0001', ts: '2026-11-01T10:00:00', pname: '山田 花子', pgender: '女性', pbirth: '19850612', pemail: 'hanako@example.com', line: 'hana', officialLine: '追加しました', referrer: 'ナシ',
       cname: '山田 太郎', cgender: '男性', cbirth: '20100315', cemail: 'taro@example.com', status: '参加中', category: 'career' }).forEach(([k, v]) => { row[rc(k)] = (o && o[k] !== undefined) ? o[k] : v; });
     Object.keys(o || {}).forEach(k => { row[rc(k)] = o[k]; });
@@ -62,6 +62,9 @@ function makeEnv(activeEmail) {
     SpreadsheetApp: { openById: (id) => (id === 'reg' ? reg : db), flush() {} },
     Session: { getActiveUser: () => ({ getEmail: () => activeEmail }), getEffectiveUser: () => ({ getEmail: () => 'me@example.com' }) },
     MailApp: { sendEmail: (o) => { sent.push(o); }, getRemainingDailyQuota: () => 100 },
+    CacheService: { getScriptCache: () => ({ get: (k) => (cache[k] === undefined ? null : cache[k]), put: (k, v) => { cache[k] = v; } }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    HtmlService: { createHtmlOutput: (h) => { const o = { html: h, setTitle(x) { o.title = x; return o; }, addMetaTag() { return o; } }; return o; } },
     Utilities: {
       getUuid: () => 'abcdef12-0000',
       formatDate: (d, tz, fmt) => { const j = new Date(d.getTime() + 9 * 3600 * 1000).toISOString(); return fmt.indexOf('HH') !== -1 ? j.slice(0, 19) : j.slice(0, 10); }
@@ -193,6 +196,46 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   ];
   used.forEach(([name, re, scope]) => { if (re.test(code)) t('マニフェストに必要な権限がある: ' + name, mf.oauthScopes.indexOf(scope) !== -1, scope); });
   t('ウェブアプリの既定の公開範囲は「自分のみ」・実行者は「自分」', mf.webapp && mf.webapp.access === 'MYSELF' && mf.webapp.executeAs === 'USER_DEPLOYING');
+}
+
+
+{ // 専用サイト(公開の申込ページ)
+  const GE = { GE1: '佐藤 一郎', GE2: '男性', GE3: '19800101', GE4: 'ichiro@example.com', GE5: 'ichiro@example.com', GE6: 'ichiro_line', GE8: '追加しました', GE9: 'ナシ', CONSENT_PI: '同意します' };
+  const E = makeEnv('');
+  const r = E.run('submitApplication')('general', GE, '');
+  t('サイト申込(一般): 受付 → G0001・名簿に33列で登録', r.ok && E.roster.values.length === 2 && E.roster.values[1][0] === 'G0001' && E.roster.values[1].length === 33);
+  t('サイト申込: 完了画面に鑑定料・お振込先・LINEを返す', /30,000円/.test(r.fee.join()) && /7332659/.test(r.bank.join()) && r.line === 'https://lin.ee/ewijo32');
+  t('サイト申込: 申込者に受付メール(HTMLつき・お振込先入り)と、運営に通知', E.sent.some(m => m.to === 'ichiro@example.com' && /7332659/.test(m.body) && /7332659/.test(m.htmlBody)) && E.sent.some(m => m.to === 'op@example.com'));
+  t('サイト申込: 送信ログに記録', E.sendlog.values.some(x => /申込受付/.test(x[2])));
+  const r2 = E.run('submitApplication')('general', Object.assign({}, GE, { CONSENT_PI: '' }), '');
+  t('サイト申込: 同意なし → 修正点を返し、登録しない', !r2.ok && /同意/.test(r2.errors.join()) && E.roster.values.length === 2);
+  const r3 = E.run('submitApplication')('general', GE, '');
+  t('サイト申込: 同じ内容の重複申込は登録しない', !r3.ok && E.roster.values.length === 2);
+  const r4 = E.run('submitApplication')('general', Object.assign({}, GE, { GE4: 'x@example.com' }), 'bot');
+  t('サイト申込: 隠し欄に入力があれば(ボット)黙って捨てる', r4.ok && r4.silent && E.roster.values.length === 2);
+  t('サイト申込: 区分が不正ならエラー', !!throws(() => E.run('submitApplication')('hack', GE, '')));
+  const rb = E.run('submitApplication')('corp', { CO1: '株式会社サンプル', CO3: '鈴木 花子', CO4: 'suzuki@sample.co.jp', CO5: 'suzuki@sample.co.jp', CO6: '03-1234-5678', CO7: 'l', CO8: '追加しました', CO9: 'ナシ', CO10: '代表のみ 50,000円', CO11: '鈴木 花子/女性/19800101', CONSENT_PI: '同意します', CONSENT_TARGET: '同意します', EVIL: 'x' }, '');
+  t('サイト申込(法人): プラン代表のみ → 50,000円、プランが名簿に入る、知らない項目は捨てる', rb.ok && /50,000円/.test(rb.fee.join()) && E.roster.values[2][E.rc('plan')] === '代表のみ 50,000円');
+  const E2 = makeEnv('');
+  let n = 0; for (let i = 0; i < 8; i++) { const x = E2.run('submitApplication')('general', Object.assign({}, GE, { GE1: 'n' + i, GE4: 'same@example.com', GE5: 'same@example.com' }), ''); if (!x.ok && /多すぎ/.test((x.errors || []).join())) n++; }
+  t('サイト申込: 同じメールからの連続送信は制限される', n >= 1);
+}
+{ // 権限(公開ページから管理用の関数は呼べない)
+  const guarded = ['setup', 'resetSetup', 'runStaticTests', 'runDataTests', 'verifyDataTests', 'buildSummary', 'exportCsv', 'deleteFamilyData'];
+  const E = makeEnv('');
+  t('管理用の関数(setup・削除・集計など)は、管理者以外が呼ぶと拒否される', guarded.every(f => /管理者のみ/.test(throws(() => E.run(f)()) || '')));
+  const E2 = makeEnv('me@example.com');
+  t('管理者本人なら、権限の確認を通る', !throws(() => E2.run('ownerOnly_')()));
+}
+{ // ページの出し分け
+  const A = makeEnv(''); const pa = A.run('doGet')({ parameter: {} });
+  t('公開(閲覧者のメール不明)で開くと、申込ページが出る(ダッシュボードは出ない)', /お申込み/.test(pa.title) && !/dashboard/i.test(pa.title) && /submitApplication/.test(pa.html) && !/F0001/.test(pa.html));
+  const O = makeEnv('me@example.com'); O.addFamily({});
+  t('管理者が開くとダッシュボード、?page=apply なら申込ページ', /ダッシュボード/.test(O.run('doGet')({ parameter: {} }).title) && /お申込み/.test(O.run('doGet')({ parameter: { page: 'apply' } }).title));
+  t('申込ページには、お振込先(口座番号)が含まれない(申込後にだけ表示)', !/7332659/.test(pa.html));
+  const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
+  let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
+  t('申込ページのスクリプトに構文エラーがない', ok);
 }
 
 console.log('\n' + pass + ' passed / ' + fail + ' failed');

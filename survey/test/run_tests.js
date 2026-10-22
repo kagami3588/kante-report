@@ -259,7 +259,7 @@ const byId = (id) => apQs.find(q => q.id === id);
 t('保護者用の項目: 名前・性別・生年月日・メール・LINE検索ID・Instagram(任意)・公式LINE追加(チェック)・紹介者(カタカナ)・自由記入欄', ['AP1', 'AP6', 'AP7', 'AP2', 'AP8', 'AP9', 'AP10', 'AP11', 'AP5'].every(id => !!byId(id)) && byId('AP9').required === false && byId('AP10').kind === 'check' && byId('AP10').required === true && byId('AP11').kind === 'katakana');
 t('保護者用の文言(フルネーム・生年月日の例20000218・LINE検索ID・公式LINE)', /名前\(フルネーム\)/.test(byId('AP1').text) && /20000218/.test(byId('AP7').text) && byId('AP8').text === 'LINE検索ID' && /林 竜輔の公式LINEを追加しましたか/.test(byId('AP10').text) && /Instagram/.test(byId('AP9').text) && /任意/.test(byId('AP9').text));
 t('お子様用の項目: 名前・性別・生年月日・メール・自由記入欄', ['CH1', 'CH2', 'CH3', 'CH4', 'CH6'].every(id => !!byId(id)) && /20100315/.test(byId('CH3').text));
-t('性別は個人情報の入力欄(保護者・お子様)にある', byId('AP6').text === '性別' && byId('CH2').text === '性別' && JSON.stringify(byId('AP6').choices) === JSON.stringify(['女性', '男性', 'その他']));
+t('性別は個人情報の入力欄(保護者・お子様)にある', byId('AP6').text === '性別' && byId('CH2').text === '性別' && JSON.stringify(byId('AP6').choices) === JSON.stringify(['男性', '女性']));
 t('追加の鑑定: 名前(任意)・レポートのみ5,000円/オンライン鑑定希望10,000円(任意)', byId('EX1').required === false && byId('EX2').required === false && JSON.stringify(byId('EX2').choices) === JSON.stringify(['レポートのみ 5,000円', 'オンライン鑑定希望 10,000円']));
 const order = apQs.map(q => q.id);
 t('入力欄の順序: 保護者用→お子様用→追加の鑑定→同意', order.indexOf('AP1') < order.indexOf('CH1') && order.indexOf('CH1') < order.indexOf('EX1') && order.indexOf('EX1') < order.indexOf('CONSENT'));
@@ -299,9 +299,9 @@ t('同意書・説明書のリンク用の設定(CONSENT_DOC_URL)がある。空
 const NVA = (o) => { const base = { AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'hanako@example.com', AP3: 'hanako@example.com', AP8: 'hanako_line', AP9: '', AP10: '追加しました', AP11: 'ナシ', AP5: '', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH4: 'taro@example.com', CH5: 'taro@example.com', CH6: '', EX1: '', EX2: '', AP_VIEW: '', CONSENT: '同意します', CONSENT_CHILD: '同意します', CONSENT_PI: '同意します', CONSENT_ANON: '同意します' }; const m = Object.assign(base, o); const out = {}; ap.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
 const pa = vm.runInContext('processApplication_', ctx);
 let pr = pa(NVA({}), [], '2026-11-01T10:00:00');
-t('申込OK → F0001を発行し、名簿の行(32列)を作る', pr.ok && pr.id === 'F0001' && pr.row.length === 32 && pr.row[0] === 'F0001' && pr.row[15] === '参加中' && pr.row[run('RC.category')] === 'career');
+t('申込OK → F0001を発行し、名簿の行(33列)を作る', pr.ok && pr.id === 'F0001' && pr.row.length === 33 && pr.row[0] === 'F0001' && pr.row[15] === '参加中' && pr.row[run('RC.category')] === 'career');
 t('名簿の列の位置(RC)と行の内容が一致', pr.row[run('RC.pname')] === '山田 花子' && pr.row[run('RC.pgender')] === '女性' && pr.row[run('RC.pbirth')] === '19850612' && pr.row[run('RC.pemail')] === 'hanako@example.com' && pr.row[run('RC.line')] === 'hanako_line' && pr.row[run('RC.officialLine')] === '追加しました' && pr.row[run('RC.referrer')] === 'ナシ' && pr.row[run('RC.cname')] === '山田 太郎' && pr.row[run('RC.cgender')] === '男性' && pr.row[run('RC.cbirth')] === '20100315' && pr.row[run('RC.cemail')] === 'taro@example.com' && pr.row[run('RC.session')] === '' && pr.row[run('RC.status')] === '参加中');
-t('名簿の見出し数 = 行の列数', run('HEAD.roster.length') === 32 && run('RC.memo') === 23 && run('RC.request') === 31);
+t('名簿の見出し数 = 行の列数', run('HEAD.roster.length') === 33 && run('RC.memo') === 23 && run('RC.request') === 31 && run('RC.plan') === 32);
 pr = pa(NVA({ EX1: '山田 次郎', EX2: 'レポートのみ 5,000円' }), [], 't');
 t('追加の鑑定の名前と希望が名簿に入る', pr.ok && pr.row[run('RC.exName')] === '山田 次郎' && pr.row[run('RC.exPlan')] === 'レポートのみ 5,000円');
 pr = pa(NVA({ EX2: 'オンライン鑑定希望 10,000円' }), [], 't');
@@ -440,12 +440,12 @@ t('一般・法人の説明に費用・謝礼・補助金の記載がない', ![
   }
   const fb = created[created.length - 1];
   const tg = fb.items.find(i => /^CO11\./.test(i.title)), hc = fb.items.find(i => /^CO10\./.test(i.title)), ph = fb.items.find(i => /^CO6\./.test(i.title));
-  t('法人: 鑑定を受ける方の欄は必須の段落、人数は半角数字、電話は数字とハイフン', tg.type === 'PARA' && tg.required && hc.validation.pattern === '^[0-9]{1,3}$' && ph.validation.pattern === '^[0-9\\-]{9,13}$');
+  t('法人: 鑑定を受ける方の欄は必須の段落、プランは選択式、電話は数字とハイフン', tg.type === 'PARA' && tg.required && hc.type === 'MC' && ph.validation.pattern === '^[0-9\\-]{9,13}$');
 }
 const NVG = (o) => { const base = { GE1: '佐藤 一郎', GE2: '男性', GE3: '19800101', GE4: 'ichiro@example.com', GE5: 'ichiro@example.com', GE6: 'ichiro_line', GE7: '', GE8: '追加しました', GE9: 'ナシ', GE10: '', GE11: '', CONSENT_PI: '同意します' }; const m = Object.assign(base, o); const out = {}; apG.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
-const NVB = (o) => { const base = { CO1: '株式会社サンプル', CO2: '総務部', CO3: '鈴木 花子', CO4: 'suzuki@sample.co.jp', CO5: 'suzuki@sample.co.jp', CO6: '03-1234-5678', CO7: 'suzuki_line', CO8: '追加しました', CO9: 'ナシ', CO10: '2', CO11: '山田 太郎/男性/19850612\n田中 次郎/男性/19900101', CO12: '', CO13: '株式会社サンプル 御中', CO14: '', CONSENT_PI: '同意します', CONSENT_TARGET: '同意します' }; const m = Object.assign(base, o); const out = {}; apB.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
+const NVB = (o) => { const base = { CO1: '株式会社サンプル', CO2: '総務部', CO3: '鈴木 花子', CO4: 'suzuki@sample.co.jp', CO5: 'suzuki@sample.co.jp', CO6: '03-1234-5678', CO7: 'suzuki_line', CO8: '追加しました', CO9: 'ナシ', CO10: '代表+幹部2名 100,000円', CO11: '山田 太郎/男性/19850612\n田中 次郎/男性/19900101\n佐藤 三郎/男性/19800101', CO12: '', CO13: '株式会社サンプル 御中', CO14: '', CONSENT_PI: '同意します', CONSENT_TARGET: '同意します' }; const m = Object.assign(base, o); const out = {}; apB.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
 let pg = pa(NVG({}), [], '2026-11-01T10:00:00', 'general');
-t('一般の申込OK → G0001を発行し、区分=general、名簿の列に入る', pg.ok && pg.id === 'G0001' && pg.row.length === 32 && pg.row[run('RC.category')] === 'general' && pg.row[run('RC.pname')] === '佐藤 一郎' && pg.row[run('RC.pbirth')] === '19800101' && pg.row[run('RC.line')] === 'ichiro_line' && pg.row[run('RC.cname')] === '');
+t('一般の申込OK → G0001を発行し、区分=general、名簿の列に入る', pg.ok && pg.id === 'G0001' && pg.row.length === 33 && pg.row[run('RC.category')] === 'general' && pg.row[run('RC.pname')] === '佐藤 一郎' && pg.row[run('RC.pbirth')] === '19800101' && pg.row[run('RC.line')] === 'ichiro_line' && pg.row[run('RC.cname')] === '');
 pg = pa(NVG({}), [{ id: 'F0005', category: 'career', email: 'a@example.com' }, { id: 'G0003', category: 'general', email: 'z@example.com', name: 'z' }], 't', 'general');
 t('一般のIDは、進路(F)と別の連番(G0004)', pg.ok && pg.id === 'G0004');
 pg = pa(NVG({ GE5: 'x@example.com' }), [], 't', 'general');
@@ -459,11 +459,11 @@ t('一般: 同じメールと名前 → 重複申込', !pg.ok && /重複申込/.
 pg = pa(NVG({}), [{ id: 'F0001', category: 'career', email: 'ichiro@example.com', childName: '佐藤 一郎' }], 't', 'general');
 t('一般: 進路相談の登録と同じメールでも、重複扱いにしない', pg.ok);
 let pb = pa(NVB({}), [], '2026-11-01T10:00:00', 'corp');
-t('法人の申込OK → B0001、会社名・担当者・電話・人数・対象者・請求書宛名が名簿に入る', pb.ok && pb.id === 'B0001' && pb.row[run('RC.category')] === 'corp' && pb.row[run('RC.company')] === '株式会社サンプル' && pb.row[run('RC.pname')] === '鈴木 花子' && pb.row[run('RC.phone')] === '03-1234-5678' && pb.row[run('RC.headcount')] === '2' && /山田 太郎/.test(pb.row[run('RC.targets')]) && pb.row[run('RC.invoice')] === '株式会社サンプル 御中' && pb.row[run('RC.memo')] === '');
-pb = pa(NVB({ CO10: '3' }), [], 't', 'corp');
-t('法人: 人数と記入行数が違っても受け付け、メモで知らせる', pb.ok && /人数\(3\)と、記入された行数\(2\)が一致しません/.test(pb.row[run('RC.memo')]));
-pb = pa(NVB({ CO10: '0' }), [], 't', 'corp');
-t('法人: 人数が0 → 要確認', !pb.ok && /人数が不正/.test(pb.reason));
+t('法人の申込OK → B0001、会社名・担当者・電話・人数・対象者・請求書宛名が名簿に入る', pb.ok && pb.id === 'B0001' && pb.row[run('RC.category')] === 'corp' && pb.row[run('RC.company')] === '株式会社サンプル' && pb.row[run('RC.pname')] === '鈴木 花子' && pb.row[run('RC.phone')] === '03-1234-5678' && pb.row[run('RC.headcount')] === '3' && pb.row[run('RC.plan')] === '代表+幹部2名 100,000円' && /山田 太郎/.test(pb.row[run('RC.targets')]) && pb.row[run('RC.invoice')] === '株式会社サンプル 御中' && pb.row[run('RC.memo')] === '');
+pb = pa(NVB({ CO10: '代表のみ 50,000円' }), [], 't', 'corp');
+t('法人: プランの人数と記入行数が違っても受け付け、メモで知らせる', pb.ok && /人数\(1\)と、記入された行数\(3\)が一致しません/.test(pb.row[run('RC.memo')]));
+pb = pa(NVB({ CO10: '' }), [], 't', 'corp');
+t('法人: プラン未選択 → 要確認', !pb.ok && /プランが未選択/.test(pb.reason));
 pb = pa(NVB({ CO6: 'abc' }), [], 't', 'corp');
 t('法人: 電話番号が不正 → 要確認', !pb.ok && /電話番号/.test(pb.reason));
 pb = pa(NVB({ CONSENT_TARGET: '' }), [], 't', 'corp');
@@ -478,7 +478,7 @@ t('法人: 同じメールでも別の法人 → 別の申込として登録(B00
 // 16. 区分の扱い(リンク送信・次にやること・ダッシュボード)
 t('リンク送信の対象は進路相談用だけ(一般・法人は対象外)', lr([base({ category: 'general' })], 'T0', '2026-11-01').length === 0 && lr([base({ category: 'corp' })], 'T0', '2026-11-01').length === 0 && lr([base({ category: 'career' })], 'T0', '2026-11-01').length === 1 && lr([base({})], 'T0', '2026-11-01').length === 1);
 t('次にやること(一般・法人): 鑑定日の入力 → 鑑定待ち → 鑑定日を過ぎた', na(F({ category: 'general' }), {}, '2026-11-01') === '日程調整 → 鑑定日を入力' && /鑑定待ち\(9日後\)/.test(na(F({ category: 'corp', sessionDate: '2026-11-10' }), {}, '2026-11-01')) && /鑑定日を過ぎました/.test(na(F({ category: 'general', sessionDate: '2026-11-10' }), {}, '2026-11-11')));
-t('受付確認メール(一般・法人・進路)の文面', /佐藤 一郎 様/.test(vm.runInContext('buildApplyReceiptEmail_', ctx)({ name: '佐藤 一郎' }, 'general').body) && /株式会社サンプル 様のお申込み/.test(vm.runInContext('buildApplyReceiptEmail_', ctx)({ name: '鈴木 花子', company: '株式会社サンプル' }, 'corp').body) && /お子様:太郎 さん/.test(vm.runInContext('buildApplyReceiptEmail_', ctx)({ name: '山田', childName: '太郎' }, 'career').body));
+t('受付確認メール(一般・法人・進路)の文面', /佐藤 一郎 様/.test(vm.runInContext('buildApplyReceiptEmail_', ctx)({ name: '佐藤 一郎' }, 'general').body) && /法人名:株式会社サンプル/.test(vm.runInContext('buildApplyReceiptEmail_', ctx)({ name: '鈴木 花子', company: '株式会社サンプル' }, 'corp').body) && /お子様:太郎 さん/.test(vm.runInContext('buildApplyReceiptEmail_', ctx)({ name: '山田', childName: '太郎' }, 'career').body));
 const rosterC = rosterD.concat([
   Object.assign({}, rosterD[0], { row: 5, id: 'G0001', category: 'general', name: '佐藤 一郎', childName: '', childEmail: '', sessionDate: '2026-11-20', sent: { T0: '', T1: '', T2: '' } }),
   Object.assign({}, rosterD[0], { row: 6, id: 'B0001', category: 'corp', name: '鈴木 花子', company: '株式会社サンプル', headcount: '2', targets: '山田 太郎/男性/19850612', childName: '', childEmail: '', sessionDate: '', sent: { T0: '', T1: '', T2: '' } })
