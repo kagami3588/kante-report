@@ -408,8 +408,10 @@ var EXTRA_PLANS = ['レポートのみ 5,000円', 'オンライン鑑定希望 1
 SURVEY.apply = {
   key: 'APPLY',
   title: '算命学の鑑定 お申込みフォーム(親子プラン)',
-  intro: 'このフォームは、算命学の鑑定と、その調査アンケートへのお申込み用です。\n\n・保護者の方・お子様の情報をご入力ください。入力は、この1回だけです。最後のページに、説明書と、同意の確認があります。\n・お申込み後、運営から、日程調整のご連絡をします。以後のアンケートのご案内は、ご登録のメールアドレスに届きます。',
+  intro: 'このフォームは、算命学の鑑定と、その調査アンケートへのお申込み用です。\n\n・最初に、説明書をお読みのうえ、同意の確認をお願いします。そのあと、保護者の方・お子様の情報をご入力ください。入力は、この1回だけです。最初のページに、説明書と、同意の確認があります。\n・お申込み後、運営から、日程調整のご連絡をします。以後のアンケートのご案内は、ご登録のメールアドレスに届きます。',
   blocks: [
+    P_('説明書と同意の確認', { desc: '下の説明書(【1. 調査の目的】から【9. お問い合わせ】まで)と、同意いただく内容をお読みのうえ、いちばん下の項目にチェックをお願いします。チェックをいただいた場合に、次のページへ進み、お申込みできます。\n\n' + APPLY_EXPLAIN_1 + '\n\n' + APPLY_EXPLAIN_2 + '\n\n' + APPLY_EXPLAIN_3 + '\n\n' + consentList_(['説明書を読み、内容を理解したうえで、お子様とともに、この調査に協力することに同意します。', 'お子様にも内容を説明し、お子様が参加することを確認しました。', 'お名前・メールアドレス・生年月日などを、鑑定のご提供(日程調整、ご連絡、アンケートのご案内)のために使うことに同意します。', '今後、個人が特定されない匿名にて、アンケート結果を公開することに同意します。(説明書の【8. アンケート結果の公開について】)']) + '\n\n責任者:' + RESPONSIBLE + '(KAGAMI)\n連絡先:' + CONTACT_MAIL + (CONSENT_DOC_URL ? '\n\n同意書・説明書(上の説明と同じ内容)は、こちらからもご覧いただけます:' + CONSENT_DOC_URL : '') }),
+    CKALL_(),
     P_('保護者用', { desc: '保護者の方のご情報です。個人情報は、アンケートの回答とは別に保管します。' }),
     T1_('AP1', '保護者さまの名前(フルネーム)', '保護者の氏名(個人情報。回答DBとは別に保管)', true),
     SEL_('AP6', '保護者さまの性別', GENDERS, true, '保護者の性別(個人情報)'),
@@ -430,9 +432,7 @@ SURVEY.apply = {
     Q_({ id: 'CH6', text: 'お子様の自由記入欄(お子様からの質問などがありましたら、内容をご記入ください)', kind: 'text', axis: AXIS.ID, system: true, purpose: 'お子様からの連絡事項・質問(任意)' }),
     P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、調査への参加とは関係ありません。)' }),
     Q_({ id: 'EX1', text: '追加の鑑定をしてほしい人の名前', kind: 'text1', axis: AXIS.ID, system: true, required: false, purpose: '追加の鑑定の対象者(任意。個人情報)' }),
-    SEL_('EX2', '追加の鑑定のご希望の内容', EXTRA_PLANS, false, '追加の鑑定の希望内容(任意)'),
-    P_('同意の確認', { desc: '下の説明書(【1. 調査の目的】から【9. お問い合わせ】まで)と、同意いただく内容をお読みのうえ、いちばん下の項目にチェックをお願いします。チェックをいただいた場合に、お申込みできます。\n\n' + APPLY_EXPLAIN_1 + '\n\n' + APPLY_EXPLAIN_2 + '\n\n' + APPLY_EXPLAIN_3 + '\n\n' + consentList_(['説明書を読み、内容を理解したうえで、お子様とともに、この調査に協力することに同意します。', 'お子様にも内容を説明し、お子様が参加することを確認しました。', 'お名前・メールアドレス・生年月日などを、鑑定のご提供(日程調整、ご連絡、アンケートのご案内)のために使うことに同意します。', '今後、個人が特定されない匿名にて、アンケート結果を公開することに同意します。(説明書の【8. アンケート結果の公開について】)']) + '\n\n責任者:' + RESPONSIBLE + '(KAGAMI)\n連絡先:' + CONTACT_MAIL + (CONSENT_DOC_URL ? '\n\n同意書・説明書(上の説明と同じ内容)は、こちらからもご覧いただけます:' + CONSENT_DOC_URL : '') }),
-    CKALL_()
+    SEL_('EX2', '追加の鑑定のご希望の内容', EXTRA_PLANS, false, '追加の鑑定の希望内容(任意)')
   ]
 };
 
@@ -2055,7 +2055,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-22-d';
+var SITE_VERSION = '2026-10-22-e';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2083,7 +2083,7 @@ SITE_CSS_ += 'body{background:radial-gradient(1200px 500px at 50% -120px,rgba(13
 '.opt{border-radius:12px;padding:13px 14px;background:var(--card);border:1.5px solid var(--line);transition:all .12s;align-items:center}.opt input{width:20px;height:20px;margin:0;accent-color:var(--accent);flex:none}.opt:hover{border-color:var(--accent)}.opt:has(input:checked){border-color:var(--accent);background:rgba(47,74,125,.08)}' +
 '.btn{margin-top:26px;border-radius:14px;padding:16px;font-size:16px;letter-spacing:.06em;box-shadow:0 8px 20px rgba(47,74,125,.25);transition:transform .1s,box-shadow .1s}.btn:active{transform:translateY(1px);box-shadow:0 3px 10px rgba(47,74,125,.25)}.btn:disabled{box-shadow:none}' +
 '.fee{display:block;background:linear-gradient(90deg,rgba(138,109,59,.16),rgba(138,109,59,.05));border-left:3px solid var(--accent2);border-radius:8px;padding:10px 14px;font-size:14px;margin:4px 0 6px;color:var(--ink)}' +
-'.bank{border-radius:14px;padding:16px 18px;line-height:1.9}.big{margin-bottom:6px}.line{border-radius:14px;padding:15px;box-shadow:0 8px 20px rgba(6,199,85,.25)}.ok{width:64px;height:64px;line-height:64px;margin:0 auto 10px;border-radius:50%;background:rgba(46,125,79,.12);font-size:32px}.banner{border-left:4px solid var(--err);border-radius:8px}footer{padding:18px 16px 48px}.card .desc+h2{margin-top:26px}.card .bank{margin:12px 0}.card .bank+.desc{margin-top:14px}.card .ok+h2{text-align:left}.card.sub{box-shadow:none;background:var(--bg);margin:14px 0;padding:16px}.card.sub h2{font-size:15px}.persons{margin-top:12px}.card.sub .q{margin-top:14px}.card.sub.bad{border-color:var(--err)}.card.sub .err{display:block}';
+'.bank{border-radius:14px;padding:16px 18px;line-height:1.9}.big{margin-bottom:6px}.line{border-radius:14px;padding:15px;box-shadow:0 8px 20px rgba(6,199,85,.25)}.ok{width:64px;height:64px;line-height:64px;margin:0 auto 10px;border-radius:50%;background:rgba(46,125,79,.12);font-size:32px}.banner{border-left:4px solid var(--err);border-radius:8px}footer{padding:18px 16px 48px}.card .desc+h2{margin-top:26px}.card .bank{margin:12px 0}.card .bank+.desc{margin-top:14px}.card .ok+h2{text-align:left}.planbadge{margin:12px 0 4px;padding:5px 20px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600;font-size:15px;letter-spacing:.14em}@media(prefers-color-scheme:dark){.planbadge{color:#101018}}.card.sub{box-shadow:none;background:var(--bg);margin:14px 0;padding:16px}.card.sub h2{font-size:15px}.persons{margin-top:12px}.card.sub .q{margin-top:14px}.card.sub.bad{border-color:var(--err)}.card.sub .err{display:block}';
 
 /** 法人の申込: 追加人数に合わせて、鑑定を受ける方(代表+追加の方)の入力欄を増やす(ブラウザで動く。toString で埋め込む) */
 function corpPersons_(el, getAdd, base, addFee) {
@@ -2141,7 +2141,7 @@ function corpAddCount_(label) { var m = /^([0-9]+)名追加/.exec(String(label |
 var APPLY_HTML = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
 '<title>算命学の鑑定 お申込み | KAGAMI</title><style>' +
 SITE_CSS_ + '</style></head><body>' +
-'<header><div class="brand">KAGAMI</div><h1 id="h1">算命学の鑑定 お申込み</h1><p>必要事項を入力して、送信してください。送信後に、お振込先をご案内します。</p></header>' +
+'<header><div class="brand">KAGAMI</div><h1 id="h1">算命学の鑑定 お申込み</h1><div id="plan" class="planbadge" style="display:none"></div><p>必要事項を入力して、送信してください。送信後に、お振込先をご案内します。</p></header>' +
 '<main><div id="app"></div></main><footer id="foot"></footer>' +
 '<script>var SITE = __DATA__;' + corpPersons_.toString() + corpAddCount_.toString() + ';' +
 'var el=function(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e;};' +
@@ -2174,7 +2174,7 @@ SITE_CSS_ + '</style></head><body>' +
 ' c.appendChild(el("div","desc","林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください。"));var a=el("a","line","公式LINEを追加する");a.href=r.line;a.target="_blank";a.rel="noopener";c.appendChild(a);}' +
 ' app.appendChild(c);window.scrollTo(0,0);}' +
 'document.getElementById("foot").textContent="運営: KAGAMI / 責任者: " + "' + RESPONSIBLE + '" + " / お問い合わせ: " + SITE.contact + " / 版: " + SITE.version;' +
-'if(SITE.cats.length===1){document.getElementById("h1").textContent="算命学の鑑定 お申込み("+SITE.cats[0].label+")";}if(SITE.cats.length){show(SITE.cats[0].key);}else{var g=el("div","card");g.appendChild(el("h2","","お申込みのページ"));g.appendChild(el("div","desc","お申込みは、ご案内したURLからお願いします。URLがお分かりにならない場合は、"+SITE.contact+" までご連絡ください。"));app.appendChild(g);}' +
+'if(SITE.cats.length===1){var pb=document.getElementById("plan");pb.textContent=SITE.cats[0].label;pb.style.display="inline-block";}if(SITE.cats.length){show(SITE.cats[0].key);}else{var g=el("div","card");g.appendChild(el("h2","","お申込みのページ"));g.appendChild(el("div","desc","お申込みは、ご案内したURLからお願いします。URLがお分かりにならない場合は、"+SITE.contact+" までご連絡ください。"));app.appendChild(g);}' +
 '</script></body></html>';
 
 function applyPage_(cat) {

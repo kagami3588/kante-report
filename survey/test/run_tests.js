@@ -261,9 +261,9 @@ t('お子様用の項目: 名前・性別・生年月日・メール・自由記
 t('性別は個人情報の入力欄(保護者・お子様)にある', byId('AP6').text === '保護者さまの性別' && byId('CH2').text === 'お子様の性別' && JSON.stringify(byId('AP6').choices) === JSON.stringify(['男性', '女性']));
 t('追加の鑑定: 名前(任意)・レポートのみ5,000円/オンライン鑑定希望10,000円(任意)', byId('EX1').required === false && byId('EX2').required === false && JSON.stringify(byId('EX2').choices) === JSON.stringify(['レポートのみ 5,000円', 'オンライン鑑定希望 10,000円']));
 const order = apQs.map(q => q.id);
-t('入力欄の順序: 保護者用→お子様用→追加の鑑定→同意', order.indexOf('AP1') < order.indexOf('CH1') && order.indexOf('CH1') < order.indexOf('EX1') && order.indexOf('EX1') < order.indexOf('CONSENT_ALL'));
+t('入力欄の順序: 説明書と同意(最初)→保護者用→お子様用→追加の鑑定', order.indexOf('CONSENT_ALL') < order.indexOf('AP1') && order.indexOf('AP1') < order.indexOf('CH1') && order.indexOf('CH1') < order.indexOf('EX1') && ap.blocks[0].type === 'page' && ap.blocks[0].title === '説明書と同意の確認' && ap.blocks[1].id === 'CONSENT_ALL');
 t('セクション見出しが「保護者用」「お子様用」', ap.blocks.some(b => b.type === 'page' && b.title === '保護者用') && ap.blocks.some(b => b.type === 'page' && b.title === 'お子様用'));
-t('同意書・説明書のリンク用の設定(CONSENT_DOC_URL)がある。空欄ならリンクを表示しない', run('typeof CONSENT_DOC_URL') === 'string' && !/https?:\/\//.test(ap.blocks.find(b => b.title === '同意の確認').desc));
+t('同意書・説明書のリンク用の設定(CONSENT_DOC_URL)がある。空欄ならリンクを表示しない', run('typeof CONSENT_DOC_URL') === 'string' && !/https?:\/\//.test(ap.blocks.find(b => b.title === '説明書と同意の確認').desc));
 
 const qt = (def, ...ids) => ids.map(id => run(`applyTitleParts_(SURVEY.${def}.blocks.find(b => b.id === '${id}')).title`));
 const isQ = (def, re) => (i) => run(`SURVEY.${def}.blocks.filter(b => b.type === 'q' && /${re}/.test(b.id)).map(b => applyTitleParts_(b).title)`).indexOf(i.title) !== -1;
