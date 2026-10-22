@@ -610,7 +610,7 @@ function buildApplyReceiptEmail_(p, category) {
     '<div style="' + box + 'text-align:center;"><div style="margin-bottom:10px;">林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください。</div>' +
     '<a href="' + escHtml_(LINE_URL) + '" style="display:inline-block;background:#06c755;color:#ffffff;text-decoration:none;font-weight:700;padding:11px 26px;border-radius:24px;">公式LINEを追加する</a></div>' +
     '<p style="font-size:13px;color:#6b7785;margin:18px 0 0;">ご不明な点があれば、このメールにご返信ください。<br>' + escHtml_(CONFIG.SENDER_NAME) + '(' + escHtml_(CONFIG.CONTACT_MAIL) + ')</p></div>';
-  return { subject: '【お申込みを受け付けました】算命学の鑑定', body: text, html: html };
+  return { subject: '【お申込みを受け付けました】算命学の鑑定(' + { career: '親子プラン', general: '個人プラン', corp: '法人プラン' }[category] + ')', body: text, html: html };
 }
 
 // ======================================================================
@@ -1424,7 +1424,7 @@ function doGet(e) {
   }
   var cat = (e && e.parameter && e.parameter.cat) || '';
   if (page === 'apply' || cat || !ok) {
-    return HtmlService.createHtmlOutput(applyPage_(cat)).setTitle('算命学の鑑定 お申込み').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    return HtmlService.createHtmlOutput(applyPage_(cat)).setTitle('算命学の鑑定 お申込み' + (SITE_CATEGORIES.filter(function (x) { return x.key === cat; })[0] ? '(' + SITE_CATEGORIES.filter(function (x) { return x.key === cat; })[0].label + ')' : '')).addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
   return HtmlService.createHtmlOutput(dashboardPage_(dashboardData_(reg))).setTitle('申込・進捗ダッシュボード').addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -1442,9 +1442,9 @@ function ownerOnly_() {
 }
 
 var SITE_CATEGORIES = [
-  { key: 'career', def: 'apply', label: '親子', sub: '保護者さまとお子様の、お申込み', desc: 'お子様の進路・自己理解のための鑑定です。調査アンケートへのご協力をお願いしています。', fee: '鑑定料 30,000円' },
-  { key: 'general', def: 'applyG', label: '個人', sub: 'ご自身の、お申込み', desc: 'ご自身の鑑定のお申込みです。', fee: '鑑定料 30,000円' },
-  { key: 'corp', def: 'applyB', label: '法人・団体', sub: '会社・団体の、お申込み', desc: '代表の方と、従業員の方の鑑定のお申込みです。', fee: '鑑定料 50,000円〜(従業員の方を追加する場合は、1名につき25,000円)' }
+  { key: 'career', def: 'apply', label: '親子プラン', sub: '保護者さまとお子様の、お申込み', desc: 'お子様の進路・自己理解のための鑑定です。調査アンケートへのご協力をお願いしています。', fee: '鑑定料 30,000円' },
+  { key: 'general', def: 'applyG', label: '個人プラン', sub: 'ご自身の、お申込み', desc: 'ご自身の鑑定のお申込みです。', fee: '鑑定料 30,000円' },
+  { key: 'corp', def: 'applyB', label: '法人プラン', sub: '会社・団体の、お申込み', desc: '代表の方と、従業員の方の鑑定のお申込みです。', fee: '鑑定料 50,000円〜(従業員の方を追加する場合は、1名につき25,000円)' }
 ];
 
 /** 公開サイトに埋め込むデータ(設問の定義だけ。お振込先は、申込のあとにだけ返す) */
@@ -1509,7 +1509,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-22-c';
+var SITE_VERSION = '2026-10-22-d';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -1595,7 +1595,7 @@ function corpAddCount_(label) { var m = /^([0-9]+)名追加/.exec(String(label |
 var APPLY_HTML = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
 '<title>算命学の鑑定 お申込み | KAGAMI</title><style>' +
 SITE_CSS_ + '</style></head><body>' +
-'<header><div class="brand">KAGAMI</div><h1>算命学の鑑定 お申込み</h1><p>必要事項を入力して、送信してください。送信後に、お振込先をご案内します。</p></header>' +
+'<header><div class="brand">KAGAMI</div><h1 id="h1">算命学の鑑定 お申込み</h1><p>必要事項を入力して、送信してください。送信後に、お振込先をご案内します。</p></header>' +
 '<main><div id="app"></div></main><footer id="foot"></footer>' +
 '<script>var SITE = __DATA__;' + corpPersons_.toString() + corpAddCount_.toString() + ';' +
 'var el=function(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e;};' +
@@ -1628,7 +1628,7 @@ SITE_CSS_ + '</style></head><body>' +
 ' c.appendChild(el("div","desc","林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください。"));var a=el("a","line","公式LINEを追加する");a.href=r.line;a.target="_blank";a.rel="noopener";c.appendChild(a);}' +
 ' app.appendChild(c);window.scrollTo(0,0);}' +
 'document.getElementById("foot").textContent="運営: KAGAMI / 責任者: " + "' + RESPONSIBLE + '" + " / お問い合わせ: " + SITE.contact + " / 版: " + SITE.version;' +
-'if(SITE.cats.length){show(SITE.cats[0].key);}else{var g=el("div","card");g.appendChild(el("h2","","お申込みのページ"));g.appendChild(el("div","desc","お申込みは、ご案内したURLからお願いします。URLがお分かりにならない場合は、"+SITE.contact+" までご連絡ください。"));app.appendChild(g);}' +
+'if(SITE.cats.length===1){document.getElementById("h1").textContent="算命学の鑑定 お申込み("+SITE.cats[0].label+")";}if(SITE.cats.length){show(SITE.cats[0].key);}else{var g=el("div","card");g.appendChild(el("h2","","お申込みのページ"));g.appendChild(el("div","desc","お申込みは、ご案内したURLからお願いします。URLがお分かりにならない場合は、"+SITE.contact+" までご連絡ください。"));app.appendChild(g);}' +
 '</script></body></html>';
 
 function applyPage_(cat) {
