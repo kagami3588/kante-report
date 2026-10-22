@@ -47,7 +47,7 @@ function makeEnv(activeEmail) {
   const sendlog = reg.add('送信ログ', H('sendlog'));
   reg.add('申込要確認', H('pending')); reg.add('安全対応ログ', H('safety'));
   const subs = db.add('Submissions', H('submissions')), long = db.add('Long', H('long')), opts = db.add('LongOptions', H('options'));
-  const resp = db.add('resp_CT0', ['タイムスタンプ', 'RID. 研究用ID(運営から届いた専用リンクで自動入力されます。変更しないでください)', 'S1. x']);
+  const resp = db.add('resp_CT0', ['タイムスタンプ', 'RID. 調査用ID(運営から届いた専用リンクで自動入力されます。変更しないでください)', 'S1. x']);
   const rc = (n) => vm.runInContext('RC.' + n, env);
   function addFamily(o) {
     const row = new Array(33).fill('');
@@ -177,10 +177,10 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const props = {};
   Object.assign(E.env, {
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => props[k], setProperty: (k, v) => { props[k] = v; } }) },
-    SpreadsheetApp: { getActiveSpreadsheet: () => null, create: (n) => { made.push(n); const ss = new SS(n === '研究台帳' ? 'reg2' : 'db2'); ss.getUrl = () => 'u'; return ss; }, openById: () => null, flush() {} }
+    SpreadsheetApp: { getActiveSpreadsheet: () => null, create: (n) => { made.push(n); const ss = new SS(n === '調査台帳' ? 'reg2' : 'db2'); ss.getUrl = () => 'u'; return ss; }, openById: () => null, flush() {} }
   });
   const msg = throws(() => E.run('setup')());
-  t('単独のスクリプトで setup() を実行すると、台帳を自動で作ろうとする(「紐づいていません」のエラーにならない)', made[0] === '研究台帳' && !/紐づいていません/.test(msg || ''), msg);
+  t('単独のスクリプトで setup() を実行すると、台帳を自動で作ろうとする(「紐づいていません」のエラーにならない)', made[0] === '調査台帳' && !/紐づいていません/.test(msg || ''), msg);
 }
 
 { // マニフェスト(権限と、ウェブアプリの公開範囲)

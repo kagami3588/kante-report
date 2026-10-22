@@ -1,5 +1,5 @@
 /**
- * 算命学×自己理解・他者理解・キャリア形成 研究アンケート — 実装(Google Apps Script)
+ * 算命学×自己理解・他者理解・キャリア形成 調査アンケート — 実装(Google Apps Script)
  *
  * 使い方:
  *   1. 台帳にする新しいスプレッドシートを作り、「拡張機能 → Apps Script」を開く
@@ -12,8 +12,8 @@
  */
 
 var CONFIG = {
-  DB_NAME: '研究アンケート回答DB',
-  REG_NAME: '研究台帳',
+  DB_NAME: '調査アンケート回答DB',
+  REG_NAME: '調査台帳',
   CONTACT_TEXT: '運営の連絡先:kagami.3588@gmail.com',
   CONTACT_MAIL: 'kagami.3588@gmail.com',
   SENDER_NAME: 'KAGAMI',
@@ -40,14 +40,14 @@ var SHEETS = {
 };
 
 var HEAD = {
-  roster: ['研究用ID', '申込日時', '保護者名(申込者名)', '保護者(申込者)の性別', '保護者(申込者)の生年月日', '保護者(申込者)メール', 'LINE検索ID', 'Instagram', '公式LINE追加', '紹介者', 'お子様名', 'お子様の性別', 'お子様の生年月日', 'お子様メール', '鑑定日(yyyy-mm-dd)', '参加状況(参加中/辞退/完了)', 'T0送信日時', 'T1送信日時', 'T2送信日時', '追加鑑定の対象者名', '追加鑑定の希望', '連絡事項(保護者・申込者)', 'お子様の連絡事項', 'メモ', '区分', '法人名', '部署・役職', '電話番号', '鑑定を受ける人数', '鑑定を受ける方(名前・性別・生年月日)', '請求書・領収書の宛名', 'ご希望の内容', 'プラン'],
+  roster: ['調査用ID', '申込日時', '保護者名(申込者名)', '保護者(申込者)の性別', '保護者(申込者)の生年月日', '保護者(申込者)メール', 'LINE検索ID', 'Instagram', '公式LINE追加', '紹介者', 'お子様名', 'お子様の性別', 'お子様の生年月日', 'お子様メール', '鑑定日(yyyy-mm-dd)', '参加状況(参加中/辞退/完了)', 'T0送信日時', 'T1送信日時', 'T2送信日時', '追加鑑定の対象者名', '追加鑑定の希望', '連絡事項(保護者・申込者)', 'お子様の連絡事項', 'メモ', '区分', '法人名', '部署・役職', '電話番号', '鑑定を受ける人数', '鑑定を受ける方(名前・性別・生年月日)', '請求書・領収書の宛名', 'ご希望の内容', 'プラン'],
   pending: ['受付日時', '区分', '名前', 'メールアドレス', 'お子様名 / 法人名', '要確認の理由', '連絡事項'],
-  sendlog: ['日時', '研究用ID', '時点', '送信先', '結果'],
-  submissions: ['submission_id', '回答日時', '研究用ID', '回答者区分', 'フォームID', '時点', '分析採用', 'フラグ', '回答数', '未回答数', '非表示数', '自由記述あり数', 'テスト'],
-  long: ['submission_id', '研究用ID', '回答者区分', 'フォームID', '時点', '設問ID', '回答内容', '数値コード', '回答日時', '状態', '自由記述あり', '分析採用'],
-  options: ['submission_id', '研究用ID', 'フォームID', '設問ID', '選択肢'],
-  reminders: ['日付', '研究用ID', 'フォームID', '回目', '通知先'],
-  safety: ['受信日時', '研究用ID', 'フォームID', '理由', '通知先', '通知結果', '対応期限', '対応状況', '対応日時', '対応担当者', '対応メモ(研究データと分けて管理)']
+  sendlog: ['日時', '調査用ID', '時点', '送信先', '結果'],
+  submissions: ['submission_id', '回答日時', '調査用ID', '回答者区分', 'フォームID', '時点', '分析採用', 'フラグ', '回答数', '未回答数', '非表示数', '自由記述あり数', 'テスト'],
+  long: ['submission_id', '調査用ID', '回答者区分', 'フォームID', '時点', '設問ID', '回答内容', '数値コード', '回答日時', '状態', '自由記述あり', '分析採用'],
+  options: ['submission_id', '調査用ID', 'フォームID', '設問ID', '選択肢'],
+  reminders: ['日付', '調査用ID', 'フォームID', '回目', '通知先'],
+  safety: ['受信日時', '調査用ID', 'フォームID', '理由', '通知先', '通知結果', '対応期限', '対応状況', '対応日時', '対応担当者', '対応メモ(調査データと分けて管理)']
 };
 
 // ======================================================================
@@ -343,7 +343,7 @@ function normEmail_(s) { return String(s || '').trim().toLowerCase(); }
 function normName_(s) { return String(s || '').replace(/[\s　]+/g, '').toLowerCase(); }
 function isEmail_(s) { return /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(String(s || '').trim()); }
 
-/** 次の研究用ID(F0001形式)。テストIDは数えない */
+/** 次の調査用ID(F0001形式)。テストIDは数えない */
 function nextId_(ids, prefix) {
   prefix = prefix || 'F';
   var max = 0;
@@ -358,7 +358,7 @@ function nextId_(ids, prefix) {
 /**
  * 申込フォームの送信を処理する。
  * namedValues: { 設問タイトル: [値] }  existing: [{id, email, childName}]
- * 問題がなければ名簿の行を返し、問題があれば「申込要確認」の行を返す(研究用IDは発行しない)
+ * 問題がなければ名簿の行を返し、問題があれば「申込要確認」の行を返す(調査用IDは発行しない)
  */
 function isBirthDate_(s) {
   s = String(s || '').trim();
@@ -809,8 +809,8 @@ function initRegSheets_(reg) {
   settings.getRange(2, 1, 5, 3).setValues([
     ['安全対応担当者メール', '', '回答に確認が必要な内容があった場合の通知先(1名)'],
     ['安全対応担当者メール(代理)', '', '担当者不在時の通知先'],
-    ['このファイルについて', '', 'この台帳には個人情報(お名前・メールアドレス)が入っています。運営のみに共有してください。研究の分析には、別ファイルの「' + CONFIG.DB_NAME + '」を使います'],
-    ['注意', '', '回答DBは、研究担当者のみに共有してください。子ども・保護者・鑑定師には共有しないでください'],
+    ['このファイルについて', '', 'この台帳には個人情報(お名前・メールアドレス)が入っています。運営のみに共有してください。調査の分析には、別ファイルの「' + CONFIG.DB_NAME + '」を使います'],
+    ['注意', '', '回答DBは、調査担当者のみに共有してください。子ども・保護者・鑑定師には共有しないでください'],
     ['運営メール(通知先)', CONFIG.CONTACT_MAIL, '新しい申込・毎朝9時のリマインド一覧が届きます。辞退した家庭は、名簿の「参加状況」を「辞退」にしてください(送信・リマインドが止まります)']
   ]);
   mkSheet_(reg, SHEETS.safety, HEAD.safety);
@@ -845,7 +845,7 @@ function readRoster_(reg) {
 }
 
 var formCache_ = {};
-/** 研究用ID入力済みの専用リンク */
+/** 調査用ID入力済みの専用リンク */
 function getPrefilledUrl_(formKey, id) {
   if (!formCache_[formKey]) {
     var f = FormApp.openById(getFormIds_()[formKey]);
@@ -865,7 +865,7 @@ function sendMail_(to, subject, body, html) {
 // 申込・送信
 // ======================================================================
 
-/** 申込フォームの送信時: 研究用IDを発行して名簿に登録し、受付確認メールを送る */
+/** 申込フォームの送信時: 調査用IDを発行して名簿に登録し、受付確認メールを送る */
 function onApplySubmit(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -883,7 +883,7 @@ function onApplySubmit(e) {
     } else {
       reg.getSheetByName(SHEETS.pending).appendRow(res.pendingRow);
       var op = opMail_(reg);
-      if (op) sendMail_(op, '[研究アンケート] 確認が必要な申込があります(' + label + ')', '理由: ' + res.reason + '\n「申込要確認」シートをご確認ください。(IDは発行していません)\n' + reg.getUrl());
+      if (op) sendMail_(op, '[調査アンケート] 確認が必要な申込があります(' + label + ')', '理由: ' + res.reason + '\n「申込要確認」シートをご確認ください。(IDは発行していません)\n' + reg.getUrl());
     }
   } finally {
     lock.releaseLock();
@@ -964,7 +964,7 @@ function deleteFamilyCore_(reg, db, fam) {
     if (sh.getLastRow() < 2) return;
     var vals = sh.getDataRange().getValues();
     var idCol = -1;
-    if (name === SHEETS.long || name === SHEETS.options || name === SHEETS.submissions) idCol = vals[0].indexOf('研究用ID');
+    if (name === SHEETS.long || name === SHEETS.options || name === SHEETS.submissions) idCol = vals[0].indexOf('調査用ID');
     else if (name.indexOf('resp_') === 0) vals[0].forEach(function (h, i) { if (String(h).indexOf('RID.') === 0) idCol = i; });
     if (idCol < 0) return;
     var res = dropRowsById_(vals, idCol, id);
@@ -983,7 +983,7 @@ function deleteFamilyCore_(reg, db, fam) {
   return total;
 }
 
-/** 削除のお申し出があったとき(メニューから): 研究用IDの回答データを回答DBから削除し、名簿の個人情報も消す */
+/** 削除のお申し出があったとき(メニューから): 調査用IDの回答データを回答DBから削除し、名簿の個人情報も消す */
 function deleteFamilyData() {
   ownerOnly_();
   var ui = SpreadsheetApp.getUi();
@@ -1072,7 +1072,7 @@ function onFormSubmit(e) {
   }
 }
 
-/** 安全対応担当者へ通知(回答内容は含めない。研究用ID・フォーム・理由のみ) */
+/** 安全対応担当者へ通知(回答内容は含めない。調査用ID・フォーム・理由のみ) */
 function notifySafety_(reg, dbUrl, res, key, tsIso) {
   var settings = reg.getSheetByName(SHEETS.settings);
   var to = [String(settings.getRange('B2').getValue()).trim(), String(settings.getRange('B3').getValue()).trim()].filter(function (s) { return s !== ''; });
@@ -1083,8 +1083,8 @@ function notifySafety_(reg, dbUrl, res, key, tsIso) {
   else if (!to.length) result = '【未送信】通知先が未設定です(設定シートに入力してください)';
   else {
     try {
-      sendMail_(to.join(','), '[研究アンケート] 確認が必要な回答があります(' + res.rid + ' / ' + key + ')',
-        '研究用ID: ' + res.rid + '\nフォーム: ' + key + '\n受信: ' + tsIso + '\n理由:\n- ' + res.reasons.join('\n- ') +
+      sendMail_(to.join(','), '[調査アンケート] 確認が必要な回答があります(' + res.rid + ' / ' + key + ')',
+        '調査用ID: ' + res.rid + '\nフォーム: ' + key + '\n受信: ' + tsIso + '\n理由:\n- ' + res.reasons.join('\n- ') +
         '\n\n対応期限: ' + dueStr + '(受信後24時間以内)\n回答内容は、回答DBの該当行を直接ご確認ください。このメールには回答内容を記載していません。\n台帳(連絡先): ' + reg.getUrl() + '\n回答DB: ' + dbUrl);
       result = '送信済み';
     } catch (err) { result = '【送信失敗】' + err; }
@@ -1109,7 +1109,7 @@ function checkOverdue() {
     }
   });
   if (overdue.length && to.length) {
-    sendMail_(to.join(','), '[研究アンケート] 対応期限を過ぎた確認依頼があります', '次の確認依頼が、24時間以内に「対応済」になっていません:\n- ' + overdue.join('\n- ') + '\n' + reg.getUrl());
+    sendMail_(to.join(','), '[調査アンケート] 対応期限を過ぎた確認依頼があります', '次の確認依頼が、24時間以内に「対応済」になっていません:\n- ' + overdue.join('\n- ') + '\n' + reg.getUrl());
   }
 }
 
@@ -1135,7 +1135,7 @@ function checkReminders() {
   var log = reg.getSheetByName(SHEETS.reminders);
   due.forEach(function (d) { log.appendRow([today, d.id, d.form, d.nth, to]); });
   if (!to) { Logger.log('通知先(設定シートB6)が未設定です'); return; }
-  sendMail_(to, '[研究アンケート] 本日のリマインド対象 ' + due.length + '件(' + today + ')',
+  sendMail_(to, '[調査アンケート] 本日のリマインド対象 ' + due.length + '件(' + today + ')',
     '次の家庭・フォームが未回答です。声かけをお願いします。リマインドは1つのフォームにつき最大2回です。\n' +
     '辞退された家庭には送らないでください(名簿の「参加状況」を「辞退」にすると、通知が止まります)。\n\n' + lines.join('\n') +
     '\n\n--- 文面の例(強制にならないようにしてください) ---\nアンケートへのご協力ありがとうございます。まだ回答がお済みでないようでしたら、お時間のあるときに、できる範囲でご回答いただけると助かります。答えにくい質問は飛ばしていただいて大丈夫です。\n' + reg.getUrl());
@@ -1393,7 +1393,7 @@ var DASHBOARD_HTML = [
   'var s=el("td"),sg=el("span","tag"+(f.status==="参加中"?" ok":" bad"),f.status);s.appendChild(sg);r.appendChild(s);',
   'var d=el("tr","det");d.style.display="none";var dc=el("td");dc.colSpan=heads.length;dc.appendChild(dl(f));dc.appendChild(actions(f));d.appendChild(dc);if(openId===f.id)d.style.display="";r.onclick=function(){var show=d.style.display==="none";d.style.display=show?"":"none";openId=show?f.id:""};t.appendChild(r);t.appendChild(d)});v.appendChild(t)}',
   'function renderPend(v){if(!DATA.pending.length){v.appendChild(el("div","empty","要確認の申込はありません"));return}var t=el("table"),h=el("tr");["受付日時","区分","名前","メール","お子様 / 法人名","理由","連絡事項"].forEach(function(x){h.appendChild(el("th",null,x))});t.appendChild(h);DATA.pending.forEach(function(p){var r=el("tr");[p.at,p.category,p.name,p.email,p.child,p.reason,p.note].forEach(function(x){r.appendChild(el("td",null,x||""))});t.appendChild(r)});v.appendChild(t)}',
-  'function renderSaf(v){if(!DATA.safety.length){v.appendChild(el("div","empty","未対応の安全確認はありません"));return}var t=el("table"),h=el("tr");["受信日時","研究用ID","フォーム","理由","対応期限","状況"].forEach(function(x){h.appendChild(el("th",null,x))});t.appendChild(h);DATA.safety.forEach(function(p){var r=el("tr");[p.at,p.id,p.form,p.reason,p.due,p.status].forEach(function(x){r.appendChild(el("td",null,x||""))});t.appendChild(r)});v.appendChild(t)}',
+  'function renderSaf(v){if(!DATA.safety.length){v.appendChild(el("div","empty","未対応の安全確認はありません"));return}var t=el("table"),h=el("tr");["受信日時","調査用ID","フォーム","理由","対応期限","状況"].forEach(function(x){h.appendChild(el("th",null,x))});t.appendChild(h);DATA.safety.forEach(function(p){var r=el("tr");[p.at,p.id,p.form,p.reason,p.due,p.status].forEach(function(x){r.appendChild(el("td",null,x||""))});t.appendChild(r)});v.appendChild(t)}',
   'function render(){renderCards();renderTabs();renderBulk();var v=document.getElementById("view");v.innerHTML="";document.getElementById("tools").style.display=(tab==="pend"||tab==="saf")?"none":"";if(tab==="pend")renderPend(v);else if(tab==="saf")renderSaf(v);else renderFam(v)}',
   'document.getElementById("q").oninput=render;document.getElementById("st").onchange=render;render();',
   '</script></body></html>'
@@ -1429,7 +1429,7 @@ function ownerOnly_() {
 }
 
 var SITE_CATEGORIES = [
-  { key: 'career', def: 'apply', label: '親子', sub: '保護者さまとお子様の、お申込み', desc: 'お子様の進路・自己理解のための鑑定です。研究アンケートへのご協力をお願いしています。', fee: '鑑定料 30,000円' },
+  { key: 'career', def: 'apply', label: '親子', sub: '保護者さまとお子様の、お申込み', desc: 'お子様の進路・自己理解のための鑑定です。調査アンケートへのご協力をお願いしています。', fee: '鑑定料 30,000円' },
   { key: 'general', def: 'applyG', label: '個人', sub: 'ご自身の、お申込み', desc: 'ご自身の鑑定のお申込みです。', fee: '鑑定料 30,000円' },
   { key: 'corp', def: 'applyB', label: '法人・団体', sub: '会社・団体の、お申込み', desc: '代表の方、または代表と幹部の方の鑑定のお申込みです。', fee: '代表のみ 50,000円 / 代表+幹部2名 100,000円' }
 ];
@@ -1561,7 +1561,7 @@ function finishApplication_(reg, category, res, tsIso) {
   reg.getSheetByName(SHEETS.sendlog).appendRow([tsIso, res.id, '申込受付(' + label + ')', res.email, result]);
   var op = opMail_(reg);
   var who = category === 'corp' ? res.company + ' / 担当:' + res.name + ' / ' + (res.plan ? res.plan.label : '') : (category === 'career' ? '保護者:' + res.name + ' / お子様:' + res.childName : res.name);
-  if (op) sendMail_(op, '[研究アンケート] 新しい申込がありました(' + label + ' / ' + res.id + ')', res.id + ' / ' + who + '\n日程調整のうえ、名簿の「鑑定日」を入力してください。\n' + reg.getUrl());
+  if (op) sendMail_(op, '[調査アンケート] 新しい申込がありました(' + label + ' / ' + res.id + ')', res.id + ' / ' + who + '\n日程調整のうえ、名簿の「鑑定日」を入力してください。\n' + reg.getUrl());
   return result;
 }
 
@@ -1628,12 +1628,12 @@ function buildSummary() {
   sh.setFrozenRows(1);
 }
 
-/** CSV出力(UTF-8 BOM付き)。個人情報は含まない回答DBのみ。Drive のフォルダ「研究アンケート_CSV出力」に保存 */
+/** CSV出力(UTF-8 BOM付き)。個人情報は含まない回答DBのみ。Drive のフォルダ「調査アンケート_CSV出力」に保存 */
 function exportCsv() {
   ownerOnly_();
   var ss = dbSS_();
-  var folders = DriveApp.getFoldersByName('研究アンケート_CSV出力');
-  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('研究アンケート_CSV出力');
+  var folders = DriveApp.getFoldersByName('調査アンケート_CSV出力');
+  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('調査アンケート_CSV出力');
   var stamp = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyyMMdd_HHmm');
   function save(name, rows) {
     folder.createFile(Utilities.newBlob('﻿' + toCsv_(rows), 'text/csv', name + '_' + stamp + '.csv'));
@@ -1651,11 +1651,11 @@ function exportCsv() {
     longRows.forEach(function (r) {
       if (r[ix['フォームID']] !== k || !isTrue_(r[ix['分析採用']])) return;
       var s = r[ix['submission_id']];
-      var o = bySid[s] = bySid[s] || { rid: r[ix['研究用ID']], ts: r[ix['回答日時']], v: {} };
+      var o = bySid[s] = bySid[s] || { rid: r[ix['調査用ID']], ts: r[ix['回答日時']], v: {} };
       var st = r[ix['状態']];
       o.v[r[ix['設問ID']]] = st === '回答' ? (r[ix['数値コード']] !== '' ? r[ix['数値コード']] : r[ix['回答内容']]) : (st === '非表示(分岐)' ? 'NA_HIDDEN' : '');
     });
-    var rows = [['研究用ID', '回答日時'].concat(ids)];
+    var rows = [['調査用ID', '回答日時'].concat(ids)];
     Object.keys(bySid).forEach(function (s) { rows.push([bySid[s].rid, bySid[s].ts].concat(ids.map(function (id) { return bySid[s].v[id] === undefined ? '' : bySid[s].v[id]; }))); });
     save('wide_' + k, rows);
   });
@@ -1722,7 +1722,7 @@ function runStaticTests() {
   Logger.log('静的テスト: ' + (res.length - ng) + ' OK / ' + ng + ' NG');
 }
 
-/** テスト送信(研究用ID F9999)。実行後1分ほど待ってから verifyDataTests() を実行する */
+/** テスト送信(調査用ID F9999)。実行後1分ほど待ってから verifyDataTests() を実行する */
 function runDataTests() {
   ownerOnly_();
   var formIds = getFormIds_();
@@ -1753,7 +1753,7 @@ function verifyDataTests() {
   var long = db.getSheetByName(SHEETS.long).getDataRange().getValues();
   var head = long.shift(); var ix = {}; head.forEach(function (h, i) { ix[h] = i; });
   function find(form, qid) {
-    return long.filter(function (r) { return r[ix['研究用ID']] === CONFIG.TEST_ID && r[ix['フォームID']] === form && r[ix['設問ID']] === qid; });
+    return long.filter(function (r) { return r[ix['調査用ID']] === CONFIG.TEST_ID && r[ix['フォームID']] === form && r[ix['設問ID']] === qid; });
   }
   var sub = db.getSheetByName(SHEETS.submissions).getDataRange().getValues(); sub.shift();
   var res = [];

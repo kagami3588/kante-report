@@ -2,7 +2,7 @@
 // Apps Script には、このファイルと appsscript.json の2つを貼り付ければ動きます。
 
 /**
- * 算命学×自己理解・他者理解・キャリア形成 研究アンケート — 設問定義
+ * 算命学×自己理解・他者理解・キャリア形成 調査アンケート — 設問定義
  *
  * 実装指示書【完全版】の設問文・選択肢を、そのまま保持する。
  * ここに無い設問を追加・省略・言い換えしない。
@@ -92,7 +92,7 @@ function SG_(id, text, scaleKey, axis, purpose, o) {
 function ID_() {
   return Q_({
     id: 'RID', kind: 'id', axis: AXIS.ID, system: true, required: true,
-    text: '研究用ID(運営から届いた専用リンクで自動入力されます。変更しないでください)',
+    text: '調査用ID(運営から届いた専用リンクで自動入力されます。変更しないでください)',
     purpose: '回答者の家庭を匿名IDで識別し、T0〜T2を紐づける'
   });
 }
@@ -339,10 +339,10 @@ var IMPLEMENTATION_NOTES = [
   '複数選択の排他条件(B1「特にない」、B2-2「わからない」、PF5「特にない」)は、Googleフォームでは回答時に強制できない。選択肢の案内文で注意を表示し、送信後に排他矛盾フラグを付けて検出する。',
   '「その他」を選んだ場合のみ自由記述欄を表示する条件(B2-2、PF5)は、Googleフォームでは実装できない。自由記述欄は常に表示し、任意回答とする。',
   '保存前の回答内容の確認画面、二重送信の完全な防止は、Googleフォームでは実装できない。二重送信は送信後に検出して重複フラグを付け、最初の送信を分析に採用する。',
-  'CT1ではD1を最初の設問とし、研究用IDは同じページのD1の直後に置く(研究用IDは専用リンクで自動入力される)。'
+  'CT1ではD1を最初の設問とし、調査用IDは同じページのD1の直後に置く(調査用IDは専用リンクで自動入力される)。'
 ];
 
-// ---------- 申込フォーム(個人情報は1回だけ入力。研究用IDは自動発行。同意は、この申込フォームのみで取得) ----------
+// ---------- 申込フォーム(個人情報は1回だけ入力。調査用IDは自動発行。同意は、この申込フォームのみで取得) ----------
 function EM_(id, text, purpose) {
   return Q_({ id: id, text: text, kind: 'email', axis: AXIS.ID, system: true, required: true, purpose: purpose });
 }
@@ -368,8 +368,8 @@ var CONSENT_DOC_URL = '';
 var CONTACT_MAIL = 'kagami.3588@gmail.com';
 
 // 保護者向けの説明(同意書本体)。小学生向けの説明は含めない(別ページで任意に表示)
-var APPLY_EXPLAIN_1 = '算命学の鑑定プロジェクトにご関心をお寄せいただき、ありがとうございます。鑑定にあわせて、研究へのご協力をお願いしています。目的と個人情報は、責任を持ってお預かりします。以下をお読みいただき、ご理解のうえで、同意をお願いします。\n\n【1. 研究の目的】\n算命学の鑑定をきっかけに、お子様と保護者の方の、自分についての理解、相手(親・子)についての理解、親子の対話、将来についての考え方が、どのように変わるのか(または変わらないのか)を調べます。\n・この研究は、算命学が「当たるかどうか」を調べるものではありません。\n・鑑定の結果は、お子様の将来や能力を決めるものではありません。お子様が自分や家族について考える、一つのきっかけとしてご活用ください。\n・鑑定が良い変化をもたらすとは決めずに、変化があった場合も、なかった場合も、気持ちが落ち着かなくなった場合も、調べます。\n\n【2. ご協力いただくこと】\nアンケートに3回、ウェブ上で回答していただきます。\n・鑑定の前:お子様 約8〜10分、保護者 約6〜8分\n・鑑定の直後:お子様 約10分、保護者 約6分\n・鑑定の約3か月後:お子様 約9〜10分、保護者 約7分\n・お子様と保護者の方が、それぞれ別々に回答します。お子様用は、お子様ご本人が回答してください。別の端末、または別の場所で回答し、お互いの回答を見たり、聞き出したりしないでください。\n・自由に書く欄には、お名前や学校名など、個人が特定される情報は書かないでください。\n・アンケートの専用リンクは、お申込みいただいたメールアドレスに、それぞれの時期に届きます。';
-var APPLY_EXPLAIN_2 = '【3. ご協力は任意です】\n・ご協力は、ご自由な意思によるものです。答えにくい質問は、飛ばしても大丈夫です。途中でやめたくなったら、やめても大丈夫です。やめても、不利益はありません。\n・できれば最後まで答えていただけると、とても助かります。\n\n【4. 途中でやめた場合の回答の扱い】\n・途中でやめた場合は、それまでにご回答いただいた分を、研究に活用させていただきます。\n・アンケートにご回答いただいた時点で、そのご回答を研究に活用することに、同意いただいたものとみなします。\n・ご回答の削除をご希望の場合は、下の連絡先まで、お申し出ください。お申し出があれば、削除します。\n\n【5. ご回答の取り扱い】\n・ご回答は、鑑定を行うまで、確認しません。鑑定のあとのご回答は、責任者の' + RESPONSIBLE + 'が確認します。\n・お子様の回答の内容は、保護者の方にはお見せしません。保護者の方の回答も、お子様にはお見せしません。\n・ただし、お子様の安全に関わる心配がある場合は、お子様にお知らせしたうえで、必要最小限の連絡をすることがあります。';
+var APPLY_EXPLAIN_1 = '算命学の鑑定プロジェクトにご関心をお寄せいただき、ありがとうございます。鑑定にあわせて、調査へのご協力をお願いしています。目的と個人情報は、責任を持ってお預かりします。以下をお読みいただき、ご理解のうえで、同意をお願いします。\n\n【1. 調査の目的】\n算命学の鑑定をきっかけに、お子様と保護者の方の、自分についての理解、相手(親・子)についての理解、親子の対話、将来についての考え方が、どのように変わるのか(または変わらないのか)を調べます。\n・この調査は、算命学が「当たるかどうか」を調べるものではありません。\n・鑑定の結果は、お子様の将来や能力を決めるものではありません。お子様が自分や家族について考える、一つのきっかけとしてご活用ください。\n・鑑定が良い変化をもたらすとは決めずに、変化があった場合も、なかった場合も、気持ちが落ち着かなくなった場合も、調べます。\n\n【2. ご協力いただくこと】\nアンケートに3回、ウェブ上で回答していただきます。\n・鑑定の前:お子様 約8〜10分、保護者 約6〜8分\n・鑑定の直後:お子様 約10分、保護者 約6分\n・鑑定の約3か月後:お子様 約9〜10分、保護者 約7分\n・お子様と保護者の方が、それぞれ別々に回答します。お子様用は、お子様ご本人が回答してください。別の端末、または別の場所で回答し、お互いの回答を見たり、聞き出したりしないでください。\n・自由に書く欄には、お名前や学校名など、個人が特定される情報は書かないでください。\n・アンケートの専用リンクは、お申込みいただいたメールアドレスに、それぞれの時期に届きます。';
+var APPLY_EXPLAIN_2 = '【3. ご協力は任意です】\n・ご協力は、ご自由な意思によるものです。答えにくい質問は、飛ばしても大丈夫です。途中でやめたくなったら、やめても大丈夫です。やめても、不利益はありません。\n・できれば最後まで答えていただけると、とても助かります。\n\n【4. 途中でやめた場合の回答の扱い】\n・途中でやめた場合は、それまでにご回答いただいた分を、調査に活用させていただきます。\n・アンケートにご回答いただいた時点で、そのご回答を調査に活用することに、同意いただいたものとみなします。\n・ご回答の削除をご希望の場合は、下の連絡先まで、お申し出ください。お申し出があれば、削除します。\n\n【5. ご回答の取り扱い】\n・ご回答は、鑑定を行うまで、確認しません。鑑定のあとのご回答は、責任者の' + RESPONSIBLE + 'が確認します。\n・お子様の回答の内容は、保護者の方にはお見せしません。保護者の方の回答も、お子様にはお見せしません。\n・ただし、お子様の安全に関わる心配がある場合は、お子様にお知らせしたうえで、必要最小限の連絡をすることがあります。';
 var APPLY_EXPLAIN_3 = '【6. 想定される負担と、気持ちへの影響】\n・アンケートに回答する時間の負担があります。\n・鑑定の内容やアンケートの質問によって、お子様や保護者の方が、不安な気持ちや、嫌な気持ちになることがあるかもしれません。そのようなときは、遠慮なく下の連絡先までご連絡ください。\n・鑑定の内容を理由に、お子様がやってみたかったことを諦めたり、保護者の方がお子様の選択を制限したりすることがないよう、お願いします。鑑定は、可能性を広げるための材料としてお使いください。\n\n【7. 個人情報の取り扱い】\nお預かりする個人情報(お名前、メールアドレスなど)は、責任を持ってお預かりします。\n・使う目的:鑑定をご提供するため(日程調整、ご連絡、アンケートのご案内)。\n・保管のしかた:アンケートのご回答とは別に保管し、運営(KAGAMI)のみが取り扱います。\n・保管の期間:このプロジェクトが終了するときまでを予定しています。\n・ご本人の同意なく、第三者にお渡しすることはありません。\n\n【8. 匿名の数値の表示について】\n現在、予定はありませんが、今後、必要になった場合に、個人情報(お名前・連絡先)は一切お渡しせず、匿名の年齢と性別の表記と、データの数値のみを表示することがあります。この点も含めて、同意をお願いします。\n\n【9. お問い合わせ】\n運営:KAGAMI\n責任者:' + RESPONSIBLE + '\n連絡先:' + CONTACT_MAIL;
 
 // お子様向けの説明(小学生にも分かる言いかた)。保護者が「見る」を選んだときだけ表示する
@@ -408,7 +408,7 @@ var EXTRA_PLANS = ['レポートのみ 5,000円', 'オンライン鑑定希望 1
 SURVEY.apply = {
   key: 'APPLY',
   title: '算命学の鑑定 お申込みフォーム',
-  intro: 'このフォームは、算命学の鑑定と、その研究アンケートへのお申込み用です。\n\n・保護者の方・お子様の情報をご入力ください。入力は、この1回だけです。最後のページに、説明書と、同意の確認があります。\n・お申込み後、運営から、日程調整のご連絡をします。以後のアンケートのご案内は、ご登録のメールアドレスに届きます。',
+  intro: 'このフォームは、算命学の鑑定と、その調査アンケートへのお申込み用です。\n\n・保護者の方・お子様の情報をご入力ください。入力は、この1回だけです。最後のページに、説明書と、同意の確認があります。\n・お申込み後、運営から、日程調整のご連絡をします。以後のアンケートのご案内は、ご登録のメールアドレスに届きます。',
   blocks: [
     P_('保護者用', { desc: '保護者の方のご情報です。個人情報は、アンケートの回答とは別に保管します。' }),
     T1_('AP1', '保護者さまの名前(フルネーム)', '保護者の氏名(個人情報。回答DBとは別に保管)', true),
@@ -428,15 +428,15 @@ SURVEY.apply = {
     EM_('CH4', 'メールアドレス(お子様用のアンケートのご案内を送ります)', 'お子様用のご案内・受付確認の送信先(個人情報)'),
     EM_('CH5', 'お子様のメールアドレス(確認のため、もう一度入力してください)', '入力ミスの確認'),
     Q_({ id: 'CH6', text: 'お子様の自由記入欄(お子様からの質問などがありましたら、内容をご記入ください)', kind: 'text', axis: AXIS.ID, system: true, purpose: 'お子様からの連絡事項・質問(任意)' }),
-    P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、研究への参加とは関係ありません。)' }),
+    P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、調査への参加とは関係ありません。)' }),
     Q_({ id: 'EX1', text: '追加の鑑定をしてほしい人の名前', kind: 'text1', axis: AXIS.ID, system: true, required: false, purpose: '追加の鑑定の対象者(任意。個人情報)' }),
     SEL_('EX2', '追加の鑑定のご希望の内容', EXTRA_PLANS, false, '追加の鑑定の希望内容(任意)'),
-    P_('同意の確認', { desc: '下の説明書(【1. 研究の目的】から【9. お問い合わせ】まで)と、同意いただく内容をお読みのうえ、いちばん下の項目にチェックをお願いします。チェックをいただいた場合に、お申込みできます。\n\n' + APPLY_EXPLAIN_1 + '\n\n' + APPLY_EXPLAIN_2 + '\n\n' + APPLY_EXPLAIN_3 + '\n\n' + consentList_(['説明書を読み、内容を理解したうえで、お子様とともに、この研究に協力することに同意します。', 'お子様にも内容を説明し、お子様が参加することを確認しました。', 'お名前・メールアドレス・生年月日などを、鑑定のご提供(日程調整、ご連絡、アンケートのご案内)のために使うことに同意します。', '今後、必要になった場合に、個人情報(お名前・連絡先)は一切お渡しせず、匿名の年齢と性別の表記と、データの数値のみを表示することがあることに同意します。(説明書の【8. 匿名の数値の表示について】)']) + '\n\n責任者:' + RESPONSIBLE + '(KAGAMI)\n連絡先:' + CONTACT_MAIL + (CONSENT_DOC_URL ? '\n\n同意書・説明書(上の説明と同じ内容)は、こちらからもご覧いただけます:' + CONSENT_DOC_URL : '') }),
+    P_('同意の確認', { desc: '下の説明書(【1. 調査の目的】から【9. お問い合わせ】まで)と、同意いただく内容をお読みのうえ、いちばん下の項目にチェックをお願いします。チェックをいただいた場合に、お申込みできます。\n\n' + APPLY_EXPLAIN_1 + '\n\n' + APPLY_EXPLAIN_2 + '\n\n' + APPLY_EXPLAIN_3 + '\n\n' + consentList_(['説明書を読み、内容を理解したうえで、お子様とともに、この調査に協力することに同意します。', 'お子様にも内容を説明し、お子様が参加することを確認しました。', 'お名前・メールアドレス・生年月日などを、鑑定のご提供(日程調整、ご連絡、アンケートのご案内)のために使うことに同意します。', '今後、必要になった場合に、個人情報(お名前・連絡先)は一切お渡しせず、匿名の年齢と性別の表記と、データの数値のみを表示することがあることに同意します。(説明書の【8. 匿名の数値の表示について】)']) + '\n\n責任者:' + RESPONSIBLE + '(KAGAMI)\n連絡先:' + CONTACT_MAIL + (CONSENT_DOC_URL ? '\n\n同意書・説明書(上の説明と同じ内容)は、こちらからもご覧いただけます:' + CONSENT_DOC_URL : '') }),
     CKALL_()
   ]
 };
 
-// ---------- 一般鑑定者用・法人鑑定者用の申込フォーム(研究アンケートと研究の同意は付けない。個人情報の利用の同意のみ) ----------
+// ---------- 一般鑑定者用・法人鑑定者用の申込フォーム(調査アンケートと調査の同意は付けない。個人情報の利用の同意のみ) ----------
 var CATEGORY_LABEL = { career: '進路相談用', general: '一般鑑定者用', corp: '法人鑑定者用' };
 var CATEGORY_PREFIX = { career: 'F', general: 'G', corp: 'B' };
 
@@ -542,7 +542,7 @@ SURVEY.applyB.confirm = confirmMessage_('corp');
 
 
 /**
- * 算命学×自己理解・他者理解・キャリア形成 研究アンケート — 実装(Google Apps Script)
+ * 算命学×自己理解・他者理解・キャリア形成 調査アンケート — 実装(Google Apps Script)
  *
  * 使い方:
  *   1. 台帳にする新しいスプレッドシートを作り、「拡張機能 → Apps Script」を開く
@@ -555,8 +555,8 @@ SURVEY.applyB.confirm = confirmMessage_('corp');
  */
 
 var CONFIG = {
-  DB_NAME: '研究アンケート回答DB',
-  REG_NAME: '研究台帳',
+  DB_NAME: '調査アンケート回答DB',
+  REG_NAME: '調査台帳',
   CONTACT_TEXT: '運営の連絡先:kagami.3588@gmail.com',
   CONTACT_MAIL: 'kagami.3588@gmail.com',
   SENDER_NAME: 'KAGAMI',
@@ -583,14 +583,14 @@ var SHEETS = {
 };
 
 var HEAD = {
-  roster: ['研究用ID', '申込日時', '保護者名(申込者名)', '保護者(申込者)の性別', '保護者(申込者)の生年月日', '保護者(申込者)メール', 'LINE検索ID', 'Instagram', '公式LINE追加', '紹介者', 'お子様名', 'お子様の性別', 'お子様の生年月日', 'お子様メール', '鑑定日(yyyy-mm-dd)', '参加状況(参加中/辞退/完了)', 'T0送信日時', 'T1送信日時', 'T2送信日時', '追加鑑定の対象者名', '追加鑑定の希望', '連絡事項(保護者・申込者)', 'お子様の連絡事項', 'メモ', '区分', '法人名', '部署・役職', '電話番号', '鑑定を受ける人数', '鑑定を受ける方(名前・性別・生年月日)', '請求書・領収書の宛名', 'ご希望の内容', 'プラン'],
+  roster: ['調査用ID', '申込日時', '保護者名(申込者名)', '保護者(申込者)の性別', '保護者(申込者)の生年月日', '保護者(申込者)メール', 'LINE検索ID', 'Instagram', '公式LINE追加', '紹介者', 'お子様名', 'お子様の性別', 'お子様の生年月日', 'お子様メール', '鑑定日(yyyy-mm-dd)', '参加状況(参加中/辞退/完了)', 'T0送信日時', 'T1送信日時', 'T2送信日時', '追加鑑定の対象者名', '追加鑑定の希望', '連絡事項(保護者・申込者)', 'お子様の連絡事項', 'メモ', '区分', '法人名', '部署・役職', '電話番号', '鑑定を受ける人数', '鑑定を受ける方(名前・性別・生年月日)', '請求書・領収書の宛名', 'ご希望の内容', 'プラン'],
   pending: ['受付日時', '区分', '名前', 'メールアドレス', 'お子様名 / 法人名', '要確認の理由', '連絡事項'],
-  sendlog: ['日時', '研究用ID', '時点', '送信先', '結果'],
-  submissions: ['submission_id', '回答日時', '研究用ID', '回答者区分', 'フォームID', '時点', '分析採用', 'フラグ', '回答数', '未回答数', '非表示数', '自由記述あり数', 'テスト'],
-  long: ['submission_id', '研究用ID', '回答者区分', 'フォームID', '時点', '設問ID', '回答内容', '数値コード', '回答日時', '状態', '自由記述あり', '分析採用'],
-  options: ['submission_id', '研究用ID', 'フォームID', '設問ID', '選択肢'],
-  reminders: ['日付', '研究用ID', 'フォームID', '回目', '通知先'],
-  safety: ['受信日時', '研究用ID', 'フォームID', '理由', '通知先', '通知結果', '対応期限', '対応状況', '対応日時', '対応担当者', '対応メモ(研究データと分けて管理)']
+  sendlog: ['日時', '調査用ID', '時点', '送信先', '結果'],
+  submissions: ['submission_id', '回答日時', '調査用ID', '回答者区分', 'フォームID', '時点', '分析採用', 'フラグ', '回答数', '未回答数', '非表示数', '自由記述あり数', 'テスト'],
+  long: ['submission_id', '調査用ID', '回答者区分', 'フォームID', '時点', '設問ID', '回答内容', '数値コード', '回答日時', '状態', '自由記述あり', '分析採用'],
+  options: ['submission_id', '調査用ID', 'フォームID', '設問ID', '選択肢'],
+  reminders: ['日付', '調査用ID', 'フォームID', '回目', '通知先'],
+  safety: ['受信日時', '調査用ID', 'フォームID', '理由', '通知先', '通知結果', '対応期限', '対応状況', '対応日時', '対応担当者', '対応メモ(調査データと分けて管理)']
 };
 
 // ======================================================================
@@ -886,7 +886,7 @@ function normEmail_(s) { return String(s || '').trim().toLowerCase(); }
 function normName_(s) { return String(s || '').replace(/[\s　]+/g, '').toLowerCase(); }
 function isEmail_(s) { return /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(String(s || '').trim()); }
 
-/** 次の研究用ID(F0001形式)。テストIDは数えない */
+/** 次の調査用ID(F0001形式)。テストIDは数えない */
 function nextId_(ids, prefix) {
   prefix = prefix || 'F';
   var max = 0;
@@ -901,7 +901,7 @@ function nextId_(ids, prefix) {
 /**
  * 申込フォームの送信を処理する。
  * namedValues: { 設問タイトル: [値] }  existing: [{id, email, childName}]
- * 問題がなければ名簿の行を返し、問題があれば「申込要確認」の行を返す(研究用IDは発行しない)
+ * 問題がなければ名簿の行を返し、問題があれば「申込要確認」の行を返す(調査用IDは発行しない)
  */
 function isBirthDate_(s) {
   s = String(s || '').trim();
@@ -1352,8 +1352,8 @@ function initRegSheets_(reg) {
   settings.getRange(2, 1, 5, 3).setValues([
     ['安全対応担当者メール', '', '回答に確認が必要な内容があった場合の通知先(1名)'],
     ['安全対応担当者メール(代理)', '', '担当者不在時の通知先'],
-    ['このファイルについて', '', 'この台帳には個人情報(お名前・メールアドレス)が入っています。運営のみに共有してください。研究の分析には、別ファイルの「' + CONFIG.DB_NAME + '」を使います'],
-    ['注意', '', '回答DBは、研究担当者のみに共有してください。子ども・保護者・鑑定師には共有しないでください'],
+    ['このファイルについて', '', 'この台帳には個人情報(お名前・メールアドレス)が入っています。運営のみに共有してください。調査の分析には、別ファイルの「' + CONFIG.DB_NAME + '」を使います'],
+    ['注意', '', '回答DBは、調査担当者のみに共有してください。子ども・保護者・鑑定師には共有しないでください'],
     ['運営メール(通知先)', CONFIG.CONTACT_MAIL, '新しい申込・毎朝9時のリマインド一覧が届きます。辞退した家庭は、名簿の「参加状況」を「辞退」にしてください(送信・リマインドが止まります)']
   ]);
   mkSheet_(reg, SHEETS.safety, HEAD.safety);
@@ -1388,7 +1388,7 @@ function readRoster_(reg) {
 }
 
 var formCache_ = {};
-/** 研究用ID入力済みの専用リンク */
+/** 調査用ID入力済みの専用リンク */
 function getPrefilledUrl_(formKey, id) {
   if (!formCache_[formKey]) {
     var f = FormApp.openById(getFormIds_()[formKey]);
@@ -1408,7 +1408,7 @@ function sendMail_(to, subject, body, html) {
 // 申込・送信
 // ======================================================================
 
-/** 申込フォームの送信時: 研究用IDを発行して名簿に登録し、受付確認メールを送る */
+/** 申込フォームの送信時: 調査用IDを発行して名簿に登録し、受付確認メールを送る */
 function onApplySubmit(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -1426,7 +1426,7 @@ function onApplySubmit(e) {
     } else {
       reg.getSheetByName(SHEETS.pending).appendRow(res.pendingRow);
       var op = opMail_(reg);
-      if (op) sendMail_(op, '[研究アンケート] 確認が必要な申込があります(' + label + ')', '理由: ' + res.reason + '\n「申込要確認」シートをご確認ください。(IDは発行していません)\n' + reg.getUrl());
+      if (op) sendMail_(op, '[調査アンケート] 確認が必要な申込があります(' + label + ')', '理由: ' + res.reason + '\n「申込要確認」シートをご確認ください。(IDは発行していません)\n' + reg.getUrl());
     }
   } finally {
     lock.releaseLock();
@@ -1507,7 +1507,7 @@ function deleteFamilyCore_(reg, db, fam) {
     if (sh.getLastRow() < 2) return;
     var vals = sh.getDataRange().getValues();
     var idCol = -1;
-    if (name === SHEETS.long || name === SHEETS.options || name === SHEETS.submissions) idCol = vals[0].indexOf('研究用ID');
+    if (name === SHEETS.long || name === SHEETS.options || name === SHEETS.submissions) idCol = vals[0].indexOf('調査用ID');
     else if (name.indexOf('resp_') === 0) vals[0].forEach(function (h, i) { if (String(h).indexOf('RID.') === 0) idCol = i; });
     if (idCol < 0) return;
     var res = dropRowsById_(vals, idCol, id);
@@ -1526,7 +1526,7 @@ function deleteFamilyCore_(reg, db, fam) {
   return total;
 }
 
-/** 削除のお申し出があったとき(メニューから): 研究用IDの回答データを回答DBから削除し、名簿の個人情報も消す */
+/** 削除のお申し出があったとき(メニューから): 調査用IDの回答データを回答DBから削除し、名簿の個人情報も消す */
 function deleteFamilyData() {
   ownerOnly_();
   var ui = SpreadsheetApp.getUi();
@@ -1615,7 +1615,7 @@ function onFormSubmit(e) {
   }
 }
 
-/** 安全対応担当者へ通知(回答内容は含めない。研究用ID・フォーム・理由のみ) */
+/** 安全対応担当者へ通知(回答内容は含めない。調査用ID・フォーム・理由のみ) */
 function notifySafety_(reg, dbUrl, res, key, tsIso) {
   var settings = reg.getSheetByName(SHEETS.settings);
   var to = [String(settings.getRange('B2').getValue()).trim(), String(settings.getRange('B3').getValue()).trim()].filter(function (s) { return s !== ''; });
@@ -1626,8 +1626,8 @@ function notifySafety_(reg, dbUrl, res, key, tsIso) {
   else if (!to.length) result = '【未送信】通知先が未設定です(設定シートに入力してください)';
   else {
     try {
-      sendMail_(to.join(','), '[研究アンケート] 確認が必要な回答があります(' + res.rid + ' / ' + key + ')',
-        '研究用ID: ' + res.rid + '\nフォーム: ' + key + '\n受信: ' + tsIso + '\n理由:\n- ' + res.reasons.join('\n- ') +
+      sendMail_(to.join(','), '[調査アンケート] 確認が必要な回答があります(' + res.rid + ' / ' + key + ')',
+        '調査用ID: ' + res.rid + '\nフォーム: ' + key + '\n受信: ' + tsIso + '\n理由:\n- ' + res.reasons.join('\n- ') +
         '\n\n対応期限: ' + dueStr + '(受信後24時間以内)\n回答内容は、回答DBの該当行を直接ご確認ください。このメールには回答内容を記載していません。\n台帳(連絡先): ' + reg.getUrl() + '\n回答DB: ' + dbUrl);
       result = '送信済み';
     } catch (err) { result = '【送信失敗】' + err; }
@@ -1652,7 +1652,7 @@ function checkOverdue() {
     }
   });
   if (overdue.length && to.length) {
-    sendMail_(to.join(','), '[研究アンケート] 対応期限を過ぎた確認依頼があります', '次の確認依頼が、24時間以内に「対応済」になっていません:\n- ' + overdue.join('\n- ') + '\n' + reg.getUrl());
+    sendMail_(to.join(','), '[調査アンケート] 対応期限を過ぎた確認依頼があります', '次の確認依頼が、24時間以内に「対応済」になっていません:\n- ' + overdue.join('\n- ') + '\n' + reg.getUrl());
   }
 }
 
@@ -1678,7 +1678,7 @@ function checkReminders() {
   var log = reg.getSheetByName(SHEETS.reminders);
   due.forEach(function (d) { log.appendRow([today, d.id, d.form, d.nth, to]); });
   if (!to) { Logger.log('通知先(設定シートB6)が未設定です'); return; }
-  sendMail_(to, '[研究アンケート] 本日のリマインド対象 ' + due.length + '件(' + today + ')',
+  sendMail_(to, '[調査アンケート] 本日のリマインド対象 ' + due.length + '件(' + today + ')',
     '次の家庭・フォームが未回答です。声かけをお願いします。リマインドは1つのフォームにつき最大2回です。\n' +
     '辞退された家庭には送らないでください(名簿の「参加状況」を「辞退」にすると、通知が止まります)。\n\n' + lines.join('\n') +
     '\n\n--- 文面の例(強制にならないようにしてください) ---\nアンケートへのご協力ありがとうございます。まだ回答がお済みでないようでしたら、お時間のあるときに、できる範囲でご回答いただけると助かります。答えにくい質問は飛ばしていただいて大丈夫です。\n' + reg.getUrl());
@@ -1936,7 +1936,7 @@ var DASHBOARD_HTML = [
   'var s=el("td"),sg=el("span","tag"+(f.status==="参加中"?" ok":" bad"),f.status);s.appendChild(sg);r.appendChild(s);',
   'var d=el("tr","det");d.style.display="none";var dc=el("td");dc.colSpan=heads.length;dc.appendChild(dl(f));dc.appendChild(actions(f));d.appendChild(dc);if(openId===f.id)d.style.display="";r.onclick=function(){var show=d.style.display==="none";d.style.display=show?"":"none";openId=show?f.id:""};t.appendChild(r);t.appendChild(d)});v.appendChild(t)}',
   'function renderPend(v){if(!DATA.pending.length){v.appendChild(el("div","empty","要確認の申込はありません"));return}var t=el("table"),h=el("tr");["受付日時","区分","名前","メール","お子様 / 法人名","理由","連絡事項"].forEach(function(x){h.appendChild(el("th",null,x))});t.appendChild(h);DATA.pending.forEach(function(p){var r=el("tr");[p.at,p.category,p.name,p.email,p.child,p.reason,p.note].forEach(function(x){r.appendChild(el("td",null,x||""))});t.appendChild(r)});v.appendChild(t)}',
-  'function renderSaf(v){if(!DATA.safety.length){v.appendChild(el("div","empty","未対応の安全確認はありません"));return}var t=el("table"),h=el("tr");["受信日時","研究用ID","フォーム","理由","対応期限","状況"].forEach(function(x){h.appendChild(el("th",null,x))});t.appendChild(h);DATA.safety.forEach(function(p){var r=el("tr");[p.at,p.id,p.form,p.reason,p.due,p.status].forEach(function(x){r.appendChild(el("td",null,x||""))});t.appendChild(r)});v.appendChild(t)}',
+  'function renderSaf(v){if(!DATA.safety.length){v.appendChild(el("div","empty","未対応の安全確認はありません"));return}var t=el("table"),h=el("tr");["受信日時","調査用ID","フォーム","理由","対応期限","状況"].forEach(function(x){h.appendChild(el("th",null,x))});t.appendChild(h);DATA.safety.forEach(function(p){var r=el("tr");[p.at,p.id,p.form,p.reason,p.due,p.status].forEach(function(x){r.appendChild(el("td",null,x||""))});t.appendChild(r)});v.appendChild(t)}',
   'function render(){renderCards();renderTabs();renderBulk();var v=document.getElementById("view");v.innerHTML="";document.getElementById("tools").style.display=(tab==="pend"||tab==="saf")?"none":"";if(tab==="pend")renderPend(v);else if(tab==="saf")renderSaf(v);else renderFam(v)}',
   'document.getElementById("q").oninput=render;document.getElementById("st").onchange=render;render();',
   '</script></body></html>'
@@ -1972,7 +1972,7 @@ function ownerOnly_() {
 }
 
 var SITE_CATEGORIES = [
-  { key: 'career', def: 'apply', label: '親子', sub: '保護者さまとお子様の、お申込み', desc: 'お子様の進路・自己理解のための鑑定です。研究アンケートへのご協力をお願いしています。', fee: '鑑定料 30,000円' },
+  { key: 'career', def: 'apply', label: '親子', sub: '保護者さまとお子様の、お申込み', desc: 'お子様の進路・自己理解のための鑑定です。調査アンケートへのご協力をお願いしています。', fee: '鑑定料 30,000円' },
   { key: 'general', def: 'applyG', label: '個人', sub: 'ご自身の、お申込み', desc: 'ご自身の鑑定のお申込みです。', fee: '鑑定料 30,000円' },
   { key: 'corp', def: 'applyB', label: '法人・団体', sub: '会社・団体の、お申込み', desc: '代表の方、または代表と幹部の方の鑑定のお申込みです。', fee: '代表のみ 50,000円 / 代表+幹部2名 100,000円' }
 ];
@@ -2104,7 +2104,7 @@ function finishApplication_(reg, category, res, tsIso) {
   reg.getSheetByName(SHEETS.sendlog).appendRow([tsIso, res.id, '申込受付(' + label + ')', res.email, result]);
   var op = opMail_(reg);
   var who = category === 'corp' ? res.company + ' / 担当:' + res.name + ' / ' + (res.plan ? res.plan.label : '') : (category === 'career' ? '保護者:' + res.name + ' / お子様:' + res.childName : res.name);
-  if (op) sendMail_(op, '[研究アンケート] 新しい申込がありました(' + label + ' / ' + res.id + ')', res.id + ' / ' + who + '\n日程調整のうえ、名簿の「鑑定日」を入力してください。\n' + reg.getUrl());
+  if (op) sendMail_(op, '[調査アンケート] 新しい申込がありました(' + label + ' / ' + res.id + ')', res.id + ' / ' + who + '\n日程調整のうえ、名簿の「鑑定日」を入力してください。\n' + reg.getUrl());
   return result;
 }
 
@@ -2171,12 +2171,12 @@ function buildSummary() {
   sh.setFrozenRows(1);
 }
 
-/** CSV出力(UTF-8 BOM付き)。個人情報は含まない回答DBのみ。Drive のフォルダ「研究アンケート_CSV出力」に保存 */
+/** CSV出力(UTF-8 BOM付き)。個人情報は含まない回答DBのみ。Drive のフォルダ「調査アンケート_CSV出力」に保存 */
 function exportCsv() {
   ownerOnly_();
   var ss = dbSS_();
-  var folders = DriveApp.getFoldersByName('研究アンケート_CSV出力');
-  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('研究アンケート_CSV出力');
+  var folders = DriveApp.getFoldersByName('調査アンケート_CSV出力');
+  var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('調査アンケート_CSV出力');
   var stamp = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyyMMdd_HHmm');
   function save(name, rows) {
     folder.createFile(Utilities.newBlob('﻿' + toCsv_(rows), 'text/csv', name + '_' + stamp + '.csv'));
@@ -2194,11 +2194,11 @@ function exportCsv() {
     longRows.forEach(function (r) {
       if (r[ix['フォームID']] !== k || !isTrue_(r[ix['分析採用']])) return;
       var s = r[ix['submission_id']];
-      var o = bySid[s] = bySid[s] || { rid: r[ix['研究用ID']], ts: r[ix['回答日時']], v: {} };
+      var o = bySid[s] = bySid[s] || { rid: r[ix['調査用ID']], ts: r[ix['回答日時']], v: {} };
       var st = r[ix['状態']];
       o.v[r[ix['設問ID']]] = st === '回答' ? (r[ix['数値コード']] !== '' ? r[ix['数値コード']] : r[ix['回答内容']]) : (st === '非表示(分岐)' ? 'NA_HIDDEN' : '');
     });
-    var rows = [['研究用ID', '回答日時'].concat(ids)];
+    var rows = [['調査用ID', '回答日時'].concat(ids)];
     Object.keys(bySid).forEach(function (s) { rows.push([bySid[s].rid, bySid[s].ts].concat(ids.map(function (id) { return bySid[s].v[id] === undefined ? '' : bySid[s].v[id]; }))); });
     save('wide_' + k, rows);
   });
@@ -2265,7 +2265,7 @@ function runStaticTests() {
   Logger.log('静的テスト: ' + (res.length - ng) + ' OK / ' + ng + ' NG');
 }
 
-/** テスト送信(研究用ID F9999)。実行後1分ほど待ってから verifyDataTests() を実行する */
+/** テスト送信(調査用ID F9999)。実行後1分ほど待ってから verifyDataTests() を実行する */
 function runDataTests() {
   ownerOnly_();
   var formIds = getFormIds_();
@@ -2296,7 +2296,7 @@ function verifyDataTests() {
   var long = db.getSheetByName(SHEETS.long).getDataRange().getValues();
   var head = long.shift(); var ix = {}; head.forEach(function (h, i) { ix[h] = i; });
   function find(form, qid) {
-    return long.filter(function (r) { return r[ix['研究用ID']] === CONFIG.TEST_ID && r[ix['フォームID']] === form && r[ix['設問ID']] === qid; });
+    return long.filter(function (r) { return r[ix['調査用ID']] === CONFIG.TEST_ID && r[ix['フォームID']] === form && r[ix['設問ID']] === qid; });
   }
   var sub = db.getSheetByName(SHEETS.submissions).getDataRange().getValues(); sub.shift();
   var res = [];

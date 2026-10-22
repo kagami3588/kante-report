@@ -244,7 +244,7 @@ t('お子様向けの説明の文は、保護者向けの本文に混ざって�
 t('責任者が「林 竜輔」、連絡先が運営メール', /責任者:林 竜輔/.test(adultText) && /kagami\.3588@gmail\.com/.test(adultText));
 t('鑑定のあとの回答は責任者の林 竜輔が確認する', /鑑定のあとのご回答は、責任者の林 竜輔が確認します/.test(adultText));
 t('削除のお申し出の文', /ご回答の削除をご希望の場合は、下の連絡先まで、お申し出ください。お申し出があれば、削除します/.test(adultText));
-t('途中でやめた場合の回答の活用・回答でみなし同意の文', /それまでにご回答いただいた分を、研究に活用させていただきます/.test(adultText) && /同意いただいたものとみなします/.test(adultText));
+t('途中でやめた場合の回答の活用・回答でみなし同意の文', /それまでにご回答いただいた分を、調査に活用させていただきます/.test(adultText) && /同意いただいたものとみなします/.test(adultText));
 t('個人情報:責任を持ってお預かり、プロジェクト終了まで保管、鑑定の提供のため', /責任を持ってお預かりします/.test(adultText) && /このプロジェクトが終了するときまでを予定/.test(adultText) && /鑑定をご提供するため/.test(adultText));
 t('回答は鑑定を行うまで確認しない', /鑑定を行うまで、確認しません/.test(adultText));
 t('匿名の年齢・性別・数値のみ表示、個人情報は一切お渡ししない', /個人情報\(お名前・連絡先\)は一切お渡しせず、匿名の年齢と性別の表記と、データの数値のみ/.test(adultText));
@@ -354,7 +354,7 @@ t('受付確認メール: お子様用はお子様宛の文面、保護者用は
 const ar = vm.runInContext('buildApplyReceiptEmail_', ctx)({ name: '山田 花子', childName: '山田 太郎' });
 t('申込の受付確認メール: 日程調整は改めて連絡する旨', /日程の調整は、運営から改めてご連絡します/.test(ar.body));
 // 削除
-const dr = vm.runInContext('dropRowsById_', ctx)([['h', '研究用ID'], ['a', 'F0001'], ['b', 'F0002'], ['c', 'F0001']], 1, 'F0001');
+const dr = vm.runInContext('dropRowsById_', ctx)([['h', '調査用ID'], ['a', 'F0001'], ['b', 'F0002'], ['c', 'F0001']], 1, 'F0001');
 t('指定IDの行だけを削除(見出しと他の家庭は残す)', dr.removed === 2 && dr.kept.length === 2 && dr.kept[1][1] === 'F0002');
 
 
@@ -416,7 +416,7 @@ const apG = run('SURVEY.applyG'), apB = run('SURVEY.applyB');
 const qG = apG.blocks.filter(b => b.type === 'q'), qB = apB.blocks.filter(b => b.type === 'q');
 const textOf = (d) => d.intro + d.blocks.map(b => (b.desc || '') + (b.text || '')).join('\n');
 t('3つの申込フォーム(進路相談用・一般鑑定者用・法人鑑定者用)と区分ラベル', run('SURVEY.applyFormKeys.join()') === 'APPLY,APPLY_G,APPLY_B' && run('CATEGORY_LABEL.career') === '進路相談用' && run('CATEGORY_LABEL.general') === '一般鑑定者用' && run('CATEGORY_LABEL.corp') === '法人鑑定者用');
-t('一般・法人の申込フォームに、研究アンケート・研究参加の同意・お子様の項目がない', [apG, apB].every(d => !/研究|アンケート|お子様|お子さま|匿名の/.test(textOf(d))) && !qG.concat(qB).some(q => /^(CONSENT$|CONSENT_CHILD|CONSENT_ANON|CH\d|AP_VIEW)/.test(q.id)));
+t('一般・法人の申込フォームに、調査アンケート・調査参加の同意・お子様の項目がない', [apG, apB].every(d => !/調査|アンケート|お子様|お子さま|匿名の/.test(textOf(d))) && !qG.concat(qB).some(q => /^(CONSENT$|CONSENT_CHILD|CONSENT_ANON|CH\d|AP_VIEW)/.test(q.id)));
 t('一般・法人の同意は、個人情報の利用(必須)', qG.filter(q => q.kind === 'consent').map(q => q.id).join() === 'CONSENT_ALL' && qB.filter(q => q.kind === 'consent').map(q => q.id).join() === 'CONSENT_ALL' && qG.concat(qB).filter(q => q.kind === 'consent').every(q => q.required));
 t('一般・法人の個人情報の説明(責任を持って・鑑定のご提供・プロジェクト終了まで・削除の申し出・責任者)', [apG, apB].every(d => { const x = textOf(d); return /責任を持ってお預かりします/.test(x) && /鑑定をご提供するため/.test(x) && /このプロジェクトが終了するときまで/.test(x) && /お申し出があれば、削除します/.test(x) && /責任者:林 竜輔/.test(x); }));
 t('一般の項目: 名前・性別・生年月日・メール・LINE検索ID・Instagram(任意)・公式LINE・紹介者(カタカナ)・自由記入欄', ['GE1', 'GE2', 'GE3', 'GE4', 'GE5', 'GE6', 'GE7', 'GE8', 'GE9', 'GE11'].every(id => qG.some(q => q.id === id)) && qG.find(q => q.id === 'GE7').required === false && qG.find(q => q.id === 'GE9').kind === 'katakana');
