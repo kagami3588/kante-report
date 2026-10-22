@@ -400,14 +400,17 @@ function corpAddLabel_(n) { return n === 0 ? '追加なし(代表のみ)' : n + 
 var CORP_ADD_CHOICES = (function () { var a = []; for (var i = 0; i <= CORP_FEE.maxAdd; i++) a.push(corpAddLabel_(i)); return a; })();
 
 var GENDERS = ['男性', '女性'];
-// 追加の鑑定(ご家族など)。お子様と大人の方で、追加料金が違う
+// 追加の鑑定(ご家族など)。人数を選び、お一人ずつ、お名前・性別・生年月日・ご希望の内容を入力する。お子様と大人の方で、追加料金が違う
 var EXTRA_FEES = {
-  'お子様 / レポートのみ(+5,000円)': 5000,
-  'お子様 / オンライン鑑定希望(+10,000円)': 10000,
-  '大人の方 / レポート作成料(+5,000円)': 5000,
-  '大人の方 / オンライン鑑定料(+20,000円)': 20000
+  'お子様・レポートのみ(+5,000円)': 5000,
+  'お子様・オンライン鑑定希望(+10,000円)': 10000,
+  '大人の方・レポート作成料(+5,000円)': 5000,
+  '大人の方・オンライン鑑定料(+20,000円)': 20000
 };
 var EXTRA_PLANS = Object.keys(EXTRA_FEES);
+var EXTRA_MAX = 10;
+var EXTRA_COUNT_CHOICES = (function () { var a = ['追加なし']; for (var i = 1; i <= EXTRA_MAX; i++) a.push(i + '名'); return a; })();
+function extraCount_(label) { var m = /^([0-9]+)名$/.exec(String(label || '')); return m ? Number(m[1]) : 0; }
 
 SURVEY.apply = {
   key: 'APPLY',
@@ -434,9 +437,9 @@ SURVEY.apply = {
     EM_('CH4', 'メールアドレス(お子様用のアンケートのご案内を送ります)', 'お子様用のご案内・受付確認の送信先(個人情報)'),
     EM_('CH5', 'お子様のメールアドレス(確認のため、もう一度入力してください)', '入力ミスの確認'),
     Q_({ id: 'CH6', text: 'お子様の自由記入欄(お子様からの質問などがありましたら、内容をご記入ください)', kind: 'text', axis: AXIS.ID, system: true, purpose: 'お子様からの連絡事項・質問(任意)' }),
-    P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、調査への参加とは関係ありません。)\n\n【追加料金】\n・お子様の鑑定: レポートのみ +5,000円 / オンライン鑑定希望 +10,000円\n・大人の方の鑑定: レポート作成料 +5,000円 / オンライン鑑定料 +20,000円' }),
-    Q_({ id: 'EX1', text: '追加の鑑定をしてほしい人の名前', kind: 'text1', axis: AXIS.ID, system: true, required: false, purpose: '追加の鑑定の対象者(任意。個人情報)' }),
-    SEL_('EX2', '追加の鑑定のご希望の内容(お子様・大人の方で、追加料金が違います)', EXTRA_PLANS, false, '追加の鑑定の希望内容(任意)。対象(お子様/大人)と、追加料金が決まる')
+    P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、調査への参加とは関係ありません。)\n\n【追加料金】\n・お子様の鑑定: レポートのみ +5,000円 / オンライン鑑定希望 +10,000円(お一人あたり)\n・大人の方の鑑定: レポート作成料 +5,000円 / オンライン鑑定料 +20,000円(お一人あたり)' }),
+    SEL_('EX0', '追加で鑑定を受ける方は、何名ですか?(追加の方の人数分、鑑定料が加わります)', EXTRA_COUNT_CHOICES, false, '追加の鑑定の人数(任意)。鑑定料に反映される'),
+    PARA_('EX1', '追加で鑑定を受ける方の、お名前・性別・生年月日・ご希望の内容(1行に1名ずつ。例:山田 次郎/男性/19800101/大人の方・レポート作成料(+5,000円))', '追加の鑑定の対象者の氏名・性別・生年月日・希望内容(任意。個人情報)', false)
   ]
 };
 
@@ -527,15 +530,38 @@ function feeLines_(category, plan, extra) {
     if (plan) return ['ご希望のプラン:' + plan.label, '鑑定料:' + yen_(plan.fee)];
     return ['鑑定料:' + yen_(CORP_FEE.base) + '〜', '(従業員の方を追加する場合は、1名につき' + yen_(CORP_FEE.add) + 'を加えた金額を、お振込みください)'];
   }
-  if (category === 'career' && extra) {
-    return ['合計:' + yen_(FEE.career + extra.fee), '鑑定料:' + yen_(FEE.career), '追加の鑑定:' + extra.label, '追加料金:' + yen_(extra.fee)];
+  if (category === 'career' && extra && extra.persons && extra.persons.length) {
+    var lines = ['合計:' + yen_(FEE.career + extra.fee), '鑑定料:' + yen_(FEE.career), '追加の鑑定(' + extra.persons.length + '名):'];
+    extra.persons.forEach(function (x) { lines.push('・' + x.name + ' さん(' + x.plan + ')'); });
+    lines.push('追加料金:' + yen_(extra.fee));
+    return lines;
   }
   return ['鑑定料:' + yen_(FEE[category])];
 }
 
-/** 追加の鑑定の選択肢から、{label, fee}。選択がない・不正なときは null */
-function findExtra_(label) {
-  return Object.prototype.hasOwnProperty.call(EXTRA_FEES, label) ? { label: label, fee: EXTRA_FEES[label] } : null;
+/**
+ * 追加の鑑定の入力(人数と、1行に1名ずつの「名前/性別/生年月日/内容」)を読む。
+ * 返す値: {ok, persons:[{name, gender, birth, plan, fee}], fee, problems:[]}。人数0なら persons は空
+ */
+function parseExtraPersons_(countLabel, lines) {
+  var n = extraCount_(countLabel), out = { ok: true, persons: [], fee: 0, problems: [] };
+  var rows = String(lines || '').split(/\r?\n/).filter(function (x) { return x.trim() !== ''; });
+  if (n === 0) {
+    if (rows.length) out.problems.push('追加の人数が「追加なし」なのに、追加の方の情報が入力されています');
+  } else {
+    if (rows.length !== n) out.problems.push('追加の人数(' + n + '名)と、入力された方の数(' + rows.length + '名)が一致しません');
+    rows.forEach(function (r, i) {
+      var f = r.split('/').map(function (x) { return x.trim(); });
+      var who = (i + 1) + '人目';
+      if (f.length !== 4 || !f[0]) { out.problems.push(who + ': 「名前/性別/生年月日/内容」の形で入力してください'); return; }
+      if (GENDERS.indexOf(f[1]) === -1) out.problems.push(who + ': 性別が不正');
+      if (!isBirthDate_(f[2])) out.problems.push(who + ': 生年月日が不正(8桁の数字)');
+      if (!Object.prototype.hasOwnProperty.call(EXTRA_FEES, f[3])) out.problems.push(who + ': ご希望の内容が不正');
+      else { out.persons.push({ name: f[0], gender: f[1], birth: f[2], plan: f[3], fee: EXTRA_FEES[f[3]] }); out.fee += EXTRA_FEES[f[3]]; }
+    });
+  }
+  out.ok = out.problems.length === 0;
+  return out;
 }
 
 /** 大きく表示する金額の行(合計があれば合計、なければ鑑定料) */

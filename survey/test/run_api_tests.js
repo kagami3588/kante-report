@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-22-g/.test(pa.html) && /2026-10-22-g/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-22-h/.test(pa.html) && /2026-10-22-h/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -463,21 +463,15 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const brokenMid = sentences.filter(l => /[ぁ-んァ-ン一-龠]$/.test(l) && !/^(■|【)/.test(l) && !/(様|さん)$/.test(l) && l.length > 28);
   t('文面: 文章の途中で改行しない(長い一文は、1行のまま)', brokenMid.length === 0, brokenMid.join(' | '));
 }
-{ // 追加の鑑定の料金
-  const E = makeEnv('');
+{ // 追加の鑑定の料金(人数・お一人ずつ)
   const base = { AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'ex1@example.com', AP3: 'ex1@example.com', AP8: 'l', AP10: '追加しました', AP11: 'ナシ', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH4: 'ex2@example.com', CH5: 'ex2@example.com', CONSENT_ALL: '全てに同意しました' };
-  const r0 = E.run('submitApplication')('career', base, '');
+  const go = (o) => { const E = makeEnv(''); return { E, r: E.run('submitApplication')('career', Object.assign({}, base, o), '') }; };
+  const { r: r0 } = go({});
   t('追加の鑑定なし: 鑑定料30,000円のみ', r0.ok && r0.fee.length === 1 && /30,000円/.test(r0.fee[0]));
-  const E2 = makeEnv('');
-  const r1 = E2.run('submitApplication')('career', Object.assign({}, base, { EX1: '山田 次郎', EX2: '大人の方 / オンライン鑑定料(+20,000円)' }), '');
-  t('追加の鑑定(大人・オンライン+20,000円): 合計50,000円が先頭に出て、内訳(鑑定料・追加の鑑定・追加料金)が続く', r1.ok && r1.fee[0] === '合計:50,000円' && /鑑定料:30,000円/.test(r1.fee.join()) && /大人の方 \/ オンライン鑑定料/.test(r1.fee.join()) && /追加料金:20,000円/.test(r1.fee.join()));
-  t('追加の鑑定: 受付メールの本文・HTMLに合計と内訳が入る', E2.sent.some(m => m.to === 'ex1@example.com' && /合計:50,000円/.test(m.body) && /50,000円/.test(m.htmlBody) && /追加料金/.test(m.htmlBody)));
-  const E3 = makeEnv('');
-  const r2 = E3.run('submitApplication')('career', Object.assign({}, base, { EX1: '山田 三郎', EX2: 'お子様 / レポートのみ(+5,000円)' }), '');
-  t('追加の鑑定(お子様・レポートのみ+5,000円): 合計35,000円', r2.ok && r2.fee[0] === '合計:35,000円');
-  const E4 = makeEnv('');
-  const r3 = E4.run('submitApplication')('career', Object.assign({}, base, { EX2: 'お子様 / レポートのみ(+5,000円)' }), '');
-  t('追加の鑑定: 対象者の名前がないと受け付けない', !r3.ok);
+  const { E, r: r1 } = go({ EX0: '2名', EX1: '山田 次郎/男性/19800101/大人の方・オンライン鑑定料(+20,000円)\n山田 三郎/男性/20150101/お子様・レポートのみ(+5,000円)' });
+  t('追加2名(大人オンライン+20,000円・お子様レポート+5,000円): 合計55,000円が先頭、内訳に鑑定料・お一人ずつの内容・追加料金25,000円', r1.ok && r1.fee[0] === '合計:55,000円' && /鑑定料:30,000円/.test(r1.fee.join()) && /山田 次郎 さん\(大人の方・オンライン鑑定料/.test(r1.fee.join()) && /山田 三郎 さん\(お子様・レポートのみ/.test(r1.fee.join()) && /追加料金:25,000円/.test(r1.fee.join()));
+  t('追加の鑑定: 受付メールの本文・HTMLに合計と内訳が入る。名簿に、名前・内容・原文が入る', E.sent.some(m => m.to === 'ex1@example.com' && /合計:55,000円/.test(m.body) && /55,000円/.test(m.htmlBody) && /追加料金/.test(m.htmlBody)) && E.roster.values[1][E.rc('exName')] === '山田 次郎、山田 三郎' && /山田 次郎\/男性\/19800101/.test(E.roster.values[1][E.rc('targets')]));
+  t('追加の鑑定: 人数と入力数の不一致・内容の不正・追加なしなのに入力あり は受け付けない', !go({ EX0: '2名', EX1: '山田 次郎/男性/19800101/大人の方・レポート作成料(+5,000円)' }).r.ok && !go({ EX0: '1名', EX1: '山田 次郎/男性/19800101/偽の内容' }).r.ok && !go({ EX0: '追加なし', EX1: '山田 次郎/男性/19800101/大人の方・レポート作成料(+5,000円)' }).r.ok && !go({ EX0: '1名', EX1: '山田 次郎/男性/1980/大人の方・レポート作成料(+5,000円)' }).r.ok);
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
