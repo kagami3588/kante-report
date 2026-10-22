@@ -512,6 +512,7 @@ SURVEY.applyFormKeys = ['APPLY', 'APPLY_G', 'APPLY_B'];
 
 var CONFIG = {
   DB_NAME: '研究アンケート回答DB',
+  REG_NAME: '研究台帳',
   CONTACT_TEXT: '運営の連絡先:kagami.3588@gmail.com',
   CONTACT_MAIL: 'kagami.3588@gmail.com',
   SENDER_NAME: 'KAGAMI',
@@ -1171,7 +1172,8 @@ function setup() {
   var errors = validateSurveyDefinition_();
   if (errors.length) throw new Error('設問定義にエラーがあります:\n' + errors.join('\n'));
   var reg = SpreadsheetApp.getActiveSpreadsheet();
-  if (!reg) throw new Error('このスクリプトは、スプレッドシートに紐づいていません(script.google.com から単独で作成されています)。次の手順でやり直してください:①Googleスプレッドシートを新しく作る ②そのスプレッドシートの上のメニュー「拡張機能 → Apps Script」を開く ③開いた画面に、このコードを貼り付ける ④もう一度 setup() を実行する。');
+  var standalone = !reg;
+  if (standalone) reg = SpreadsheetApp.create(CONFIG.REG_NAME);
 
   var db = SpreadsheetApp.create(CONFIG.DB_NAME);
   props.setProperty('SS_ID', db.getId());
@@ -1201,6 +1203,7 @@ function setup() {
   ScriptApp.newTrigger('checkOverdue').timeBased().everyHours(1).create();
   ScriptApp.newTrigger('checkReminders').timeBased().everyDays(1).atHour(9).create();
 
+  if (standalone) Logger.log('※このスクリプトはスプレッドシートに紐づいていないため、台帳を自動で作りました。台帳のメニュー「アンケート運用」は使えません。リンクの送信・鑑定日の入力などは、確認サイト(ウェブアプリ)の画面で行ってください。');
   Logger.log('台帳: ' + reg.getUrl());
   Logger.log('回答DB: ' + db.getUrl());
   applyUrls.forEach(function (u) { Logger.log(u); });
@@ -1333,6 +1336,27 @@ function sendT0Selected() { sendLinks_('T0', 'selected'); }
 function sendT1Selected() { sendLinks_('T1', 'selected'); }
 function sendT2Selected() { sendLinks_('T2', 'selected'); }
 
+/** 対象の家庭に、保護者宛・お子様宛のリンクをメールで送り、送信日時を名簿に記録する(メニューとサイトの共通処理) */
+function sendLinksToFamilies_(reg, time, due) {
+  var sh = reg.getSheetByName(SHEETS.roster);
+  var log = reg.getSheetByName(SHEETS.sendlog);
+  var col = RC.T0 + 1 + LINK_TIMES.indexOf(time);
+  var ok = 0, ng = 0;
+  due.forEach(function (d) {
+    var stamp = nowStr_();
+    var okParent = false, okChild = false;
+    try {
+      var mails = buildLinkEmails_(time, d, { child: getPrefilledUrl_('CT' + time.charAt(1), d.id), parent: getPrefilledUrl_('PT' + time.charAt(1), d.id) });
+      try { sendMail_(d.email, mails.parent.subject, mails.parent.body); okParent = true; log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '送信済み']); } catch (e1) { log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '【失敗】' + e1]); }
+      try { sendMail_(d.childEmail, mails.child.subject, mails.child.body); okChild = true; log.appendRow([stamp, d.id, time + ' お子様宛', d.childEmail, '送信済み']); } catch (e2) { log.appendRow([stamp, d.id, time + ' お子様宛', d.childEmail, '【失敗】' + e2]); }
+    } catch (err) {
+      log.appendRow([stamp, d.id, time, '', '【リンク作成に失敗】' + err]);
+    }
+    if (okParent && okChild) { sh.getRange(d.row, col).setValue(stamp); ok++; } else { ng++; }
+  });
+  return { ok: ok, ng: ng };
+}
+
 /** 確認ダイアログのあと、対象の家庭にアンケートのリンクをメールで送る(ボタン=メニューから実行) */
 function sendLinks_(time, mode) {
   var reg = regSS_();
@@ -1353,40 +1377,15 @@ function sendLinks_(time, mode) {
   var ans = ui.alert('送信の確認', due.length + '家庭に、' + TIME_LABEL[time] + 'のアンケートのリンク(子ども用・保護者用)を、メールで送ります。\n\n' + list + (due.length > 20 ? '\n…ほか' + (due.length - 20) + '家庭' : '') + '\n\n送ってよろしいですか?', ui.ButtonSet.YES_NO);
   if (ans !== ui.Button.YES) return;
 
-  var sh = reg.getSheetByName(SHEETS.roster);
-  var log = reg.getSheetByName(SHEETS.sendlog);
-  var col = RC.T0 + 1 + LINK_TIMES.indexOf(time);
-  var ok = 0, ng = 0;
-  due.forEach(function (d) {
-    var stamp = nowStr_();
-    var parts = [];
-    var okParent = false, okChild = false;
-    try {
-      var mails = buildLinkEmails_(time, d, { child: getPrefilledUrl_('CT' + time.charAt(1), d.id), parent: getPrefilledUrl_('PT' + time.charAt(1), d.id) });
-      try { sendMail_(d.email, mails.parent.subject, mails.parent.body); okParent = true; log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '送信済み']); } catch (e1) { log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '【失敗】' + e1]); }
-      try { sendMail_(d.childEmail, mails.child.subject, mails.child.body); okChild = true; log.appendRow([stamp, d.id, time + ' お子様宛', d.childEmail, '送信済み']); } catch (e2) { log.appendRow([stamp, d.id, time + ' お子様宛', d.childEmail, '【失敗】' + e2]); }
-    } catch (err) {
-      log.appendRow([stamp, d.id, time, '', '【リンク作成に失敗】' + err]);
-    }
-    if (okParent && okChild) { sh.getRange(d.row, col).setValue(stamp); ok++; } else { ng++; }
-  });
+  var res = sendLinksToFamilies_(reg, time, due);
+  var ok = res.ok, ng = res.ng;
   ui.alert('送信が終わりました', '保護者・お子様の両方に送れた家庭: ' + ok + ' / 一部または全部が失敗: ' + ng + '\n(結果は「送信ログ」シートで確認できます。失敗した家庭は、送信日時が空欄のままなので、もう一度実行できます。ただし、すでに届いた宛先には重複して届きます)', ui.ButtonSet.OK);
 }
 
 
-/** 削除のお申し出があったとき: 研究用IDの回答データを、回答DB(生の回答・Long・LongOptions・Submissions)から削除し、名簿の個人情報も消す */
-function deleteFamilyData() {
-  var ui = SpreadsheetApp.getUi();
-  var r = ui.prompt('削除する研究用ID', '削除を申し出た家庭の研究用ID(例:F0001)を入力してください。この操作は元に戻せません。', ui.ButtonSet.OK_CANCEL);
-  if (r.getSelectedButton() !== ui.Button.OK) return;
-  var id = r.getResponseText().trim();
-  if (!/^[FGB][0-9]{4}$/.test(id)) { ui.alert('IDの形式が正しくありません(F0001・G0001・B0001 の形式)'); return; }
-  var reg = regSS_();
-  var db = dbSS_();
-  var fam = readRoster_(reg).filter(function (x) { return x.id === id; })[0];
-  if (!fam) { ui.alert('名簿に ' + id + ' が見つかりません'); return; }
-  var ans = ui.alert('削除の確認', id + '(' + fam.name + ' 様 / お子様:' + fam.childName + ')の、アンケートの回答データをすべて削除し、名簿の個人情報(名前・性別・生年月日・メール・LINE・Instagram・紹介者・追加鑑定・連絡事項)を消去します。\n\n元に戻せません。実行しますか?', ui.ButtonSet.YES_NO);
-  if (ans !== ui.Button.YES) return;
+/** 指定IDの回答データ(回答DB)と、名簿の個人情報を削除する(メニューとサイトの共通処理)。削除した回答DBの行数を返す */
+function deleteFamilyCore_(reg, db, fam) {
+  var id = fam.id;
   var total = 0;
   db.getSheets().forEach(function (sh) {
     var name = sh.getName();
@@ -1409,7 +1408,23 @@ function deleteFamilyData() {
   rsh.getRange(fam.row, RC.status + 1).setValue('削除済み');
   rsh.getRange(fam.row, RC.memo + 1).setValue('削除のお申し出により、' + todayStr_() + ' に回答データと個人情報を削除');
   reg.getSheetByName(SHEETS.sendlog).appendRow([nowStr_(), id, '削除', '', '回答データ' + total + '行・個人情報を削除']);
-  ui.alert('削除しました', '回答DBから ' + total + ' 行を削除し、名簿の個人情報を消去しました。(安全対応ログ・送信ログに残る研究用IDの記録は、必要に応じて手動で整理してください)', ui.ButtonSet.OK);
+  return total;
+}
+
+/** 削除のお申し出があったとき(メニューから): 研究用IDの回答データを回答DBから削除し、名簿の個人情報も消す */
+function deleteFamilyData() {
+  var ui = SpreadsheetApp.getUi();
+  var r = ui.prompt('削除するID', '削除を申し出た方のID(例:F0001)を入力してください。この操作は元に戻せません。', ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  var id = r.getResponseText().trim();
+  if (!/^[FGB][0-9]{4}$/.test(id)) { ui.alert('IDの形式が正しくありません(F0001・G0001・B0001 の形式)'); return; }
+  var reg = regSS_();
+  var fam = readRoster_(reg).filter(function (x) { return x.id === id; })[0];
+  if (!fam) { ui.alert('名簿に ' + id + ' が見つかりません'); return; }
+  var ans = ui.alert('削除の確認', id + '(' + fam.name + ' 様)の、アンケートの回答データをすべて削除し、名簿の個人情報を消去します。\n\n元に戻せません。実行しますか?', ui.ButtonSet.YES_NO);
+  if (ans !== ui.Button.YES) return;
+  var total = deleteFamilyCore_(reg, dbSS_(), fam);
+  ui.alert('削除しました', '回答DBから ' + total + ' 行を削除し、名簿の個人情報を消去しました。(安全対応ログ・送信ログに残るIDの記録は、必要に応じて手動で整理してください)', ui.ButtonSet.OK);
 }
 
 function onOpen() {
@@ -1644,6 +1659,93 @@ function safeJson_(obj) {
   return JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 }
 
+
+// ======================================================================
+// 確認サイトからの操作(メニューが使えない場合でも、サイトだけで運用できる)
+// ======================================================================
+
+function isIsoDate_(s) {
+  s = String(s || '').trim();
+  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(s)) return false;
+  var y = Number(s.slice(0, 4)), m = Number(s.slice(5, 7)), d = Number(s.slice(8, 10));
+  var dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d && y >= 2020 && y <= 2100;
+}
+
+var ALLOWED_STATUS = ['参加中', '辞退', '完了'];
+
+function apiGuard_() {
+  var reg = regSS_();
+  if (!isAllowedViewer_(Session.getActiveUser().getEmail(), Session.getEffectiveUser().getEmail(), [opMail_(reg)])) throw new Error('権限がありません');
+  return reg;
+}
+
+function dashboardData_(reg) {
+  var db = dbSS_();
+  function rows(ss, name) { var sh = ss.getSheetByName(name); if (!sh || sh.getLastRow() < 2) return []; return sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues(); }
+  return buildDashboardData_(readRoster_(reg), rows(reg, SHEETS.pending), rows(db, SHEETS.submissions), rows(reg, SHEETS.safety), todayStr_());
+}
+
+function findFamily_(reg, id) {
+  id = String(id || '').trim();
+  if (!/^[FGB][0-9]{4}$/.test(id)) throw new Error('IDの形式が正しくありません');
+  var fam = readRoster_(reg).filter(function (x) { return x.id === id; })[0];
+  if (!fam) throw new Error('名簿に ' + id + ' が見つかりません');
+  return fam;
+}
+
+/** 最新のデータを返す(サイトの更新用) */
+function apiData() { return dashboardData_(apiGuard_()); }
+
+/** 鑑定日を入力・変更する。空文字で消去 */
+function apiSetSessionDate(id, date) {
+  var reg = apiGuard_();
+  var fam = findFamily_(reg, id);
+  date = String(date || '').trim();
+  if (date !== '' && !isIsoDate_(date)) throw new Error('日付は yyyy-mm-dd の形式で入力してください(例:2026-11-10)');
+  var cell = reg.getSheetByName(SHEETS.roster).getRange(fam.row, RC.session + 1);
+  cell.setNumberFormat('@');
+  cell.setValue(date);
+  return dashboardData_(reg);
+}
+
+/** 参加状況を変更する(参加中/辞退/完了) */
+function apiSetStatus(id, status) {
+  var reg = apiGuard_();
+  var fam = findFamily_(reg, id);
+  if (ALLOWED_STATUS.indexOf(status) === -1) throw new Error('参加状況が正しくありません');
+  if (String(fam.status) === '削除済み') throw new Error('削除済みの方は変更できません');
+  reg.getSheetByName(SHEETS.roster).getRange(fam.row, RC.status + 1).setValue(status);
+  return dashboardData_(reg);
+}
+
+/** アンケートのリンクを送る(進路相談用のみ)。ids を渡すとその家庭だけ(日付の条件なし)、渡さなければ条件に合う家庭すべて */
+function apiSendLinks(time, ids) {
+  var reg = apiGuard_();
+  if (LINK_TIMES.indexOf(time) === -1) throw new Error('時点が正しくありません');
+  var selected = null;
+  if (ids && ids.length) {
+    var rows = readRoster_(reg);
+    selected = {};
+    ids.forEach(function (id) { var f = rows.filter(function (x) { return x.id === String(id); })[0]; if (f) selected[f.row] = true; });
+  }
+  var due = linksDue_(readRoster_(reg), time, todayStr_(), selected);
+  if (!due.length) return { sent: 0, ng: 0, message: '送る対象の家庭はありません(送信済み・辞退・メール未入力・鑑定日の条件を満たしていません)', data: dashboardData_(reg) };
+  var quota = MailApp.getRemainingDailyQuota();
+  if (quota < due.length * 2) throw new Error('今日の送信上限に足りません(残り' + quota + '通 / 必要:' + due.length * 2 + '通)');
+  var res = sendLinksToFamilies_(reg, time, due);
+  return { sent: res.ok, ng: res.ng, message: TIME_LABEL[time] + 'のリンクを、' + res.ok + '家庭に送りました' + (res.ng ? '(失敗:' + res.ng + '家庭。「送信ログ」を確認してください)' : ''), data: dashboardData_(reg) };
+}
+
+/** 削除のお申し出があった方のデータを削除する */
+function apiDeleteFamily(id) {
+  var reg = apiGuard_();
+  var fam = findFamily_(reg, id);
+  if (String(fam.status) === '削除済み') throw new Error('すでに削除済みです');
+  var total = deleteFamilyCore_(reg, dbSS_(), fam);
+  return { message: id + ' の回答データ(' + total + '行)と個人情報を削除しました', data: dashboardData_(reg) };
+}
+
 var DASHBOARD_HTML = [
   '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>申込・進捗ダッシュボード</title>',
   '<style>',
@@ -1664,18 +1766,32 @@ var DASHBOARD_HTML = [
   '.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;border:1px solid var(--line)}.tag.ok{color:var(--ok);border-color:var(--ok)}.tag.warn{color:var(--warn);border-color:var(--warn)}.tag.bad{color:var(--bad);border-color:var(--bad)}',
   '.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;border:1px solid var(--mut)}.dot.on{background:var(--ok);border-color:var(--ok)}.dot.sent{background:var(--warn);border-color:var(--warn)}',
   '.empty{padding:24px;text-align:center;color:var(--mut)}.note{color:var(--mut);font-size:12px;margin-top:10px}',
+  '.msg{margin:0 0 10px;padding:0;color:var(--ok);min-height:0}.msg.bad{color:var(--bad)}.msg:not(:empty){padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card)}',
+  '.acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}.acts label{color:var(--mut);font-size:12px}',
+  'button.act{border:1px solid var(--acc);background:var(--card);color:var(--acc);padding:4px 10px;border-radius:6px;cursor:pointer;font:inherit}button.act.danger{border-color:var(--bad);color:var(--bad)}button.act:disabled{opacity:.5;cursor:default}',
+  '.bulk{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}',
   '</style></head><body><main>',
   '<h1>申込・進捗ダッシュボード</h1><div class="sub" id="sub"></div>',
   '<div class="cards" id="cards"></div>',
   '<div class="tabs" id="tabs"></div>',
   '<div class="tools" id="tools"><input id="q" placeholder="名前・ID・法人名・メール・LINE・紹介者で検索"><select id="st"><option value="">すべての状況</option><option value="参加中">参加中</option><option value="辞退">辞退</option><option value="完了">完了</option><option value="削除済み">削除済み</option></select></div>',
+  '<div class="msg" id="msg"></div><div class="bulk" id="bulk"></div>',
   '<div class="wrap" id="view"></div>',
-  '<div class="note">この画面は閲覧専用です。リンクの送信・鑑定日の入力・削除は、台帳のスプレッドシートで行います。個人情報を含むため、画面を他の人に見せたり、URLを共有したりしないでください。</div>',
+  '<div class="note">行をクリックすると、詳細と操作(鑑定日の入力・参加状況の変更・リンクの送信・削除)が開きます。ボタンは、1回目で確認、2回目で実行します。個人情報を含むため、画面を他の人に見せたり、URLを共有したりしないでください。</div>',
   '</main><script>',
   'var DATA=__DATA__;',
   'var CATS=[["career","進路相談用"],["general","一般鑑定者用"],["corp","法人鑑定者用"]];',
   'function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}',
-  'var tab="career";',
+  'var tab="career",openId="",busy=false;',
+  'function msg(t,bad){var m=document.getElementById("msg");m.textContent=t;m.className="msg"+(bad?" bad":"")}',
+  'function call(name,args){if(!window.google||!google.script||!google.script.run){msg("この画面では操作できません。Apps Scriptのウェブアプリとして開いてください。",true);return}if(busy)return;busy=true;msg("処理中…");var r=google.script.run.withSuccessHandler(function(res){busy=false;DATA=(res&&res.data)?res.data:res;msg((res&&res.message)?res.message:"保存しました");render()}).withFailureHandler(function(e){busy=false;msg("エラー: "+(e&&e.message?e.message:e),true)});r[name].apply(r,args)}',
+  'function armBtn(label,fn,cls){var b=el("button","act"+(cls?" "+cls:""),label),t=null;b._armed=false;b.onclick=function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();if(b._armed){clearTimeout(t);b._armed=false;b.textContent=label;fn();return}b._armed=true;b.textContent="もう一度押すと実行";t=setTimeout(function(){b._armed=false;b.textContent=label},5000)};return b}',
+  'function actions(f){var a=el("div","acts"),gone=f.status==="削除済み";',
+  'var l1=el("label",null,"鑑定日");a.appendChild(l1);var di=el("input");di.type="date";di.value=f.sessionDate||"";di.disabled=gone;a.appendChild(di);var sv=el("button","act","保存");sv.disabled=gone;sv.onclick=function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();call("apiSetSessionDate",[f.id,di.value])};a.appendChild(sv);',
+  'var l2=el("label",null,"参加状況");a.appendChild(l2);var se=el("select");["参加中","辞退","完了"].forEach(function(x){var o=el("option",null,x);o.value=x;if(f.status===x)o.selected=true;se.appendChild(o)});se.disabled=gone;a.appendChild(se);var sv2=el("button","act","保存");sv2.disabled=gone;sv2.onclick=function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();call("apiSetStatus",[f.id,se.value])};a.appendChild(sv2);',
+  'if(f.category==="career"&&!gone){["T0","T1","T2"].forEach(function(t){a.appendChild(armBtn(t+"のリンクを送る",function(){call("apiSendLinks",[t,[f.id]])}))})}',
+  'if(!gone)a.appendChild(armBtn("データを削除",function(){call("apiDeleteFamily",[f.id])},"danger"));return a}',
+  'function renderBulk(){var b=document.getElementById("bulk");b.innerHTML="";if(tab!=="career")return;var s=DATA.summary;["T0","T1","T2"].forEach(function(t){var n=s.toSend[t];var x=armBtn(t+"のリンクを、条件に合う全家庭に送る ("+n+")",function(){call("apiSendLinks",[t,null])});x.disabled=!n;b.appendChild(x)})}',
   'function card(l,v,k){var d=el("div","card"+(k?" "+k:""));d.appendChild(el("b",null,String(v)));d.appendChild(el("span",null,l));return d}',
   'function renderCards(){var s=DATA.summary,c=document.getElementById("cards");c.innerHTML="";',
   'CATS.forEach(function(x){var b=s.by[x[0]];c.appendChild(card(x[1]+"(参加中)",b.active,b.noSession?"warn":""))});',
@@ -1702,10 +1818,10 @@ var DASHBOARD_HTML = [
   'if(career){var p=el("td");["T0","T1","T2"].forEach(function(x){p.appendChild(dots(f,x))});r.appendChild(p)}',
   'var n=el("td"),tg=el("span","tag"+(/送る|入力/.test(f.next)?" warn":/完了/.test(f.next)?" ok":""),f.next);n.appendChild(tg);r.appendChild(n);',
   'var s=el("td"),sg=el("span","tag"+(f.status==="参加中"?" ok":" bad"),f.status);s.appendChild(sg);r.appendChild(s);',
-  'var d=el("tr","det");d.style.display="none";var dc=el("td");dc.colSpan=heads.length;dc.appendChild(dl(f));d.appendChild(dc);r.onclick=function(){d.style.display=d.style.display==="none"?"":"none"};t.appendChild(r);t.appendChild(d)});v.appendChild(t)}',
+  'var d=el("tr","det");d.style.display="none";var dc=el("td");dc.colSpan=heads.length;dc.appendChild(dl(f));dc.appendChild(actions(f));d.appendChild(dc);if(openId===f.id)d.style.display="";r.onclick=function(){var show=d.style.display==="none";d.style.display=show?"":"none";openId=show?f.id:""};t.appendChild(r);t.appendChild(d)});v.appendChild(t)}',
   'function renderPend(v){if(!DATA.pending.length){v.appendChild(el("div","empty","要確認の申込はありません"));return}var t=el("table"),h=el("tr");["受付日時","区分","名前","メール","お子様 / 法人名","理由","連絡事項"].forEach(function(x){h.appendChild(el("th",null,x))});t.appendChild(h);DATA.pending.forEach(function(p){var r=el("tr");[p.at,p.category,p.name,p.email,p.child,p.reason,p.note].forEach(function(x){r.appendChild(el("td",null,x||""))});t.appendChild(r)});v.appendChild(t)}',
   'function renderSaf(v){if(!DATA.safety.length){v.appendChild(el("div","empty","未対応の安全確認はありません"));return}var t=el("table"),h=el("tr");["受信日時","研究用ID","フォーム","理由","対応期限","状況"].forEach(function(x){h.appendChild(el("th",null,x))});t.appendChild(h);DATA.safety.forEach(function(p){var r=el("tr");[p.at,p.id,p.form,p.reason,p.due,p.status].forEach(function(x){r.appendChild(el("td",null,x||""))});t.appendChild(r)});v.appendChild(t)}',
-  'function render(){renderCards();renderTabs();var v=document.getElementById("view");v.innerHTML="";document.getElementById("tools").style.display=(tab==="pend"||tab==="saf")?"none":"";if(tab==="pend")renderPend(v);else if(tab==="saf")renderSaf(v);else renderFam(v)}',
+  'function render(){renderCards();renderTabs();renderBulk();var v=document.getElementById("view");v.innerHTML="";document.getElementById("tools").style.display=(tab==="pend"||tab==="saf")?"none":"";if(tab==="pend")renderPend(v);else if(tab==="saf")renderSaf(v);else renderFam(v)}',
   'document.getElementById("q").oninput=render;document.getElementById("st").onchange=render;render();',
   '</script></body></html>'
 ].join('\n');
@@ -1719,14 +1835,9 @@ function doGet() {
   var props = PropertiesService.getScriptProperties();
   if (!props.getProperty('REG_SS_ID')) return HtmlService.createHtmlOutput('セットアップが済んでいません。setup() を実行してください。');
   var reg = regSS_();
-  var allowed = [opMail_(reg)];
-  var ok = isAllowedViewer_(Session.getActiveUser().getEmail(), Session.getEffectiveUser().getEmail(), allowed);
+  var ok = isAllowedViewer_(Session.getActiveUser().getEmail(), Session.getEffectiveUser().getEmail(), [opMail_(reg)]);
   if (!ok) return HtmlService.createHtmlOutput('この画面を見る権限がありません。').setTitle('権限がありません');
-  var db = dbSS_();
-  var roster = readRoster_(reg);
-  function rows(ss, name) { var sh = ss.getSheetByName(name); if (!sh || sh.getLastRow() < 2) return []; return sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues(); }
-  var data = buildDashboardData_(roster, rows(reg, SHEETS.pending), rows(db, SHEETS.submissions), rows(reg, SHEETS.safety), todayStr_());
-  return HtmlService.createHtmlOutput(dashboardPage_(data)).setTitle('申込・進捗ダッシュボード').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  return HtmlService.createHtmlOutput(dashboardPage_(dashboardData_(reg))).setTitle('申込・進捗ダッシュボード').addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
 // ======================================================================
