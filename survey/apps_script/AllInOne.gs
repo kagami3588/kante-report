@@ -1171,7 +1171,7 @@ function setup() {
   var errors = validateSurveyDefinition_();
   if (errors.length) throw new Error('設問定義にエラーがあります:\n' + errors.join('\n'));
   var reg = SpreadsheetApp.getActiveSpreadsheet();
-  if (!reg) throw new Error('このスクリプトは、台帳にするスプレッドシートの「拡張機能 → Apps Script」から作成してください。');
+  if (!reg) throw new Error('このスクリプトは、スプレッドシートに紐づいていません(script.google.com から単独で作成されています)。次の手順でやり直してください:①Googleスプレッドシートを新しく作る ②そのスプレッドシートの上のメニュー「拡張機能 → Apps Script」を開く ③開いた画面に、このコードを貼り付ける ④もう一度 setup() を実行する。');
 
   var db = SpreadsheetApp.create(CONFIG.DB_NAME);
   props.setProperty('SS_ID', db.getId());
