@@ -283,7 +283,7 @@ t('同意書・説明書のリンク用の設定(CONSENT_DOC_URL)がある。空
   const bd = f.items.filter(i => /^(AP7|CH3)\./.test(i.title));
   t('生年月日欄は8桁の数字の検証', bd.length === 2 && bd.every(i => i.validation && i.validation.pattern === '^[0-9]{8}$'));
   const kt = f.items.find(i => /^AP11\./.test(i.title));
-  t('紹介者欄はカタカナの検証', !!kt && !!kt.validation && /30A1/.test(kt.validation.pattern));
+  t('紹介者欄はカタカナの検証(\\u の表記は使わず、文字そのもので書く)', !!kt && !!kt.validation && /ァ-ヺ/.test(kt.validation.pattern) && !/\\u/.test(kt.validation.pattern));
   t('4つの同意が必須のチェックボックス', f.items.filter(i => /^CONSENT/.test(i.title)).length === 4 && f.items.filter(i => /^CONSENT/.test(i.title)).every(i => i.required));
   const line = f.items.find(i => /^AP10\./.test(i.title));
   t('公式LINEの追加確認は必須のチェックボックス', line.type === 'CHECK' && line.required && line.choices[0].value === '追加しました');

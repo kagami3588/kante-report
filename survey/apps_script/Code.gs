@@ -559,6 +559,12 @@ function buildApplyReceiptEmail_(p, category) {
 // フォーム構築(Apps Script)
 // ======================================================================
 
+/** 入力チェックの設定に失敗しても、フォームの作成を止めない(受付後に、運営側のプログラムでも同じ確認をしている) */
+function setValidationSafe_(item, validation) {
+  try { item.setValidation(validation); }
+  catch (e) { Logger.log('【注意】入力チェックを設定できませんでした: ' + item.getTitle() + ' (' + e + ')。回答は受け付けたあとに、運営側のプログラムでも確認します。'); }
+}
+
 function buildFormFromDef_(def, ss, confirmMessage) {
   var form = FormApp.create(def.title);
   form.setDescription(def.intro);
@@ -594,30 +600,30 @@ function buildFormFromDef_(def, ss, confirmMessage) {
     var title = qTitle_(b);
     if (b.kind === 'id') {
       it = form.addTextItem().setTitle(title);
-      it.setValidation(FormApp.createTextValidation().requireTextMatchesPattern(SURVEY.idPattern).setHelpText('F0001 の形式です。専用リンクから開くと自動で入力されます。').build());
+      setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern(SURVEY.idPattern).setHelpText('F0001 の形式です。専用リンクから開くと自動で入力されます。').build());
       it.setRequired(true);
     } else if (b.kind === 'email') {
       it = form.addTextItem().setTitle(title);
-      it.setValidation(FormApp.createTextValidation().requireTextIsEmail().build());
+      setValidationSafe_(it, FormApp.createTextValidation().requireTextIsEmail().build());
       it.setRequired(!!b.required);
     } else if (b.kind === 'text1') {
       it = form.addTextItem().setTitle(title);
       it.setRequired(!!b.required);
     } else if (b.kind === 'birth') {
       it = form.addTextItem().setTitle(title);
-      it.setValidation(FormApp.createTextValidation().requireTextMatchesPattern('^[0-9]{8}$').setHelpText('8桁の数字で入力してください。(例:20000218)').build());
+      setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern('^[0-9]{8}$').setHelpText('8桁の数字で入力してください。(例:20000218)').build());
       it.setRequired(!!b.required);
     } else if (b.kind === 'int') {
       it = form.addTextItem().setTitle(title);
-      it.setValidation(FormApp.createTextValidation().requireTextMatchesPattern('^[0-9]{1,3}$').setHelpText('半角の数字で入力してください。').build());
+      setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern('^[0-9]{1,3}$').setHelpText('半角の数字で入力してください。').build());
       it.setRequired(!!b.required);
     } else if (b.kind === 'phone') {
       it = form.addTextItem().setTitle(title);
-      it.setValidation(FormApp.createTextValidation().requireTextMatchesPattern('^[0-9\\-]{9,13}$').setHelpText('半角の数字(ハイフンは省略可)で入力してください。').build());
+      setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern('^[0-9\\-]{9,13}$').setHelpText('半角の数字(ハイフンは省略可)で入力してください。').build());
       it.setRequired(!!b.required);
     } else if (b.kind === 'katakana') {
       it = form.addTextItem().setTitle(title);
-      it.setValidation(FormApp.createTextValidation().requireTextMatchesPattern('^[\\u30A1-\\u30FA\\u30FC\\u30FB\\s\\u3000]+$').setHelpText('カタカナで入力してください。(いない場合は「ナシ」)').build());
+      setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern('^[ァ-ヺー・\\s\u3000]+$').setHelpText('カタカナで入力してください。(いない場合は「ナシ」)').build());
       it.setRequired(!!b.required);
     } else if (b.kind === 'consent' || b.kind === 'check') {
       it = form.addCheckboxItem().setTitle(title);
@@ -625,7 +631,7 @@ function buildFormFromDef_(def, ss, confirmMessage) {
       it.setRequired(!!b.required);
     } else if (b.kind === 'age') {
       it = form.addTextItem().setTitle(title);
-      it.setValidation(FormApp.createTextValidation().requireNumberBetween(5, 25).setHelpText('数字(歳)で入力してください。').build());
+      setValidationSafe_(it, FormApp.createTextValidation().requireNumberBetween(5, 25).setHelpText('数字(歳)で入力してください。').build());
       it.setRequired(false);
     } else if (b.kind === 'text') {
       it = form.addParagraphTextItem().setTitle(title);
@@ -667,6 +673,14 @@ function renameNewSheet_(ss, beforeIds, name) {
   ss.getSheets().forEach(function (s) { if (beforeIds.indexOf(s.getSheetId()) === -1) s.setName(name); });
 }
 
+/** セットアップをやり直す前に実行する(記録された設定だけを消す。作成済みのファイルやフォームは消えません) */
+function resetSetup() {
+  var props = PropertiesService.getScriptProperties();
+  ['SS_ID', 'REG_SS_ID', 'FORM_IDS'].forEach(function (k) { props.deleteProperty(k); });
+  ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
+  Logger.log('設定とトリガーを消しました。作成済みのスプレッドシートやフォームは、ドライブから手動で削除してください。そのあと setup() を実行できます。');
+}
+
 function setup() {
   var props = PropertiesService.getScriptProperties();
   if (props.getProperty('SS_ID')) throw new Error('すでにセットアップ済みです。やり直す場合は、スクリプトプロパティ SS_ID・REG_SS_ID・FORM_IDS を削除してください(既存の回答は消えません)。');
@@ -677,24 +691,26 @@ function setup() {
   if (standalone) reg = SpreadsheetApp.create(CONFIG.REG_NAME);
 
   var db = SpreadsheetApp.create(CONFIG.DB_NAME);
-  props.setProperty('SS_ID', db.getId());
-  props.setProperty('REG_SS_ID', reg.getId());
 
   var formIds = {};
   SURVEY.formKeys.forEach(function (key) {
     var before = db.getSheets().map(function (s) { return s.getSheetId(); });
-    var form = buildForm_(key, db);
+    var form;
+    try { form = buildForm_(key, db); } catch (e) { throw new Error(key + ' のフォームの作成に失敗しました: ' + e); }
     formIds[key] = form.getId();
     renameNewSheet_(db, before, 'resp_' + key);
   });
   var applyUrls = [];
   [['APPLY', SURVEY.apply, 'resp_APPLY'], ['APPLY_G', SURVEY.applyG, 'resp_APPLY_G'], ['APPLY_B', SURVEY.applyB, 'resp_APPLY_B']].forEach(function (x) {
     var beforeReg = reg.getSheets().map(function (s) { return s.getSheetId(); });
-    var af = buildFormFromDef_(x[1], reg, x[1].confirm);
+    var af;
+    try { af = buildFormFromDef_(x[1], reg, x[1].confirm); } catch (e) { throw new Error(x[0] + ' の申込フォームの作成に失敗しました: ' + e); }
     formIds[x[0]] = af.getId();
     renameNewSheet_(reg, beforeReg, x[2]);
     applyUrls.push(CATEGORY_LABEL[x[1].category] + ' 申込フォーム(公開用): ' + af.getPublishedUrl());
   });
+  props.setProperty('SS_ID', db.getId());
+  props.setProperty('REG_SS_ID', reg.getId());
   props.setProperty('FORM_IDS', JSON.stringify(formIds));
 
   initDbSheets_(db);
