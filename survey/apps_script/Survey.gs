@@ -400,7 +400,14 @@ function corpAddLabel_(n) { return n === 0 ? '追加なし(代表のみ)' : n + 
 var CORP_ADD_CHOICES = (function () { var a = []; for (var i = 0; i <= CORP_FEE.maxAdd; i++) a.push(corpAddLabel_(i)); return a; })();
 
 var GENDERS = ['男性', '女性'];
-var EXTRA_PLANS = ['レポートのみ 5,000円', 'オンライン鑑定希望 10,000円'];
+// 追加の鑑定(ご家族など)。お子様と大人の方で、追加料金が違う
+var EXTRA_FEES = {
+  'お子様 / レポートのみ(+5,000円)': 5000,
+  'お子様 / オンライン鑑定希望(+10,000円)': 10000,
+  '大人の方 / レポート作成料(+5,000円)': 5000,
+  '大人の方 / オンライン鑑定料(+20,000円)': 20000
+};
+var EXTRA_PLANS = Object.keys(EXTRA_FEES);
 
 SURVEY.apply = {
   key: 'APPLY',
@@ -427,9 +434,9 @@ SURVEY.apply = {
     EM_('CH4', 'メールアドレス(お子様用のアンケートのご案内を送ります)', 'お子様用のご案内・受付確認の送信先(個人情報)'),
     EM_('CH5', 'お子様のメールアドレス(確認のため、もう一度入力してください)', '入力ミスの確認'),
     Q_({ id: 'CH6', text: 'お子様の自由記入欄(お子様からの質問などがありましたら、内容をご記入ください)', kind: 'text', axis: AXIS.ID, system: true, purpose: 'お子様からの連絡事項・質問(任意)' }),
-    P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、調査への参加とは関係ありません。)' }),
+    P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、調査への参加とは関係ありません。)\n\n【追加料金】\n・お子様の鑑定: レポートのみ +5,000円 / オンライン鑑定希望 +10,000円\n・大人の方の鑑定: レポート作成料 +5,000円 / オンライン鑑定料 +20,000円' }),
     Q_({ id: 'EX1', text: '追加の鑑定をしてほしい人の名前', kind: 'text1', axis: AXIS.ID, system: true, required: false, purpose: '追加の鑑定の対象者(任意。個人情報)' }),
-    SEL_('EX2', '追加の鑑定のご希望の内容', EXTRA_PLANS, false, '追加の鑑定の希望内容(任意)')
+    SEL_('EX2', '追加の鑑定のご希望の内容(お子様・大人の方で、追加料金が違います)', EXTRA_PLANS, false, '追加の鑑定の希望内容(任意)。対象(お子様/大人)と、追加料金が決まる')
   ]
 };
 
@@ -515,12 +522,26 @@ function findPlan_(label) {
 }
 
 /** 鑑定料の行。法人は、人数が分かればその金額、分からなければ(フォームの完了画面)「50,000円〜」と追加料金を出す */
-function feeLines_(category, plan) {
+function feeLines_(category, plan, extra) {
   if (category === 'corp') {
     if (plan) return ['ご希望のプラン:' + plan.label, '鑑定料:' + yen_(plan.fee)];
     return ['鑑定料:' + yen_(CORP_FEE.base) + '〜', '(従業員の方を追加する場合は、1名につき' + yen_(CORP_FEE.add) + 'を加えた金額を、お振込みください)'];
   }
+  if (category === 'career' && extra) {
+    return ['合計:' + yen_(FEE.career + extra.fee), '鑑定料:' + yen_(FEE.career), '追加の鑑定:' + extra.label, '追加料金:' + yen_(extra.fee)];
+  }
   return ['鑑定料:' + yen_(FEE[category])];
+}
+
+/** 追加の鑑定の選択肢から、{label, fee}。選択がない・不正なときは null */
+function findExtra_(label) {
+  return Object.prototype.hasOwnProperty.call(EXTRA_FEES, label) ? { label: label, fee: EXTRA_FEES[label] } : null;
+}
+
+/** 大きく表示する金額の行(合計があれば合計、なければ鑑定料) */
+function bigFeeLine_(lines) {
+  var t = lines.filter(function (l) { return l.indexOf('合計:') === 0; })[0] || lines.filter(function (l) { return l.indexOf('鑑定料:') === 0; })[0];
+  return t || lines[0] || '';
 }
 
 function bankLines_() {
@@ -533,7 +554,7 @@ function paymentText_(category, plan) {
 
 function confirmMessage_(category) {
   return 'お申込みを受け付けました。受付確認のメールをお送りします。数分たっても届かない場合は、迷惑メールフォルダをご確認のうえ、' + CONTACT_MAIL + ' までご連絡ください。日程の調整は、運営から改めてご連絡します。\n\n' +
-    paymentText_(category, null) + '\n\n林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください:' + LINE_URL;
+    paymentText_(category, null) + (category === 'career' ? '\n(追加の鑑定をご希望の方は、追加料金を加えた金額をお振込みください。お子様: レポートのみ+5,000円 / オンライン鑑定希望+10,000円、大人の方: レポート作成料+5,000円 / オンライン鑑定料+20,000円)' : '') + '\n\n林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください:' + LINE_URL;
 }
 
 SURVEY.apply.confirm = confirmMessage_('career');

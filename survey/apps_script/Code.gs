@@ -407,7 +407,7 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   }
   var id = nextId_((existing || []).map(function (e) { return e.id; }), 'F');
   var row = [id, tsIso, a.AP1, a.AP6, a.AP7, a.AP2, a.AP8, a.AP9, a.AP10, a.AP11, a.CH1, a.CH2, a.CH3, a.CH4, '', '参加中', '', '', '', a.EX1, a.EX2, a.AP5, a.CH6, '', 'career', '', '', '', '', '', '', '', '', ''];
-  return { ok: true, category: 'career', id: id, name: a.AP1, email: a.AP2, childName: a.CH1, childEmail: a.CH4, row: row };
+  return { ok: true, category: 'career', id: id, name: a.AP1, email: a.AP2, childName: a.CH1, childEmail: a.CH4, extra: findExtra_(a.EX2), row: row };
 }
 
 function readAnswers_(formDef, namedValues) {
@@ -619,13 +619,14 @@ function buildApplyReceiptEmail_(p, category) {
   else if (category === 'career') { who = p.name + ' 様'; detail = ['保護者:' + p.name, 'お子様:' + p.childName + ' さん']; }
   else { who = p.name + ' 様'; detail = ['お名前:' + p.name]; }
   var plan = (category === 'corp') ? (p.plan || null) : null;
+  var extra = category === 'career' ? (p.extra || null) : null;
   var steps = ['日程の調整は、運営から改めてご連絡します。'];
   if (category === 'career') steps.push('アンケートのご案内は、日程が決まったあとに、保護者様とお子様のそれぞれのメールアドレスにお送りします。');
   steps.push('このメールに心当たりがない場合は、お手数ですが、ご返信ください。');
 
   var text = who + '\n\nお申込みありがとうございます。お申込みを受け付けました。\n\n' +
     '■ お申込み内容\n' + detail.join('\n') + '\n\n' +
-    '■ 鑑定料・お振込先\n' + feeLines_(category, plan).join('\n') + '\n\n' + bankLines_().join('\n') + '\nお支払い方法は、口座振込のみです。\n\n' +
+    '■ 鑑定料・お振込先\n' + feeLines_(category, plan, extra).join('\n') + '\n\n' + bankLines_().join('\n') + '\nお支払い方法は、口座振込のみです。\n\n' +
     '■ 次のステップ\n' + steps.map(function (x) { return '・' + x; }).join('\n') + '\n\n' +
     '■ 林 竜輔の公式LINE\nまだ追加していない方は、こちらから追加してください。\n' + LINE_URL + foot;
 
@@ -640,8 +641,8 @@ function buildApplyReceiptEmail_(p, category) {
     '<div style="' + box + '"><div style="font-weight:700;margin-bottom:6px;">お申込み内容</div><table style="border-collapse:collapse;font-size:14px;">' + kv(detail) + '</table></div>' +
     '<div style="border:2px solid #2e6da4;border-radius:10px;padding:14px 18px;margin:18px 0;">' +
     '<div style="font-weight:700;margin-bottom:6px;color:#2e6da4;">鑑定料・お振込先</div>' +
-    '<div style="font-size:22px;font-weight:700;margin:2px 0 8px;">' + escHtml_(feeLines_(category, plan).filter(function (l) { return l.indexOf('鑑定料:') === 0; }).map(function (l) { return l.replace('鑑定料:', ''); }).join(' / ') || feeLines_(category, plan).join(' ')) + '</div>' +
-    (category === 'corp' && !plan ? '' : '') +
+    '<div style="font-size:22px;font-weight:700;margin:2px 0 8px;">' + escHtml_(bigFeeLine_(feeLines_(category, plan, extra)).replace(/^(合計|鑑定料):/, '')) + '</div>' +
+    (feeLines_(category, plan, extra).length > 1 && category === 'career' ? '<table style="border-collapse:collapse;font-size:14px;margin-bottom:8px;">' + kv(feeLines_(category, plan, extra).slice(1)) + '</table>' : '') +
     '<table style="border-collapse:collapse;font-size:14px;">' + kv(bankLines_()) + '</table>' +
     '<div style="font-size:12px;color:#6b7785;margin-top:8px;">お支払い方法は、口座振込のみです。</div></div>' +
     '<div style="margin:18px 0;"><div style="font-weight:700;margin-bottom:4px;">次のステップ</div><ol style="margin:0;padding-left:20px;">' + steps.map(function (x) { return '<li>' + escHtml_(x) + '</li>'; }).join('') + '</ol></div>' +
@@ -1589,7 +1590,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-22-f';
+var SITE_VERSION = '2026-10-22-g';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -1748,7 +1749,7 @@ function submitApplication(category, answers, honeypot) {
     if (!res.ok) return { ok: false, errors: friendlyReasons_(res.reason) };
     finishApplication_(reg, category, res, tsIso);
     var plan = res.plan || null;
-    return { ok: true, fee: feeLines_(category, plan), bank: bankLines_(), line: LINE_URL, email: res.email };
+    return { ok: true, fee: feeLines_(category, plan, res.extra || null), bank: bankLines_(), line: LINE_URL, email: res.email };
   } finally {
     lock.releaseLock();
   }

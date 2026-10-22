@@ -403,7 +403,14 @@ function corpAddLabel_(n) { return n === 0 ? '追加なし(代表のみ)' : n + 
 var CORP_ADD_CHOICES = (function () { var a = []; for (var i = 0; i <= CORP_FEE.maxAdd; i++) a.push(corpAddLabel_(i)); return a; })();
 
 var GENDERS = ['男性', '女性'];
-var EXTRA_PLANS = ['レポートのみ 5,000円', 'オンライン鑑定希望 10,000円'];
+// 追加の鑑定(ご家族など)。お子様と大人の方で、追加料金が違う
+var EXTRA_FEES = {
+  'お子様 / レポートのみ(+5,000円)': 5000,
+  'お子様 / オンライン鑑定希望(+10,000円)': 10000,
+  '大人の方 / レポート作成料(+5,000円)': 5000,
+  '大人の方 / オンライン鑑定料(+20,000円)': 20000
+};
+var EXTRA_PLANS = Object.keys(EXTRA_FEES);
 
 SURVEY.apply = {
   key: 'APPLY',
@@ -430,9 +437,9 @@ SURVEY.apply = {
     EM_('CH4', 'メールアドレス(お子様用のアンケートのご案内を送ります)', 'お子様用のご案内・受付確認の送信先(個人情報)'),
     EM_('CH5', 'お子様のメールアドレス(確認のため、もう一度入力してください)', '入力ミスの確認'),
     Q_({ id: 'CH6', text: 'お子様の自由記入欄(お子様からの質問などがありましたら、内容をご記入ください)', kind: 'text', axis: AXIS.ID, system: true, purpose: 'お子様からの連絡事項・質問(任意)' }),
-    P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、調査への参加とは関係ありません。)' }),
+    P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、調査への参加とは関係ありません。)\n\n【追加料金】\n・お子様の鑑定: レポートのみ +5,000円 / オンライン鑑定希望 +10,000円\n・大人の方の鑑定: レポート作成料 +5,000円 / オンライン鑑定料 +20,000円' }),
     Q_({ id: 'EX1', text: '追加の鑑定をしてほしい人の名前', kind: 'text1', axis: AXIS.ID, system: true, required: false, purpose: '追加の鑑定の対象者(任意。個人情報)' }),
-    SEL_('EX2', '追加の鑑定のご希望の内容', EXTRA_PLANS, false, '追加の鑑定の希望内容(任意)')
+    SEL_('EX2', '追加の鑑定のご希望の内容(お子様・大人の方で、追加料金が違います)', EXTRA_PLANS, false, '追加の鑑定の希望内容(任意)。対象(お子様/大人)と、追加料金が決まる')
   ]
 };
 
@@ -518,12 +525,26 @@ function findPlan_(label) {
 }
 
 /** 鑑定料の行。法人は、人数が分かればその金額、分からなければ(フォームの完了画面)「50,000円〜」と追加料金を出す */
-function feeLines_(category, plan) {
+function feeLines_(category, plan, extra) {
   if (category === 'corp') {
     if (plan) return ['ご希望のプラン:' + plan.label, '鑑定料:' + yen_(plan.fee)];
     return ['鑑定料:' + yen_(CORP_FEE.base) + '〜', '(従業員の方を追加する場合は、1名につき' + yen_(CORP_FEE.add) + 'を加えた金額を、お振込みください)'];
   }
+  if (category === 'career' && extra) {
+    return ['合計:' + yen_(FEE.career + extra.fee), '鑑定料:' + yen_(FEE.career), '追加の鑑定:' + extra.label, '追加料金:' + yen_(extra.fee)];
+  }
   return ['鑑定料:' + yen_(FEE[category])];
+}
+
+/** 追加の鑑定の選択肢から、{label, fee}。選択がない・不正なときは null */
+function findExtra_(label) {
+  return Object.prototype.hasOwnProperty.call(EXTRA_FEES, label) ? { label: label, fee: EXTRA_FEES[label] } : null;
+}
+
+/** 大きく表示する金額の行(合計があれば合計、なければ鑑定料) */
+function bigFeeLine_(lines) {
+  var t = lines.filter(function (l) { return l.indexOf('合計:') === 0; })[0] || lines.filter(function (l) { return l.indexOf('鑑定料:') === 0; })[0];
+  return t || lines[0] || '';
 }
 
 function bankLines_() {
@@ -536,7 +557,7 @@ function paymentText_(category, plan) {
 
 function confirmMessage_(category) {
   return 'お申込みを受け付けました。受付確認のメールをお送りします。数分たっても届かない場合は、迷惑メールフォルダをご確認のうえ、' + CONTACT_MAIL + ' までご連絡ください。日程の調整は、運営から改めてご連絡します。\n\n' +
-    paymentText_(category, null) + '\n\n林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください:' + LINE_URL;
+    paymentText_(category, null) + (category === 'career' ? '\n(追加の鑑定をご希望の方は、追加料金を加えた金額をお振込みください。お子様: レポートのみ+5,000円 / オンライン鑑定希望+10,000円、大人の方: レポート作成料+5,000円 / オンライン鑑定料+20,000円)' : '') + '\n\n林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください:' + LINE_URL;
 }
 
 SURVEY.apply.confirm = confirmMessage_('career');
@@ -953,7 +974,7 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   }
   var id = nextId_((existing || []).map(function (e) { return e.id; }), 'F');
   var row = [id, tsIso, a.AP1, a.AP6, a.AP7, a.AP2, a.AP8, a.AP9, a.AP10, a.AP11, a.CH1, a.CH2, a.CH3, a.CH4, '', '参加中', '', '', '', a.EX1, a.EX2, a.AP5, a.CH6, '', 'career', '', '', '', '', '', '', '', '', ''];
-  return { ok: true, category: 'career', id: id, name: a.AP1, email: a.AP2, childName: a.CH1, childEmail: a.CH4, row: row };
+  return { ok: true, category: 'career', id: id, name: a.AP1, email: a.AP2, childName: a.CH1, childEmail: a.CH4, extra: findExtra_(a.EX2), row: row };
 }
 
 function readAnswers_(formDef, namedValues) {
@@ -1165,13 +1186,14 @@ function buildApplyReceiptEmail_(p, category) {
   else if (category === 'career') { who = p.name + ' 様'; detail = ['保護者:' + p.name, 'お子様:' + p.childName + ' さん']; }
   else { who = p.name + ' 様'; detail = ['お名前:' + p.name]; }
   var plan = (category === 'corp') ? (p.plan || null) : null;
+  var extra = category === 'career' ? (p.extra || null) : null;
   var steps = ['日程の調整は、運営から改めてご連絡します。'];
   if (category === 'career') steps.push('アンケートのご案内は、日程が決まったあとに、保護者様とお子様のそれぞれのメールアドレスにお送りします。');
   steps.push('このメールに心当たりがない場合は、お手数ですが、ご返信ください。');
 
   var text = who + '\n\nお申込みありがとうございます。お申込みを受け付けました。\n\n' +
     '■ お申込み内容\n' + detail.join('\n') + '\n\n' +
-    '■ 鑑定料・お振込先\n' + feeLines_(category, plan).join('\n') + '\n\n' + bankLines_().join('\n') + '\nお支払い方法は、口座振込のみです。\n\n' +
+    '■ 鑑定料・お振込先\n' + feeLines_(category, plan, extra).join('\n') + '\n\n' + bankLines_().join('\n') + '\nお支払い方法は、口座振込のみです。\n\n' +
     '■ 次のステップ\n' + steps.map(function (x) { return '・' + x; }).join('\n') + '\n\n' +
     '■ 林 竜輔の公式LINE\nまだ追加していない方は、こちらから追加してください。\n' + LINE_URL + foot;
 
@@ -1186,8 +1208,8 @@ function buildApplyReceiptEmail_(p, category) {
     '<div style="' + box + '"><div style="font-weight:700;margin-bottom:6px;">お申込み内容</div><table style="border-collapse:collapse;font-size:14px;">' + kv(detail) + '</table></div>' +
     '<div style="border:2px solid #2e6da4;border-radius:10px;padding:14px 18px;margin:18px 0;">' +
     '<div style="font-weight:700;margin-bottom:6px;color:#2e6da4;">鑑定料・お振込先</div>' +
-    '<div style="font-size:22px;font-weight:700;margin:2px 0 8px;">' + escHtml_(feeLines_(category, plan).filter(function (l) { return l.indexOf('鑑定料:') === 0; }).map(function (l) { return l.replace('鑑定料:', ''); }).join(' / ') || feeLines_(category, plan).join(' ')) + '</div>' +
-    (category === 'corp' && !plan ? '' : '') +
+    '<div style="font-size:22px;font-weight:700;margin:2px 0 8px;">' + escHtml_(bigFeeLine_(feeLines_(category, plan, extra)).replace(/^(合計|鑑定料):/, '')) + '</div>' +
+    (feeLines_(category, plan, extra).length > 1 && category === 'career' ? '<table style="border-collapse:collapse;font-size:14px;margin-bottom:8px;">' + kv(feeLines_(category, plan, extra).slice(1)) + '</table>' : '') +
     '<table style="border-collapse:collapse;font-size:14px;">' + kv(bankLines_()) + '</table>' +
     '<div style="font-size:12px;color:#6b7785;margin-top:8px;">お支払い方法は、口座振込のみです。</div></div>' +
     '<div style="margin:18px 0;"><div style="font-weight:700;margin-bottom:4px;">次のステップ</div><ol style="margin:0;padding-left:20px;">' + steps.map(function (x) { return '<li>' + escHtml_(x) + '</li>'; }).join('') + '</ol></div>' +
@@ -2135,7 +2157,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-22-f';
+var SITE_VERSION = '2026-10-22-g';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2294,7 +2316,7 @@ function submitApplication(category, answers, honeypot) {
     if (!res.ok) return { ok: false, errors: friendlyReasons_(res.reason) };
     finishApplication_(reg, category, res, tsIso);
     var plan = res.plan || null;
-    return { ok: true, fee: feeLines_(category, plan), bank: bankLines_(), line: LINE_URL, email: res.email };
+    return { ok: true, fee: feeLines_(category, plan, res.extra || null), bank: bankLines_(), line: LINE_URL, email: res.email };
   } finally {
     lock.releaseLock();
   }
