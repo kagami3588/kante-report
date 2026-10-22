@@ -31,6 +31,7 @@ var SHEETS = {
   sendlog: '送信ログ',
   pending: '申込要確認',
   tests: 'テスト結果',
+  templates: 'メール文面',
   // 回答DB
   submissions: 'Submissions',
   long: 'Long',
@@ -518,38 +519,74 @@ function linksDue_(rows, time, today, selectedSet) {
 
 var TIME_LABEL = { T0: '鑑定前', T1: '鑑定直後', T2: '鑑定から約3か月後' };
 
-/** 保護者宛(保護者用リンク)と、お子様宛(お子様用リンク)の、2通を作る */
-function buildLinkEmails_(time, p, urls) {
-  var dead = {
-    T0: p.sessionDate ? '鑑定日(' + p.sessionDate + ')の前日までに' : '鑑定の前日までに',
-    T1: '鑑定の当日から3日以内に',
-    T2: 'ご都合のよいときに(鑑定から約3か月後の前後2週間ほどの間に)'
-  }[time];
-  var timesP = { T0: '約6〜8分', T1: '約6分', T2: '約7分' }[time];
-  var timesC = { T0: '約8〜10分', T1: '約10分', T2: '約9〜10分' }[time];
-  var subject = '【アンケートのご案内】' + TIME_LABEL[time] + 'のアンケート';
-  var foot = '\n\n' + CONFIG.SENDER_NAME + '\n' + CONFIG.CONTACT_MAIL;
-  var parent = {
-    subject: subject,
-    body: p.name + ' 様\n\n' + (time === 'T0' ? 'このたびは、お申込みありがとうございます。' : 'いつもご協力ありがとうございます。') + '\n' +
-      TIME_LABEL[time] + 'のアンケート(保護者用)をご案内します。' + dead + 'ご回答ください。(所要時間の目安:' + timesP + ')\n\n' +
-      (urls.site ? '■ アンケートのページ\n' + urls.parent + '\n(ページを開いたら、このメールを受け取ったメールアドレス(' + p.email + ')を入力してください。いま答えるアンケートが表示されます)\n\n' : '■ 保護者用アンケート\n' + urls.parent + '\n\n') +
-      '【お願い】\n' +
-      '・お子様用のアンケートのリンクは、お子様ご本人のメールアドレスにお送りしています。お子様の回答は、見たり、聞き出したりしないでください。\n' +
-      '・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n' +
-      '・リンクは、他の方に転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。' + foot
+// ---------- メールの文面(台帳の「メール文面」シートで編集できる) ----------
+var TEMPLATE_VARS_HELP = '使える差し込み: {{宛名}} {{保護者名}} {{お子様名}} {{鑑定日}} {{アンケート名}} {{アンケートURL}} {{入力案内}} {{期限}} {{所要時間}} {{アンケート状況}} {{署名}} {{連絡先}}';
+
+var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}のアンケート(保護者用)をご案内します。{{期限}}ご回答ください。(所要時間の目安:{{所要時間}})\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・お子様用のアンケートは、お子様ご本人のメールアドレスにお送りしています。お子様の回答は、見たり、聞き出したりしないでください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n・リンクは、他の方に転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。\n\n{{署名}}';
+var TEMPLATE_BASE_CHILD = '{{宛名}}\n\n{{アンケート名}}のアンケートのご案内です。{{期限}}答えてください。(所要時間の目安:{{所要時間}})\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・正解はありません。思ったとおりに答えてください。\n・お父さん・お母さんとは、別の場所(または別の端末)で、ひとりで答えてください。答えは、お父さん・お母さんには見せません。\n・すべての質問に、答えてください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、困ることはありません。\n・リンクは、他の人に送らないでください。\n\n気になることがあれば、このメールに返信してください。\n\n{{署名}}';
+
+var DEFAULT_TEMPLATES = (function () {
+  var out = [];
+  [['T0', '鑑定前'], ['T1', '鑑定直後'], ['T2', '鑑定から約3か月後']].forEach(function (t) {
+    out.push({ key: t[0] + '_parent', to: '保護者', subject: '【アンケートのご案内】{{アンケート名}}のアンケート', body: TEMPLATE_BASE_PARENT, note: t[1] + 'のアンケートの案内(自動配信・送信ボタン共通)' });
+    out.push({ key: t[0] + '_child', to: 'お子様', subject: '【アンケートのご案内】{{アンケート名}}のアンケート', body: TEMPLATE_BASE_CHILD, note: t[1] + 'のアンケートの案内(自動配信・送信ボタン共通)' });
+  });
+  out.push({ key: 'remind7_parent', to: '保護者', subject: '【鑑定日のご案内】{{鑑定日}}の鑑定について', body: '{{宛名}}\n\nいつもありがとうございます。鑑定日が近づいてまいりましたので、ご案内します。\n\n■ 鑑定日\n{{鑑定日}}\n\n日程の変更などがある場合は、このメールにご返信ください。\n鑑定の前に、アンケート(鑑定前)のご案内を、メールでお送りします。\n\n{{署名}}', note: '鑑定日の1週間前のリマインド' });
+  out.push({ key: 'remind7_child', to: 'お子様', subject: '【鑑定日のご案内】{{鑑定日}}の鑑定について', body: '{{宛名}}\n\n鑑定の日が近づいてきました。\n\n■ 鑑定の日\n{{鑑定日}}\n\n鑑定の前に、アンケート(鑑定前)のご案内を、メールでお送りします。\n分からないことがあれば、このメールに返信してください。\n\n{{署名}}', note: '鑑定日の1週間前のリマインド' });
+  out.push({ key: 'remind1_parent', to: '保護者', subject: '【明日は鑑定日です】{{鑑定日}}', body: '{{宛名}}\n\n明日({{鑑定日}})は、鑑定の日です。\n\n{{アンケート状況}}\n\n当日は、どうぞよろしくお願いいたします。ご不明な点は、このメールにご返信ください。\n\n{{署名}}', note: '鑑定日の前日のリマインド' });
+  out.push({ key: 'remind1_child', to: 'お子様', subject: '【明日は鑑定の日です】{{鑑定日}}', body: '{{宛名}}\n\n明日({{鑑定日}})は、鑑定の日です。\n\n{{アンケート状況}}\n\n分からないことがあれば、このメールに返信してください。\n\n{{署名}}', note: '鑑定日の前日のリマインド' });
+  return out;
+})();
+
+/** 文面の {{名前}} を、値に置きかえる。知らない名前は、そのまま残す(間違いに気づけるように) */
+function renderTemplate_(text, vars) {
+  return String(text || '').replace(/\{\{([^{}]+)\}\}/g, function (m, k) { k = String(k).trim(); return Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m; });
+}
+
+/** 文面の一覧({key: {subject, body}})。台帳の「メール文面」シートの値を優先し、空欄・無いものは、既定の文面を使う */
+function getTemplates_(reg) {
+  var map = {};
+  DEFAULT_TEMPLATES.forEach(function (t) { map[t.key] = { subject: t.subject, body: t.body }; });
+  var sh = reg && reg.getSheetByName ? reg.getSheetByName(SHEETS.templates) : null;
+  if (sh && sh.getLastRow() > 1) {
+    sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues().forEach(function (r) {
+      var k = String(r[0] || '').trim();
+      if (!map[k]) return;
+      if (String(r[2] || '').trim()) map[k].subject = String(r[2]);
+      if (String(r[3] || '').trim()) map[k].body = String(r[3]);
+    });
+  }
+  return map;
+}
+
+function templateVars_(time, role, p, url) {
+  var parent = role === 'parent';
+  var addr = parent ? p.email : p.childEmail;
+  var late = { T0: p.sessionDate ? '鑑定日(' + p.sessionDate + ')の前日までに' : '鑑定の前日までに', T1: '鑑定の当日から3日以内に', T2: 'ご都合のよいときに(鑑定から約3か月後の前後2週間ほどの間に)' };
+  var mins = parent ? { T0: '約6〜8分', T1: '約6分', T2: '約7分' } : { T0: '約8〜10分', T1: '約10分', T2: '約9〜10分' };
+  return {
+    '宛名': parent ? (p.name || '') + ' 様' : (p.childName || '') + ' さん',
+    '保護者名': p.name || '', 'お子様名': p.childName || '', '鑑定日': p.sessionDate || '',
+    '挨拶': time === 'T0' ? 'このたびは、お申込みありがとうございます。' : 'いつもご協力ありがとうございます。',
+    'アンケート名': time ? TIME_LABEL[time] : '',
+    '期限': time ? late[time] : '', '所要時間': time ? mins[time] : '',
+    'アンケートURL': url || '',
+    '入力案内': url ? '(ページを開いたら、このメールを受け取ったメールアドレス(' + (addr || '') + ')を入力してください。いま答えるアンケートが表示されます)' : '',
+    'アンケート状況': p.surveyNote || '',
+    '署名': CONFIG.SENDER_NAME + '\n' + CONFIG.CONTACT_MAIL, '連絡先': CONFIG.CONTACT_MAIL
   };
-  var child = {
-    subject: subject,
-    body: p.childName + ' さん\n\n' + TIME_LABEL[time] + 'のアンケートのご案内です。' + dead + '答えてください。(所要時間の目安:' + timesC + ')\n\n' +
-      (urls.site ? '■ アンケートのページ\n' + urls.child + '\n(ページを開いたら、このメールを受け取ったメールアドレス(' + p.childEmail + ')を入力してください。いま答えるアンケートが表示されます)\n\n' : '■ アンケート\n' + urls.child + '\n\n') +
-      '【お願い】\n' +
-      '・正解はありません。思ったとおりに答えてください。\n' +
-      '・お父さん・お母さんとは、別の場所(または別の端末)で、ひとりで答えてください。答えは、お父さん・お母さんには見せません。\n' +
-      '・すべての質問に、答えてください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、困ることはありません。\n' +
-      '・リンクは、他の人に送らないでください。\n\n気になることがあれば、このメールに返信してください。' + foot
-  };
-  return { parent: parent, child: child };
+}
+
+/** 保護者宛と、お子様宛の、2通を作る。kind は 'T0' 'T1' 'T2'(アンケートの案内)、'remind7' 'remind1'(鑑定日のリマインド)。templates は getTemplates_ の結果(省略時は既定) */
+function buildLinkEmails_(time, p, urls, templates) {
+  var T = templates || getTemplates_(null);
+  var isSurvey = LINK_TIMES.indexOf(time) !== -1;
+  function one(role, url) {
+    var t = T[time + '_' + role];
+    var v = templateVars_(isSurvey ? time : '', role, p, url);
+    return { subject: renderTemplate_(t.subject, v), body: renderTemplate_(t.body, v) };
+  }
+  return { parent: one('parent', urls && urls.parent), child: one('child', urls && urls.child) };
 }
 
 /** 受付確認メール。お子様用はお子様のメールへ、保護者用は保護者のメールへ。回答内容は載せない */
@@ -814,14 +851,23 @@ function initDbSheets_(db) {
 function initRegSheets_(reg) {
   mkSheet_(reg, SHEETS.roster, HEAD.roster);
   var settings = mkSheet_(reg, SHEETS.settings, ['項目', '値', '説明']);
-  settings.getRange(2, 1, 6, 3).setValues([
+  settings.getRange(2, 1, 12, 3).setValues([
     ['安全対応担当者メール', '', '回答に確認が必要な内容があった場合の通知先(1名)'],
     ['安全対応担当者メール(代理)', '', '担当者不在時の通知先'],
     ['このファイルについて', '', 'この台帳には個人情報(お名前・メールアドレス)が入っています。運営のみに共有してください。調査の分析には、別ファイルの「' + CONFIG.DB_NAME + '」を使います'],
     ['注意', '', '回答DBは、調査担当者のみに共有してください。子ども・保護者・鑑定師には共有しないでください'],
     ['運営メール(通知先)', CONFIG.CONTACT_MAIL, '新しい申込・毎朝9時のリマインド一覧が届きます。辞退した家庭は、名簿の「参加状況」を「辞退」にしてください(送信・リマインドが止まります)'],
-    ['アンケートサイトのURL(公開用)', '', 'ウェブアプリ(公開用・アクセス「全員」)のURLの末尾に ?page=survey を付けたもの。入力すると、アンケートのご案内メールに、Googleフォームの代わりにこのサイトのURLが載ります(空欄ならGoogleフォームのリンク)']
+    ['アンケートサイトのURL(公開用)', '', 'ウェブアプリ(公開用・アクセス「全員」)のURLの末尾に ?page=survey を付けたもの。入力すると、アンケートのご案内メールに、Googleフォームの代わりにこのサイトのURLが載ります(空欄ならGoogleフォームのリンク)'],
+    ['メールの自動配信', '有効', '「有効」のとき、毎朝9時ごろ、鑑定日に合わせて、下の日数でメールが自動で届きます。止めるときは「無効」に変えてください'],
+    ['鑑定日の何日前に、リマインド', 7, '鑑定日のリマインド(保護者・お子様)。数字で入力'],
+    ['鑑定日の何日前に、鑑定前アンケートの案内', 3, '鑑定前アンケート(T0)の案内。数字で入力'],
+    ['鑑定日の何日前に、前日リマインド', 1, '前日のリマインド(通常は1)。数字で入力'],
+    ['鑑定日の何日後に、鑑定後アンケートの案内', 0, '鑑定後アンケート(T1)の案内。0なら鑑定日の朝に届きます(鑑定のあとに送りたいときは、管理画面の「セッション終了」ボタンも使えます)'],
+    ['鑑定日の何日後に、3か月後アンケートの案内', 90, '3か月後アンケート(T2)の案内。数字で入力']
   ]);
+  var tpl = mkSheet_(reg, SHEETS.templates, ['キー', '送り先', '件名', '本文', 'メモ(使える差し込み: ' + TEMPLATE_VARS_HELP.replace('使える差し込み: ', '') + ')']);
+  tpl.getRange(2, 1, DEFAULT_TEMPLATES.length, 5).setValues(DEFAULT_TEMPLATES.map(function (t) { return [t.key, t.to, t.subject, t.body, t.note]; }));
+  tpl.setColumnWidth(3, 280); tpl.setColumnWidth(4, 520);
   mkSheet_(reg, SHEETS.safety, HEAD.safety);
   mkSheet_(reg, SHEETS.reminders, HEAD.reminders);
   mkSheet_(reg, SHEETS.sendlog, HEAD.sendlog);
@@ -920,6 +966,7 @@ function sendT2Selected() { sendLinks_('T2', 'selected'); }
 /** 対象の家庭に、保護者宛・お子様宛のリンクをメールで送り、送信日時を名簿に記録する(メニューとサイトの共通処理) */
 function sendLinksToFamilies_(reg, time, due) {
   var site = requireSurveySiteUrl_(reg);
+  var templates = getTemplates_(reg);
   var sh = reg.getSheetByName(SHEETS.roster);
   var log = reg.getSheetByName(SHEETS.sendlog);
   var col = RC.T0 + 1 + LINK_TIMES.indexOf(time);
@@ -928,7 +975,7 @@ function sendLinksToFamilies_(reg, time, due) {
     var stamp = nowStr_();
     var okParent = false, okChild = false;
     try {
-      var mails = buildLinkEmails_(time, d, { site: true, child: site, parent: site });
+      var mails = buildLinkEmails_(time, d, { child: site, parent: site }, templates);
       try { sendMail_(d.email, mails.parent.subject, mails.parent.body); okParent = true; log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '送信済み']); } catch (e1) { log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '【失敗】' + e1]); }
       try { sendMail_(d.childEmail, mails.child.subject, mails.child.body); okChild = true; log.appendRow([stamp, d.id, time + ' お子様宛', d.childEmail, '送信済み']); } catch (e2) { log.appendRow([stamp, d.id, time + ' お子様宛', d.childEmail, '【失敗】' + e2]); }
     } catch (err) {
@@ -1129,6 +1176,7 @@ function checkOverdue() {
 function checkReminders() {
   var reg = regSS_();
   var db = dbSS_();
+  try { runAutomation_(reg, db); } catch (e) { Logger.log('自動配信でエラー: ' + e); }
   var today = todayStr_();
   var roster = readRoster_(reg);
   var sub = db.getSheetByName(SHEETS.submissions).getDataRange().getValues();
@@ -1184,7 +1232,8 @@ function nextAction_(f, resp, today) {
  * roster: readRoster_の結果  pending: [[受付日時, 保護者名, メール, お子様名, 理由, 連絡事項]]
  * subs: Submissionsの行(見出しなし)  safety: 安全対応ログの行(見出しなし)
  */
-function buildDashboardData_(roster, pending, subs, safety, today) {
+function buildDashboardData_(roster, pending, subs, safety, today, auto) {
+  auto = auto || { sch: SCHEDULE_DEFAULT, done: {} };
   var respBy = {};
   subs.forEach(function (r) {
     if (!isTrue_(r[6]) || isTrue_(r[12])) return;
@@ -1196,7 +1245,7 @@ function buildDashboardData_(roster, pending, subs, safety, today) {
       officialLine: f.officialLine, referrer: f.referrer, childName: f.childName, cGender: f.cGender, cBirth: f.cBirth, childEmail: f.childEmail,
       sessionDate: f.sessionDate, status: String(f.status || '参加中'), sent: f.sent, resp: resp, exName: f.exName, exPlan: f.exPlan,
       pNote: f.pNote, cNote: f.cNote, memo: f.memo, company: f.company, dept: f.dept, phone: f.phone, headcount: f.headcount,
-      targets: f.targets, invoice: f.invoice, request: f.request, plan: f.plan, ended: f.ended, next: nextAction_(f, resp, today) };
+      targets: f.targets, invoice: f.invoice, request: f.request, plan: f.plan, ended: f.ended, auto: autoScheduleText_(f, auto.sch, auto.done), next: nextAction_(f, resp, today) };
   });
   var active = roster.filter(function (f) { return isParticipating_(f.status); });
   var careerActive = active.filter(function (f) { return (f.category || 'career') === 'career'; });
@@ -1268,7 +1317,7 @@ function apiGuard_() {
 function dashboardData_(reg) {
   var db = dbSS_();
   function rows(ss, name) { var sh = ss.getSheetByName(name); if (!sh || sh.getLastRow() < 2) return []; return sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues(); }
-  return buildDashboardData_(readRoster_(reg), rows(reg, SHEETS.pending), rows(db, SHEETS.submissions), rows(reg, SHEETS.safety), todayStr_());
+  return buildDashboardData_(readRoster_(reg), rows(reg, SHEETS.pending), rows(db, SHEETS.submissions), rows(reg, SHEETS.safety), todayStr_(), { sch: getSchedule_(reg), done: remindDone_(reg) });
 }
 
 function findFamily_(reg, id) {
@@ -1412,7 +1461,7 @@ var DASHBOARD_HTML = [
   'if(f.category==="career")mid=[["保護者",f.name+"("+f.pGender+" / "+f.pBirth+")"],["保護者メール",f.email],["LINE検索ID",f.line],["Instagram",f.insta||"-"],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["お子様",f.childName+"("+f.cGender+" / "+f.cBirth+")"],["お子様メール",f.childEmail],["追加の鑑定",(f.exName||"-")+" "+(f.exPlan||"")],["保護者の連絡事項",f.pNote||"-"],["お子様の連絡事項",f.cNote||"-"]];',
   'else if(f.category==="general")mid=[["お名前",f.name+"("+f.pGender+" / "+f.pBirth+")"],["メール",f.email],["LINE検索ID",f.line],["Instagram",f.insta||"-"],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["ご希望の内容",f.request||"-"],["自由記入欄",f.pNote||"-"]];',
   'else mid=[["法人名",f.company],["部署・役職",f.dept||"-"],["ご担当者",f.name],["メール",f.email],["電話番号",f.phone],["LINE検索ID",f.line],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["プラン",f.plan||"-"],["鑑定を受ける人数",f.headcount],["鑑定を受ける方",f.targets],["ご希望の内容",f.request||"-"],["請求書・領収書の宛名",f.invoice||"-"],["自由記入欄",f.pNote||"-"]];',
-  'var tail=[["セッション終了",f.ended||"-"],["鑑定日",f.sessionDate||"未入力"],["参加状況",f.status]];if(f.category==="career")tail.push(["送信日時 T0/T1/T2",[f.sent.T0,f.sent.T1,f.sent.T2].map(function(x){return x||"-"}).join(" / ")]);tail.push(["メモ",f.memo||"-"]);return base.concat(mid,tail)}',
+  'var tail=[["自動配信の予定",f.auto||"-"],["セッション終了",f.ended||"-"],["鑑定日",f.sessionDate||"未入力"],["参加状況",f.status]];if(f.category==="career")tail.push(["送信日時 T0/T1/T2",[f.sent.T0,f.sent.T1,f.sent.T2].map(function(x){return x||"-"}).join(" / ")]);tail.push(["メモ",f.memo||"-"]);return base.concat(mid,tail)}',
   'function dl(f){var d=el("dl","dl");fields(f).forEach(function(r){d.appendChild(el("dt",null,r[0]));d.appendChild(el("dd",null,r[1]))});return d}',
   'function renderFam(v){var q=document.getElementById("q").value.trim().toLowerCase(),st=document.getElementById("st").value;',
   'var rows=DATA.families.filter(function(f){if(f.category!==tab)return false;if(st&&f.status!==st)return false;if(!q)return true;return [f.id,f.name,f.childName,f.company,f.email,f.childEmail,f.line,f.insta,f.referrer].join(" ").toLowerCase().indexOf(q)>=0});',
@@ -2054,6 +2103,129 @@ var SURVEY_SITE_HTML = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-
 'document.getElementById("foot").textContent="運営: KAGAMI / 責任者: "+SURVEY_SITE.responsible+" / お問い合わせ: "+SURVEY_SITE.contact+" / 版: "+SURVEY_SITE.version;</script></body></html>';
 
 function surveyPage_() { return SURVEY_SITE_HTML; }
+
+// ======================================================================
+// 鑑定日に合わせた、メールの自動配信(毎朝のトリガーで実行)
+// ======================================================================
+
+var SCHEDULE_DEFAULT = { enabled: true, remind7: 7, t0: 3, remind1: 1, t1: 0, t2: 90 };
+
+/** 設定シート(B8〜B13)から、配信の日数を読む。空欄・不正な値は、既定の日数 */
+function getSchedule_(reg) {
+  var s = {}, sh = reg.getSheetByName(SHEETS.settings);
+  Object.keys(SCHEDULE_DEFAULT).forEach(function (k) { s[k] = SCHEDULE_DEFAULT[k]; });
+  if (!sh || sh.getLastRow() < 8) return s;
+  function num(row, def) { var v = String(sh.getRange(row, 2).getValue()).trim(); return /^[0-9]{1,3}$/.test(v) ? Number(v) : def; }
+  var sw = String(sh.getRange(8, 2).getValue()).trim();
+  s.enabled = sw === '' ? true : sw === '有効';
+  s.remind7 = num(9, s.remind7); s.t0 = num(10, s.t0); s.remind1 = num(11, s.remind1); s.t1 = num(12, s.t1); s.t2 = num(13, s.t2);
+  return s;
+}
+
+/**
+ * 今日、自動で送るもの。roster: readRoster_ の行、done: {'F0001|remind7': true}(送信済みのリマインド)。
+ * 返す値: [{id, kind: 'remind7'|'T0'|'remind1'|'T1'|'T2'}]。鑑定日の入力が遅れて日数を過ぎていても、まだ意味のある範囲なら、すぐ送る
+ */
+function autoPlan_(roster, sch, today, done) {
+  var out = [];
+  if (!sch.enabled) return out;
+  roster.forEach(function (f) {
+    if (!f.id || f.id === CONFIG.TEST_ID || (f.category && f.category !== 'career') || !isParticipating_(f.status) || !f.sessionDate) return;
+    if (!isEmail_(f.email) || !isEmail_(f.childEmail)) return;
+    var before = dayDiff_(f.sessionDate, today);   // 鑑定日まで、あと何日(過ぎていれば負)
+    var after = -before;
+    if (!done[f.id + '|remind7'] && before <= sch.remind7 && before > sch.remind1) out.push({ id: f.id, kind: 'remind7' });
+    if (!(f.sent && f.sent.T0) && before <= sch.t0 && before >= 0) out.push({ id: f.id, kind: 'T0' });
+    if (!done[f.id + '|remind1'] && before <= sch.remind1 && before >= 1) out.push({ id: f.id, kind: 'remind1' });
+    if (!(f.sent && f.sent.T1) && after >= sch.t1) out.push({ id: f.id, kind: 'T1' });
+    if (!(f.sent && f.sent.T2) && after >= sch.t2) out.push({ id: f.id, kind: 'T2' });
+  });
+  return out;
+}
+
+function addDays_(dateStr, n) {
+  var p = String(dateStr).split('-');
+  var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n));
+  return d.getUTCFullYear() + '-' + ('0' + (d.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + d.getUTCDate()).slice(-2);
+}
+
+/** 管理画面に出す、自動配信の予定(日付つき)。送信済みのものは「済」 */
+function autoScheduleText_(f, sch, done) {
+  if (!sch.enabled) return '自動配信は「無効」です(設定シート)';
+  if (f.category && f.category !== 'career') return '-';
+  if (!f.sessionDate) return '鑑定日を入力すると、自動配信の予定が出ます';
+  var items = [
+    ['リマインド', addDays_(f.sessionDate, -sch.remind7), !!done[f.id + '|remind7']],
+    ['鑑定前アンケート', addDays_(f.sessionDate, -sch.t0), !!(f.sent && f.sent.T0)],
+    ['前日リマインド', addDays_(f.sessionDate, -sch.remind1), !!done[f.id + '|remind1']],
+    ['鑑定後アンケート', addDays_(f.sessionDate, sch.t1), !!(f.sent && f.sent.T1)],
+    ['3か月後アンケート', addDays_(f.sessionDate, sch.t2), !!(f.sent && f.sent.T2)]
+  ];
+  return items.map(function (x) { return x[1] + ' ' + x[0] + (x[2] ? '(済)' : ''); }).join(' / ');
+}
+
+/** 送信ログから、送信済みのリマインドを集める */
+function remindDone_(reg) {
+  var sh = reg.getSheetByName(SHEETS.sendlog), done = {};
+  if (!sh || sh.getLastRow() < 2) return done;
+  sh.getRange(2, 1, sh.getLastRow() - 1, 5).getValues().forEach(function (r) {
+    var m = /^自動:(remind7|remind1)/.exec(String(r[2]));
+    if (m && String(r[4]) === '送信済み') done[r[1] + '|' + m[1]] = true;
+  });
+  return done;
+}
+
+/** 鑑定日のリマインド(remind7 / remind1)を送り、送信ログに記録する */
+function sendNotice_(reg, kind, fam, templates, surveyNote) {
+  var log = reg.getSheetByName(SHEETS.sendlog), stamp = nowStr_();
+  var p = { name: fam.name, email: fam.email, childName: fam.childName, childEmail: fam.childEmail, sessionDate: fam.sessionDate, surveyNote: surveyNote };
+  var mails = buildLinkEmails_(kind, p, null, templates);
+  var ok = 0;
+  [['保護者宛', fam.email, mails.parent], ['お子様宛', fam.childEmail, mails.child]].forEach(function (x) {
+    var res = '送信済み';
+    try { sendMail_(x[1], x[2].subject, x[2].body); ok++; } catch (err) { res = '【失敗】' + err; }
+    log.appendRow([stamp, fam.id, '自動:' + kind + ' ' + x[0], x[1], res]);
+  });
+  return ok === 2;
+}
+
+/** 毎朝の自動配信。送った内容を、運営メールに知らせる。設定B7(サイトのURL)が未入力ならアンケートの案内は送らない */
+function runAutomation_(reg, db) {
+  var sch = getSchedule_(reg);
+  if (!sch.enabled) return { sent: 0, lines: ['自動配信は「無効」です'] };
+  var today = todayStr_(), roster = readRoster_(reg), done = remindDone_(reg), answered = surveyAnswered_(db);
+  var plan = autoPlan_(roster, sch, today, done);
+  var byId = {}; roster.forEach(function (r) { byId[r.id] = r; });
+  var templates = getTemplates_(reg), lines = [], sent = 0, errors = [];
+  var surveyOk = true;
+  try { requireSurveySiteUrl_(reg); } catch (e) { surveyOk = false; errors.push(String(e.message || e)); }
+  plan.forEach(function (t) {
+    var fam = byId[t.id];
+    if (MailApp.getRemainingDailyQuota() < 2) { errors.push('今日の送信上限に足りないため、' + t.id + ' の ' + t.kind + ' は送りませんでした(明日の朝に再実行されます)'); return; }
+    if (t.kind === 'remind7' || t.kind === 'remind1') {
+      var note = '';
+      if (t.kind === 'remind1') note = (answered[fam.id + '|CT0'] && answered[fam.id + '|PT0']) ? '鑑定前のアンケートへのご回答、ありがとうございました。' : '鑑定前のアンケートが、まだお済みでない場合は、メールのご案内から、お時間のあるときにご回答ください。';
+      if (sendNotice_(reg, t.kind, fam, templates, note)) { sent++; lines.push(t.id + ' ' + (t.kind === 'remind7' ? '鑑定日のリマインド' : '前日リマインド') + ' を送りました'); }
+      else errors.push(t.id + ' の ' + t.kind + ' の送信に失敗しました(「送信ログ」を確認)');
+    } else {
+      if (!surveyOk) return;
+      var r = sendLinksToFamilies_(reg, t.kind, [fam]);
+      if (r.ok) { sent++; lines.push(t.id + ' ' + TIME_LABEL[t.kind] + 'のアンケートの案内を送りました'); } else errors.push(t.id + ' の ' + t.kind + ' の送信に失敗しました(「送信ログ」を確認)');
+    }
+  });
+  var to = opMail_(reg);
+  if (to && (lines.length || errors.length)) {
+    try { sendMail_(to, '[調査アンケート] 自動配信の結果(' + today + ')', (lines.length ? '送ったもの:\n- ' + lines.join('\n- ') + '\n\n' : '') + (errors.length ? '確認が必要なこと:\n- ' + errors.join('\n- ') + '\n\n' : '') + reg.getUrl()); } catch (e2) { /* 通知の失敗は無視 */ }
+  }
+  return { sent: sent, lines: lines, errors: errors };
+}
+
+/** いま、自動配信を実行する(確認用)。毎朝のトリガーと同じ処理 */
+function runAutomationNow() {
+  ownerOnly_();
+  var r = runAutomation_(regSS_(), dbSS_());
+  Logger.log('自動配信: ' + r.sent + '件送信\\n' + (r.lines || []).concat(r.errors || []).join('\\n'));
+}
 
 // ======================================================================
 // 集計・出力

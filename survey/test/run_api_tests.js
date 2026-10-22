@@ -43,7 +43,7 @@ function makeEnv(activeEmail) {
   const H = (n) => vm.runInContext('HEAD.' + n, env);
   const roster = reg.add('名簿', H('roster'));
   const settings = reg.add('設定', ['項目', '値', '説明']);
-  settings.values.push(['安全', 'safe@example.com'], ['代理', ''], ['', ''], ['', ''], ['運営メール', 'op@example.com'], ['アンケートサイトURL', 'https://site.example/exec?page=survey']);
+  settings.values.push(['安全', 'safe@example.com'], ['代理', ''], ['', ''], ['', ''], ['運営メール', 'op@example.com'], ['アンケートサイトURL', 'https://site.example/exec?page=survey'], ['メールの自動配信', '有効'], ['', 7], ['', 3], ['', 1], ['', 0], ['', 90]);
   const sendlog = reg.add('送信ログ', H('sendlog'));
   reg.add('申込要確認', H('pending')); reg.add('安全対応ログ', H('safety'));
   const subs = db.add('Submissions', H('submissions')), long = db.add('Long', H('long')), opts = db.add('LongOptions', H('options'));
@@ -388,6 +388,66 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('診断: 見ている台帳・回答DBのURLと、各家庭の状況(案内の送信有無)が出る。メールは一部を伏せる', /sheets\.example\/reg/.test(out) && /sheets\.example\/db/.test(out) && /F0001.*T0:済.*入室できる/.test(out) && /F0002.*T0:未.*T0のリンクを送る/.test(out) && /h\*\*\*@example\.com/.test(out) && !/hanako@example\.com/.test(out));
   const E2 = makeEnv('other@example.com');
   t('診断: 管理者以外は実行できない', /管理者のみ/.test(throws(() => E2.run('diagnoseSurvey')()) || ''));
+}
+{ // 鑑定日に合わせた自動配信
+  const E = makeEnv('me@example.com');
+  const plan = (rows, today, done = {}, sch) => E.run('autoPlan_')(rows, sch || E.run('SCHEDULE_DEFAULT'), today, done).map(x => x.id + ':' + x.kind).join(',');
+  const fam = (o) => Object.assign({ id: 'F0001', category: 'career', status: '参加中', email: 'p@example.com', childEmail: 'c@example.com', sessionDate: '2026-12-10', sent: { T0: '', T1: '', T2: '' } }, o || {});
+  t('自動配信の計画: 鑑定の7日前 → リマインド', plan([fam()], '2026-12-03') === 'F0001:remind7');
+  t('自動配信の計画: 鑑定の3日前 → 鑑定前アンケート(T0)の案内(リマインドは送信済みの場合)', plan([fam()], '2026-12-07', { 'F0001|remind7': true }) === 'F0001:T0');
+  t('自動配信の計画: 鑑定の前日 → 前日リマインド', plan([fam({ sent: { T0: 'x', T1: '', T2: '' } })], '2026-12-09', { 'F0001|remind7': true }) === 'F0001:remind1');
+  t('自動配信の計画: 鑑定日 → 鑑定後アンケート(T1)の案内', plan([fam({ sent: { T0: 'x', T1: '', T2: '' } })], '2026-12-10', { 'F0001|remind7': true, 'F0001|remind1': true }) === 'F0001:T1');
+  t('自動配信の計画: 鑑定の90日後 → 3か月後アンケート(T2)。89日後はまだ', plan([fam({ sent: { T0: 'x', T1: 'x', T2: '' } })], '2027-03-10', { 'F0001|remind7': true, 'F0001|remind1': true }) === 'F0001:T2' && plan([fam({ sent: { T0: 'x', T1: 'x', T2: '' } })], '2027-03-09', { 'F0001|remind7': true, 'F0001|remind1': true }) === '');
+  t('自動配信の計画: 日数が空く日は何もしない(鑑定の5日前)', plan([fam()], '2026-12-05', { 'F0001|remind7': true }) === '');
+  t('自動配信の計画: 鑑定日の入力が遅れても(2日前)、鑑定前アンケートをすぐ送る。前日リマインドは、まだ', plan([fam()], '2026-12-08', { 'F0001|remind7': true }) === 'F0001:T0');
+  t('自動配信の計画: 送信済み・辞退・鑑定日なし・メールなし・一般/法人・テストIDは対象外', plan([fam({ sent: { T0: 'x', T1: '', T2: '' } }), fam({ id: 'F0002', status: '辞退' }), fam({ id: 'F0003', sessionDate: '' }), fam({ id: 'F0004', childEmail: '' }), fam({ id: 'G0001', category: 'general' }), fam({ id: 'F9999' })], '2026-12-07', { 'F0001|remind7': true }) === '');
+  t('自動配信の計画: 設定で「無効」なら何も送らない。日数は設定で変えられる', plan([fam()], '2026-12-07', {}, { enabled: false, remind7: 7, t0: 3, remind1: 1, t1: 0, t2: 90 }) === '' && plan([fam()], '2026-12-05', { 'F0001|remind7': true }, { enabled: true, remind7: 7, t0: 5, remind1: 1, t1: 0, t2: 90 }) === 'F0001:T0');
+  t('設定シートから、日数・有効/無効を読む(空欄・不正値は既定)', JSON.stringify(E.run('getSchedule_')(E.reg)) === JSON.stringify({ enabled: true, remind7: 7, t0: 3, remind1: 1, t1: 0, t2: 90 }));
+  t('管理画面の予定: 鑑定日から、日付つきで出る', /2026-12-03 リマインド/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /2026-12-07 鑑定前アンケート/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /2027-03-10 3か月後アンケート/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /鑑定日を入力すると/.test(E.run('autoScheduleText_')(fam({ sessionDate: '' }), E.run('SCHEDULE_DEFAULT'), {})));
+}
+{ // 自動配信の実行(メールと記録)
+  const E = makeEnv('me@example.com'); E.addFamily({});
+  const today = E.run('todayStr_')();
+  const setSession = (n) => { E.roster.values[1][E.rc('session')] = E.run('addDays_')(today, n); };
+  setSession(3);
+  let r = E.run('runAutomation_')(E.reg, E.db);
+  t('自動配信: 鑑定の3日前に、鑑定前アンケートの案内が、保護者とお子様に届き、送信日時が記録される(リマインドも同時に1回)', E.sent.filter(m => /アンケートのご案内/.test(m.subject)).length === 2 && String(E.roster.values[1][E.rc('T0')]).length > 10 && E.sent.some(m => /鑑定日のご案内/.test(m.subject) && m.to === 'hanako@example.com') && E.sent.some(m => m.to === 'op@example.com' && /自動配信の結果/.test(m.subject)));
+  const n = E.sent.length;
+  E.run('runAutomation_')(E.reg, E.db);
+  t('自動配信: 同じ日にもう一度実行しても、二重には送らない', E.sent.length === n);
+  setSession(1);
+  const before = E.sent.length;
+  E.run('runAutomation_')(E.reg, E.db);
+  const rem = E.sent.slice(before).filter(m => /明日は鑑定/.test(m.subject));
+  t('自動配信: 鑑定の前日に、前日リマインド(保護者・お子様)。鑑定前アンケートが未回答なら、回答のお願いが入る', rem.length === 2 && /まだお済みでない/.test(rem[0].body));
+  setSession(0);
+  E.run('runAutomation_')(E.reg, E.db);
+  t('自動配信: 鑑定日に、鑑定後アンケート(T1)の案内が届く(送信日時が記録される)', String(E.roster.values[1][E.rc('T1')]).length > 10);
+  E.roster.values[1][E.rc('session')] = E.run('addDays_')(today, -90);
+  E.run('runAutomation_')(E.reg, E.db);
+  t('自動配信: 鑑定の90日後に、3か月後アンケート(T2)の案内が届く', String(E.roster.values[1][E.rc('T2')]).length > 10);
+  // B7 未入力
+  const E2 = makeEnv('me@example.com'); E2.addFamily({}); E2.reg.getSheetByName('設定').values[6][1] = '';
+  E2.roster.values[1][E2.rc('session')] = E2.run('addDays_')(E2.run('todayStr_')(), 3);
+  const r2 = E2.run('runAutomation_')(E2.reg, E2.db);
+  t('自動配信: B7(サイトのURL)が未入力なら、アンケートの案内は送らず、運営に知らせる(リマインドは送る)', E2.roster.values[1][E2.rc('T0')] === '' && E2.sent.some(m => /鑑定日のご案内/.test(m.subject)) && E2.sent.some(m => m.to === 'op@example.com' && /B7/.test(m.body)));
+  // 無効
+  const E3 = makeEnv('me@example.com'); E3.addFamily({}); E3.reg.getSheetByName('設定').values[7][1] = '無効';
+  E3.roster.values[1][E3.rc('session')] = E3.run('addDays_')(E3.run('todayStr_')(), 3);
+  E3.run('runAutomation_')(E3.reg, E3.db);
+  t('自動配信: 設定が「無効」なら、何も送らない', E3.sent.length === 0);
+  t('管理者以外は、自動配信を手動で実行できない', /管理者のみ/.test(throws(() => makeEnv('x@example.com').run('runAutomationNow')()) || ''));
+}
+{ // メール文面の編集
+  const E = makeEnv('me@example.com');
+  const defaults = E.run('getTemplates_')(E.reg);
+  t('文面: 「メール文面」シートが無くても、既定の文面で動く(10種類)', Object.keys(defaults).length === 10 && /{{宛名}}/.test(defaults.T0_parent.body));
+  const sh = E.reg.add('メール文面', ['キー', '送り先', '件名', '本文', 'メモ']);
+  sh.values.push(['T0_parent', '保護者', '【編集した件名】{{アンケート名}}', '{{宛名}}、編集した本文です。{{アンケートURL}} {{知らない差し込み}}', ''], ['remind1_child', 'お子様', '', '', '']);
+  const m = E.run('buildLinkEmails_')('T0', { name: '山田 花子', email: 'h@example.com', childName: '太郎', childEmail: 'c@example.com', sessionDate: '2026-12-10' }, { parent: 'https://site.example/x', child: 'https://site.example/x' }, E.run('getTemplates_')(E.reg));
+  t('文面: シートで編集した件名・本文が使われ、{{差し込み}}が置きかわる。知らない差し込みは、そのまま残る', m.parent.subject === '【編集した件名】鑑定前' && m.parent.body === '山田 花子 様、編集した本文です。https://site.example/x {{知らない差し込み}}');
+  t('文面: 空欄の項目は、既定の文面に戻る。他の文面は、変わらない', E.run('getTemplates_')(E.reg).remind1_child.body === defaults.remind1_child.body && /ひとりで/.test(m.child.body));
+  t('文面: 既定の文面に、費用・謝礼・円の記載がない', !/費用|謝礼|円/.test(JSON.stringify(Object.values(defaults))));
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
