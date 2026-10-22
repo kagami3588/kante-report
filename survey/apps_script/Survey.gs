@@ -365,7 +365,7 @@ var CHILD_EXPLAIN = 'これは なんの おねがい?\nさんめいがくの �
 
 function CHK_(id, text, purpose) {
   return Q_({ id: id, text: text, kind: 'check', axis: AXIS.ID, system: true, required: true, choices: [text.indexOf('公式LINE') !== -1 ? '追加しました' : '確認しました'], purpose: purpose,
-    help: text.indexOf('公式LINE') !== -1 ? 'まだの方は、こちらから追加してください:' + LINE_URL : '' });
+    help: text.indexOf('公式LINE') !== -1 ? '【林 竜輔の公式LINE】まだ追加していない方は、先に下のリンクから追加をお願いします。\n追加はこちら → ' + LINE_URL + '\n(追加したあとで、下の「追加しました」にチェックを入れてください)' : '' });
 }
 function SEL_(id, text, choices, required, purpose) {
   return Q_({ id: id, text: text, kind: 'single', axis: AXIS.ID, system: true, required: !!required, choices: choices, purpose: purpose });

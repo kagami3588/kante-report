@@ -665,6 +665,7 @@ function buildFormFromDef_(def, ss, confirmMessage) {
     } else if (b.kind === 'consent' || b.kind === 'check') {
       it = form.addCheckboxItem().setTitle(title);
       it.setChoices([it.createChoice(b.choices[0])]);
+      if (b.help) it.setHelpText(b.help);
       it.setRequired(!!b.required);
     } else if (b.kind === 'age') {
       it = form.addTextItem().setTitle(title);
