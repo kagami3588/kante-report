@@ -68,11 +68,15 @@ function applyTitleParts_(q) {
   return { title: q.text, hint: '' };
 }
 
+/** フォームに表示する設問の題名。設問番号は回答者に見せない(申込フォームは、カッコ内の説明も説明文へ移す) */
+function shownTitle_(def, q) { return def.category ? applyTitleParts_(q).title : q.text; }
+
+/** 回答の項目名(表示題名)を、内部の「ID. 文言」の形に戻す。すでに内部の形のものは、そのまま使う */
 function normalizeApplyNamed_(def, namedValues) {
   var out = {};
   Object.keys(namedValues || {}).forEach(function (k) { out[k] = namedValues[k]; });
   def.blocks.forEach(function (b) {
-    if (b.type === 'q' && out[qTitle_(b)] === undefined && namedValues && namedValues[applyTitleParts_(b).title] !== undefined) out[qTitle_(b)] = namedValues[applyTitleParts_(b).title];
+    if (b.type === 'q' && out[qTitle_(b)] === undefined && namedValues && namedValues[shownTitle_(def, b)] !== undefined) out[qTitle_(b)] = namedValues[shownTitle_(def, b)];
   });
   return out;
 }
@@ -149,6 +153,7 @@ function safetyReasons_(formKey, answers) {
  */
 function processSubmission_(formKey, namedValues, tsIso, sid, ctx) {
   var def = SURVEY.forms[formKey];
+  namedValues = normalizeApplyNamed_(def, namedValues);
   var qs = questionsOf_(formKey);
   var answers = {};
   var flags = [];
@@ -633,15 +638,21 @@ function buildFormFromDef_(def, ss, confirmMessage) {
   var pages = [];
   var pendingGates = [];
   var firstBlock = true;
+  // 進み具合が分かるように、ページの題名の先頭に 【いま/全体】 を付け、区分の記号(A. など)は見せない。先頭に質問があるときは、それも1ページと数える
+  var totalPages = def.blocks.filter(function (x) { return x.type === 'page' && !x.conditional; }).length + (def.blocks[0] && def.blocks[0].type === 'q' ? 1 : 0);
+  var pageNo = def.blocks[0] && def.blocks[0].type === 'q' ? 1 : 0;
 
   def.blocks.forEach(function (b) {
     if (b.type === 'page') {
       var item;
+      if (!b.conditional) pageNo++;
+      var plain = b.title.replace(/^[A-Z](-[0-9]+)?\.\s*/, '');
+      var pageTitle = (totalPages > 1 && !b.conditional) ? '【' + pageNo + '/' + totalPages + '】' + plain : plain;
       if (firstBlock) {
-        item = form.addSectionHeaderItem().setTitle(b.title);
+        item = form.addSectionHeaderItem().setTitle(pageTitle);
         if (b.desc) item.setHelpText(b.desc);
       } else {
-        item = form.addPageBreakItem().setTitle(b.title);
+        item = form.addPageBreakItem().setTitle(pageTitle);
         if (b.desc) item.setHelpText(b.desc);
       }
       pages.push({ block: b, item: item, isHeader: firstBlock });
@@ -651,7 +662,7 @@ function buildFormFromDef_(def, ss, confirmMessage) {
     firstBlock = false;
     var it;
     var hint = def.category ? applyTitleParts_(b).hint : '';
-    var title = def.category ? applyTitleParts_(b).title : qTitle_(b);
+    var title = shownTitle_(def, b);
     if (b.kind === 'id') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern(SURVEY.idPattern).setHelpText('F0001 の形式です。専用リンクから開くと自動で入力されます。').build());
@@ -846,10 +857,11 @@ function readRoster_(reg) {
 
 var formCache_ = {};
 /** 調査用ID入力済みの専用リンク */
+function ridTitle_(formKey) { return shownTitle_(SURVEY.forms[formKey], questionsOf_(formKey).filter(function (q) { return q.id === 'RID'; })[0]); }
 function getPrefilledUrl_(formKey, id) {
   if (!formCache_[formKey]) {
     var f = FormApp.openById(getFormIds_()[formKey]);
-    formCache_[formKey] = { form: f, item: f.getItems(FormApp.ItemType.TEXT).filter(function (i) { return i.getTitle().indexOf('RID. ') === 0; })[0] };
+    formCache_[formKey] = { form: f, item: f.getItems(FormApp.ItemType.TEXT).filter(function (i) { return i.getTitle() === ridTitle_(formKey); })[0] };
   }
   var c = formCache_[formKey];
   return c.form.createResponse().withItemResponse(c.item.asTextItem().createResponse(id)).toPrefilledUrl();
@@ -965,7 +977,7 @@ function deleteFamilyCore_(reg, db, fam) {
     var vals = sh.getDataRange().getValues();
     var idCol = -1;
     if (name === SHEETS.long || name === SHEETS.options || name === SHEETS.submissions) idCol = vals[0].indexOf('調査用ID');
-    else if (name.indexOf('resp_') === 0) vals[0].forEach(function (h, i) { if (String(h).indexOf('RID.') === 0) idCol = i; });
+    else if (name.indexOf('resp_') === 0) vals[0].forEach(function (h, i) { if (String(h).indexOf('調査用ID') === 0) idCol = i; });
     if (idCol < 0) return;
     var res = dropRowsById_(vals, idCol, id);
     if (!res.removed) return;
@@ -1688,7 +1700,7 @@ function runStaticTests() {
     var mcBad = [];
     items.forEach(function (i) {
       if (i.getType() === FormApp.ItemType.MULTIPLE_CHOICE) {
-        var q = qs.filter(function (x) { return qTitle_(x) === i.getTitle(); })[0];
+        var q = qs.filter(function (x) { return shownTitle_(defs[k], x) === i.getTitle(); })[0];
         if (!q) return;
         var got = i.asMultipleChoiceItem().getChoices().map(function (c) { return c.getValue(); }).join('|');
         if (got !== choicesOf_(q).join('|')) mcBad.push(q.id);
@@ -1697,7 +1709,7 @@ function runStaticTests() {
     add(k + ' 選択肢が仕様どおり', mcBad.length === 0, mcBad.join(','));
     var gateBad = [];
     qs.filter(function (q) { return q.gate; }).forEach(function (q) {
-      var it = items.filter(function (i) { return i.getTitle() === qTitle_(q); })[0].asMultipleChoiceItem();
+      var it = items.filter(function (i) { return i.getTitle() === shownTitle_(defs[k], q); })[0].asMultipleChoiceItem();
       var skip = it.getChoices().filter(function (c) { return c.getValue() === q.gate.skip; })[0];
       var other = it.getChoices().filter(function (c) { return c.getValue() !== q.gate.skip; })[0];
       var skipType = skip.getPageNavigationType();

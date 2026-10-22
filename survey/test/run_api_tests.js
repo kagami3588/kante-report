@@ -47,7 +47,7 @@ function makeEnv(activeEmail) {
   const sendlog = reg.add('送信ログ', H('sendlog'));
   reg.add('申込要確認', H('pending')); reg.add('安全対応ログ', H('safety'));
   const subs = db.add('Submissions', H('submissions')), long = db.add('Long', H('long')), opts = db.add('LongOptions', H('options'));
-  const resp = db.add('resp_CT0', ['タイムスタンプ', 'RID. 調査用ID(運営から届いた専用リンクで自動入力されます。変更しないでください)', 'S1. x']);
+  const resp = db.add('resp_CT0', ['タイムスタンプ', '調査用ID(運営から届いた専用リンクで自動入力されます。変更しないでください)', 'S1. x']);
   const rc = (n) => vm.runInContext('RC.' + n, env);
   function addFamily(o) {
     const row = new Array(33).fill('');
@@ -69,7 +69,7 @@ function makeEnv(activeEmail) {
       getUuid: () => 'abcdef12-0000',
       formatDate: (d, tz, fmt) => { const j = new Date(d.getTime() + 9 * 3600 * 1000).toISOString(); return fmt.indexOf('HH') !== -1 ? j.slice(0, 19) : j.slice(0, 10); }
     },
-    FormApp: { ItemType: { TEXT: 'TEXT' }, openById: (id) => ({ getItems: () => [{ getTitle: () => 'RID. x', asTextItem: () => ({ createResponse: (v) => ({ id: v }) }) }], createResponse: () => ({ withItemResponse: (r) => ({ toPrefilledUrl: () => 'https://forms.example/' + id + '?rid=' + r.id }) }) }) }
+    FormApp: { ItemType: { TEXT: 'TEXT' }, openById: (id) => ({ getItems: () => [{ getTitle: () => '調査用ID(運営から届いた専用リンクで自動入力されます。変更しないでください)', asTextItem: () => ({ createResponse: (v) => ({ id: v }) }) }], createResponse: () => ({ withItemResponse: (r) => ({ toPrefilledUrl: () => 'https://forms.example/' + id + '?rid=' + r.id }) }) }) }
   });
   return { env, reg, db, roster, sendlog, subs, long, opts, resp, sent, addFamily, rc, run: (e) => vm.runInContext(e, env) };
 }
