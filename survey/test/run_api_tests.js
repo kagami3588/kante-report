@@ -180,5 +180,20 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('単独のスクリプトで setup() を実行すると、台帳を自動で作ろうとする(「紐づいていません」のエラーにならない)', made[0] === '研究台帳' && !/紐づいていません/.test(msg || ''), msg);
 }
 
+{ // マニフェスト(権限と、ウェブアプリの公開範囲)
+  const mf = JSON.parse(fs.readFileSync(path.join(root, 'appsscript.json'), 'utf8'));
+  const used = [
+    ['Session.getEffectiveUser / getActiveUser', /Session\.get(Effective|Active)User/, 'https://www.googleapis.com/auth/userinfo.email'],
+    ['MailApp', /MailApp\./, 'https://www.googleapis.com/auth/script.send_mail'],
+    ['ScriptApp.newTrigger', /ScriptApp\./, 'https://www.googleapis.com/auth/script.scriptapp'],
+    ['FormApp', /FormApp\./, 'https://www.googleapis.com/auth/forms'],
+    ['SpreadsheetApp', /SpreadsheetApp\./, 'https://www.googleapis.com/auth/spreadsheets'],
+    ['DriveApp', /DriveApp\./, 'https://www.googleapis.com/auth/drive'],
+    ['SpreadsheetApp.getUi(メニュー・ダイアログ)', /getUi\(\)/, 'https://www.googleapis.com/auth/script.container.ui']
+  ];
+  used.forEach(([name, re, scope]) => { if (re.test(code)) t('マニフェストに必要な権限がある: ' + name, mf.oauthScopes.indexOf(scope) !== -1, scope); });
+  t('ウェブアプリの既定の公開範囲は「自分のみ」・実行者は「自分」', mf.webapp && mf.webapp.access === 'MYSELF' && mf.webapp.executeAs === 'USER_DEPLOYING');
+}
+
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
