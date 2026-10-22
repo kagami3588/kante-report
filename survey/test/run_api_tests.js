@@ -228,11 +228,17 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('管理者本人なら、権限の確認を通る', !throws(() => E2.run('ownerOnly_')()));
 }
 { // ページの出し分け
-  const A = makeEnv(''); const pa = A.run('doGet')({ parameter: {} });
+  const A = makeEnv(''); const pa = A.run('doGet')({ parameter: { cat: 'career' } });
   t('公開(閲覧者のメール不明)で開くと、申込ページが出る(ダッシュボードは出ない)', /お申込み/.test(pa.title) && !/dashboard/i.test(pa.title) && /submitApplication/.test(pa.html) && !/F0001/.test(pa.html));
   const O = makeEnv('me@example.com'); O.addFamily({});
   t('管理者が開くとダッシュボード、?page=apply なら申込ページ', /ダッシュボード/.test(O.run('doGet')({ parameter: {} }).title) && /お申込み/.test(O.run('doGet')({ parameter: { page: 'apply' } }).title));
   t('申込ページには、お振込先(口座番号)が含まれない(申込後にだけ表示)', !/7332659/.test(pa.html));
+  const pc = A.run('doGet')({ parameter: { cat: 'corp' } }), pg2 = A.run('doGet')({ parameter: { cat: 'general' } }), pn = A.run('doGet')({ parameter: {} });
+  t('区分ごとのURL: 進路の申込ページには、法人・個人の項目やプラン(50,000円/100,000円)が含まれない', !/50,000円|100,000円|株式会社|法人名/.test(pa.html) && /お子様/.test(pa.html));
+  t('区分ごとのURL: 法人の申込ページには、進路・個人の項目が含まれない(お子様・追加の鑑定)', !/お子様|追加の鑑定/.test(pc.html) && /50,000円/.test(pc.html));
+  t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
+  t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/GE1|AP1|CO1|CONSENT_ALL/.test(pn.html) && !/GE1|AP1|CO1/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html));
+  t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
   t('申込ページのスクリプトに構文エラーがない', ok);

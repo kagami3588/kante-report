@@ -1422,8 +1422,9 @@ function doGet(e) {
   if (page === 'survey') {
     return HtmlService.createHtmlOutput(surveyPage_()).setTitle('算命学の鑑定 アンケート').addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
-  if (page === 'apply' || !ok) {
-    return HtmlService.createHtmlOutput(applyPage_()).setTitle('算命学の鑑定 お申込み').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  var cat = (e && e.parameter && e.parameter.cat) || '';
+  if (page === 'apply' || cat || !ok) {
+    return HtmlService.createHtmlOutput(applyPage_(cat)).setTitle('算命学の鑑定 お申込み').addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
   return HtmlService.createHtmlOutput(dashboardPage_(dashboardData_(reg))).setTitle('申込・進捗ダッシュボード').addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -1447,10 +1448,10 @@ var SITE_CATEGORIES = [
 ];
 
 /** 公開サイトに埋め込むデータ(設問の定義だけ。お振込先は、申込のあとにだけ返す) */
-function publicSiteData_() {
+function publicSiteData_(cat) {
   return {
     line: LINE_URL, contact: CONTACT_MAIL,
-    cats: SITE_CATEGORIES.map(function (c) {
+    cats: SITE_CATEGORIES.filter(function (c) { return c.key === cat; }).map(function (c) {
       var d = SURVEY[c.def];
       return {
         key: c.key, label: c.label, sub: c.sub, desc: c.desc, fee: c.fee,
@@ -1546,7 +1547,7 @@ SITE_CSS_ + '</style></head><body>' +
 'var checks={email:function(v){return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v);},birth:function(v){if(!/^[0-9]{8}$/.test(v))return false;var y=+v.slice(0,4),m=+v.slice(4,6),d=+v.slice(6,8),t=new Date(y,m-1,d);return y>1900&&t.getFullYear()===y&&t.getMonth()===m-1&&t.getDate()===d&&t<=new Date();},phone:function(v){return /^[0-9\\-]{9,13}$/.test(v);},katakana:function(v){return /^[ァ-ヺー・\\s　]+$/.test(v);},int:function(v){return /^[0-9]{1,3}$/.test(v);}};' +
 'var msg={email:"メールアドレスの形式が正しくありません",birth:"生年月日は8桁の半角数字で入力してください(例:20000218)",phone:"電話番号は、数字とハイフンで入力してください",katakana:"カタカナで入力してください",int:"半角数字で入力してください"};' +
 'function show(key){cur=SITE.cats.filter(function(c){return c.key===key;})[0];fields={};app.innerHTML="";' +
-' var tabs=el("div","tabs");SITE.cats.forEach(function(c){var b=el("button","tab"+(c.key===key?" on":""));b.type="button";b.appendChild(el("b","",c.label));b.appendChild(el("small","",c.sub));b.onclick=function(){show(c.key);window.scrollTo(0,0);};tabs.appendChild(b);});app.appendChild(tabs);' +
+'  var tabs=el("div","tabs");if(SITE.cats.length>1)SITE.cats.forEach(function(c){var b=el("button","tab"+(c.key===key?" on":""));b.type="button";b.appendChild(el("b","",c.label));b.appendChild(el("small","",c.sub));b.onclick=function(){show(c.key);window.scrollTo(0,0);};tabs.appendChild(b);});if(SITE.cats.length>1)app.appendChild(tabs);' +
 ' var banner=el("div","banner");app.appendChild(banner);var card=null;' +
 ' cur.blocks.forEach(function(b,i){if(b.type==="page"){if(b.conditional)return;card=el("div","card");card.appendChild(el("h2","",b.title));if(b.desc)card.appendChild(el("div","desc",b.desc));if(i===0){card.appendChild(el("span","fee",cur.fee));}app.appendChild(card);return;}' +
 '  if(b.id==="AP_VIEW")return;if(!card){card=el("div","card");app.appendChild(card);}' +
@@ -1569,11 +1570,11 @@ SITE_CSS_ + '</style></head><body>' +
 ' c.appendChild(el("div","desc","林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください。"));var a=el("a","line","公式LINEを追加する");a.href=r.line;a.target="_blank";a.rel="noopener";c.appendChild(a);}' +
 ' app.appendChild(c);window.scrollTo(0,0);}' +
 'document.getElementById("foot").textContent="運営: KAGAMI / 責任者: " + "' + RESPONSIBLE + '" + " / お問い合わせ: " + SITE.contact;' +
-'var qs=(location.search||"").match(/cat=(career|general|corp)/);show(qs?qs[1]:SITE.cats[0].key);' +
+'if(SITE.cats.length){show(SITE.cats[0].key);}else{var g=el("div","card");g.appendChild(el("h2","","お申込みのページ"));g.appendChild(el("div","desc","お申込みは、ご案内したURLからお願いします。URLがお分かりにならない場合は、"+SITE.contact+" までご連絡ください。"));app.appendChild(g);}' +
 '</script></body></html>';
 
-function applyPage_() {
-  return APPLY_HTML.replace('__DATA__', function () { return safeJson_(publicSiteData_()); });
+function applyPage_(cat) {
+  return APPLY_HTML.replace('__DATA__', function () { return safeJson_(publicSiteData_(cat)); });
 }
 
 /** 申込を名簿に登録し、受付確認メール(お振込先つき)を申込者に、新規申込の通知を運営に送る(フォーム・専用サイトの共通処理) */
