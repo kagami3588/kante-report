@@ -376,5 +376,14 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const d = E.run('apiData')();
   t('ダッシュボードのデータに、セッション終了日時が入る', !!d.families.find(f => f.id === 'F0001').ended);
 }
+{ // 診断
+  const logs = []; const E = makeEnv('me@example.com'); E.env.Logger = { log: (m) => logs.push(m) };
+  E.addFamily({}); E.addFamily({ id: 'F0002', pemail: 'q@example.com', cemail: 'r@example.com' }); E.roster.values[1][E.rc('T0')] = '2026-11-01T10:00:00';
+  E.run('diagnoseSurvey')();
+  const out = logs.join('\n');
+  t('診断: 見ている台帳・回答DBのURLと、各家庭の状況(案内の送信有無)が出る。メールは一部を伏せる', /sheets\.example\/reg/.test(out) && /sheets\.example\/db/.test(out) && /F0001.*T0:済.*入室できる/.test(out) && /F0002.*T0:未.*T0のリンクを送る/.test(out) && /h\*\*\*@example\.com/.test(out) && !/hanako@example\.com/.test(out));
+  const E2 = makeEnv('other@example.com');
+  t('診断: 管理者以外は実行できない', /管理者のみ/.test(throws(() => E2.run('diagnoseSurvey')()) || ''));
+}
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

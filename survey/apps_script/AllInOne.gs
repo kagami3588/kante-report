@@ -2364,6 +2364,35 @@ function surveyLogin(email) {
   return { ok: true, token: token, who: pick.role === 'child' ? (pick.fam.childName || '') : (pick.fam.name || ''), def: surveyClientDef_(pick.due.key) };
 }
 
+function maskEmail_(e) {
+  e = String(e || '');
+  var at = e.indexOf('@');
+  return at < 1 ? (e ? '(形式が不正)' : '(空)') : e.charAt(0) + '***' + e.slice(at);
+}
+
+/** アンケートサイトに入れない原因を調べる(診断用)。サイトが見ている台帳・回答DBのURLと、進路相談の各家庭の状況を、実行ログに出す。メールアドレスは一部を伏せる */
+function diagnoseSurvey() {
+  ownerOnly_();
+  var reg = regSS_(), db = dbSS_();
+  var lines = ['サイトが見ている台帳: ' + reg.getUrl(), 'サイトが見ている回答DB: ' + db.getUrl(), 'アンケートサイトのURL(設定B7): ' + (surveySiteUrl_(reg) || '(未設定。案内メールにはGoogleフォームのリンクが載ります)')];
+  var roster = readRoster_(reg), answered = surveyAnswered_(db);
+  lines.push('名簿の行数: ' + roster.length);
+  roster.forEach(function (f) {
+    var why = [];
+    if (f.category !== 'career') why.push('区分が進路相談ではない(' + (f.category || '空') + ')→ アンケートの対象外');
+    if (!isParticipating_(f.status)) why.push('参加状況が「' + f.status + '」');
+    var due = surveyDue_(f, 'parent', answered);
+    if (f.category === 'career') {
+      if (due.state === 'wait') why.push('案内(T0)をまだ送っていない → 管理画面で「T0のリンクを送る」');
+      else if (due.state === 'done') why.push('案内済みのアンケートには、すべて回答済み');
+      else why.push('入室できる状態です(いまのアンケート: ' + due.key.replace(/^P/, '保護者用 ').replace(/^C/, 'お子様用 ') + ')');
+    }
+    lines.push(f.id + ' / 区分:' + (f.category || '空') + ' / 参加状況:' + f.status + ' / 保護者:' + maskEmail_(f.email) + ' / お子様:' + maskEmail_(f.childEmail) +
+      ' / 案内の送信 T0:' + (f.sent && f.sent.T0 ? '済' : '未') + ' T1:' + (f.sent && f.sent.T1 ? '済' : '未') + ' T2:' + (f.sent && f.sent.T2 ? '済' : '未') + ' → ' + why.join(' / '));
+  });
+  Logger.log(lines.join('\n'));
+}
+
 /** アンケートの送信(誰でも呼べるが、入室で渡した合い鍵が必要)。フォームと同じ処理で、回答DBに記録する */
 function surveySubmit(token, answers) {
   token = String(token || '');
