@@ -423,7 +423,7 @@ t('一般・法人の同意は、個人情報の利用(必須)', qG.filter(q => 
 t('一般・法人の個人情報の説明(責任を持って・鑑定のご提供・プロジェクト終了まで・削除の申し出・責任者)', [apG, apB].every(d => { const x = textOf(d); return /責任を持ってお預かりします/.test(x) && /鑑定をご提供するため/.test(x) && /このプロジェクトが終了するときまで/.test(x) && /お申し出があれば、削除します/.test(x) && /責任者:林 竜輔/.test(x); }));
 t('一般の項目: 名前・性別・生年月日・メール・LINE検索ID・Instagram(任意)・公式LINE・紹介者(カタカナ)・自由記入欄', ['GE1', 'GE2', 'GE3', 'GE4', 'GE5', 'GE6', 'GE7', 'GE8', 'GE9', 'GE11'].every(id => qG.some(q => q.id === id)) && qG.find(q => q.id === 'GE7').required === false && qG.find(q => q.id === 'GE9').kind === 'katakana');
 t('法人の項目: 法人名・部署・担当者・メール・電話・LINE・公式LINE・紹介者・人数・対象者・請求書宛名・自由記入欄', ['CO1', 'CO2', 'CO3', 'CO4', 'CO6', 'CO7', 'CO8', 'CO9', 'CO10', 'CO11', 'CO13', 'CO14'].every(id => qB.some(q => q.id === id)) && qB.find(q => q.id === 'CO2').required === false && qB.find(q => q.id === 'CO13').required === false);
-t('一般・法人の説明に費用・謝礼・補助金の記載がない', ![apG, apB].some(d => /費用|謝礼|補助金|円/.test(textOf(d))));
+t('一般・法人の説明文(同意の文面)に費用・謝礼・補助金の記載がない(鑑定料は、プランの選択肢とお振込先の案内にのみ表示)', ![apG, apB].some(d => /費用|謝礼|補助金|円/.test(d.intro + d.blocks.filter(b => b.type === 'page').map(b => b.desc || '').join('\n'))));
 {
   ctx.__ss = { getId: () => 'reg' };
   for (const k of ['applyG', 'applyB']) {
@@ -437,7 +437,7 @@ t('一般・法人の説明に費用・謝礼・補助金の記載がない', ![
   t('法人: 鑑定を受ける方の欄は必須の段落、プランは選択式、電話は数字とハイフン', tg.type === 'PARA' && tg.required && hc.type === 'MC' && ph.validation.pattern === '^[0-9\\-]{9,13}$');
 }
 const NVG = (o) => { const base = { GE1: '佐藤 一郎', GE2: '男性', GE3: '19800101', GE4: 'ichiro@example.com', GE5: 'ichiro@example.com', GE6: 'ichiro_line', GE7: '', GE8: '追加しました', GE9: 'ナシ', GE10: '', GE11: '', CONSENT_ALL: '全てに同意しました' }; const m = Object.assign(base, o); const out = {}; apG.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
-const NVB = (o) => { const base = { CO1: '株式会社サンプル', CO2: '総務部', CO3: '鈴木 花子', CO4: 'suzuki@sample.co.jp', CO5: 'suzuki@sample.co.jp', CO6: '03-1234-5678', CO7: 'suzuki_line', CO8: '追加しました', CO9: 'ナシ', CO10: '代表+幹部2名 100,000円', CO11: '山田 太郎/男性/19850612\n田中 次郎/男性/19900101\n佐藤 三郎/男性/19800101', CO12: '', CO13: '株式会社サンプル 御中', CO14: '', CONSENT_ALL: '全てに同意しました' }; const m = Object.assign(base, o); const out = {}; apB.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
+const NVB = (o) => { const base = { CO1: '株式会社サンプル', CO2: '総務部', CO3: '鈴木 花子', CO4: 'suzuki@sample.co.jp', CO5: 'suzuki@sample.co.jp', CO6: '03-1234-5678', CO7: 'suzuki_line', CO8: '追加しました', CO9: 'ナシ', CO10: '2名追加', CO11: '山田 太郎/男性/19850612\n田中 次郎/男性/19900101\n佐藤 三郎/男性/19800101', CO12: '', CO13: '株式会社サンプル 御中', CO14: '', CONSENT_ALL: '全てに同意しました' }; const m = Object.assign(base, o); const out = {}; apB.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
 let pg = pa(NVG({}), [], '2026-11-01T10:00:00', 'general');
 t('一般の申込OK → G0001を発行し、区分=general、名簿の列に入る', pg.ok && pg.id === 'G0001' && pg.row.length === 33 && pg.row[run('RC.category')] === 'general' && pg.row[run('RC.pname')] === '佐藤 一郎' && pg.row[run('RC.pbirth')] === '19800101' && pg.row[run('RC.line')] === 'ichiro_line' && pg.row[run('RC.cname')] === '');
 pg = pa(NVG({}), [{ id: 'F0005', category: 'career', email: 'a@example.com' }, { id: 'G0003', category: 'general', email: 'z@example.com', name: 'z' }], 't', 'general');
@@ -453,11 +453,11 @@ t('一般: 同じメールと名前 → 重複申込', !pg.ok && /重複申込/.
 pg = pa(NVG({}), [{ id: 'F0001', category: 'career', email: 'ichiro@example.com', childName: '佐藤 一郎' }], 't', 'general');
 t('一般: 進路相談の登録と同じメールでも、重複扱いにしない', pg.ok);
 let pb = pa(NVB({}), [], '2026-11-01T10:00:00', 'corp');
-t('法人の申込OK → B0001、会社名・担当者・電話・人数・対象者・請求書宛名が名簿に入る', pb.ok && pb.id === 'B0001' && pb.row[run('RC.category')] === 'corp' && pb.row[run('RC.company')] === '株式会社サンプル' && pb.row[run('RC.pname')] === '鈴木 花子' && pb.row[run('RC.phone')] === '03-1234-5678' && pb.row[run('RC.headcount')] === '3' && pb.row[run('RC.plan')] === '代表+幹部2名 100,000円' && /山田 太郎/.test(pb.row[run('RC.targets')]) && pb.row[run('RC.invoice')] === '株式会社サンプル 御中' && pb.row[run('RC.memo')] === '');
-pb = pa(NVB({ CO10: '代表のみ 50,000円' }), [], 't', 'corp');
+t('法人の申込OK → B0001、会社名・担当者・電話・人数・対象者・請求書宛名が名簿に入る', pb.ok && pb.id === 'B0001' && pb.row[run('RC.category')] === 'corp' && pb.row[run('RC.company')] === '株式会社サンプル' && pb.row[run('RC.pname')] === '鈴木 花子' && pb.row[run('RC.phone')] === '03-1234-5678' && pb.row[run('RC.headcount')] === '3' && pb.row[run('RC.plan')] === '代表+追加2名 100,000円' && /山田 太郎/.test(pb.row[run('RC.targets')]) && pb.row[run('RC.invoice')] === '株式会社サンプル 御中' && pb.row[run('RC.memo')] === '');
+pb = pa(NVB({ CO10: '追加なし(代表のみ)' }), [], 't', 'corp');
 t('法人: プランの人数と記入行数が違っても受け付け、メモで知らせる', pb.ok && /人数\(1\)と、記入された行数\(3\)が一致しません/.test(pb.row[run('RC.memo')]));
 pb = pa(NVB({ CO10: '' }), [], 't', 'corp');
-t('法人: プラン未選択 → 要確認', !pb.ok && /プランが未選択/.test(pb.reason));
+t('法人: プラン未選択 → 要確認', !pb.ok && /追加人数が未選択/.test(pb.reason));
 pb = pa(NVB({ CO6: 'abc' }), [], 't', 'corp');
 t('法人: 電話番号が不正 → 要確認', !pb.ok && /電話番号/.test(pb.reason));
 pb = pa(NVB({ CONSENT_ALL: '' }), [], 't', 'corp');

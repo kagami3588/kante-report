@@ -458,7 +458,7 @@ function processCorpApplication_(namedValues, existing, tsIso) {
   if (!a.CO8) problems.push('公式LINEの追加が未確認');
   if (!isKatakana_(a.CO9)) problems.push('紹介者氏名がカタカナではない(いない場合は「ナシ」)');
   var plan = findPlan_(a.CO10);
-  if (!plan) problems.push('ご希望のプランが未選択');
+  if (!plan) problems.push('追加人数が未選択');
   if (!a.CO11) problems.push('鑑定を受ける方の情報が未入力');
   if (!a.CONSENT_ALL) problems.push('同意未確認');
   var dup = (existing || []).filter(function (e) { return e.category === 'corp'; }).some(function (e) { return normEmail_(e.email) === normEmail_(a.CO4) && normName_(e.company) === normName_(a.CO1); });
@@ -1444,13 +1444,13 @@ function ownerOnly_() {
 var SITE_CATEGORIES = [
   { key: 'career', def: 'apply', label: '親子', sub: '保護者さまとお子様の、お申込み', desc: 'お子様の進路・自己理解のための鑑定です。調査アンケートへのご協力をお願いしています。', fee: '鑑定料 30,000円' },
   { key: 'general', def: 'applyG', label: '個人', sub: 'ご自身の、お申込み', desc: 'ご自身の鑑定のお申込みです。', fee: '鑑定料 30,000円' },
-  { key: 'corp', def: 'applyB', label: '法人・団体', sub: '会社・団体の、お申込み', desc: '代表の方、または代表と幹部の方の鑑定のお申込みです。', fee: '代表のみ 50,000円 / 代表+幹部2名 100,000円' }
+  { key: 'corp', def: 'applyB', label: '法人・団体', sub: '会社・団体の、お申込み', desc: '代表の方と、従業員の方の鑑定のお申込みです。', fee: '鑑定料 50,000円〜(従業員の方を追加する場合は、1名につき25,000円)' }
 ];
 
 /** 公開サイトに埋め込むデータ(設問の定義だけ。お振込先は、申込のあとにだけ返す) */
 function publicSiteData_(cat) {
   return {
-    line: LINE_URL, contact: CONTACT_MAIL, version: SITE_VERSION,
+    line: LINE_URL, contact: CONTACT_MAIL, version: SITE_VERSION, corp: { base: CORP_FEE.base, add: CORP_FEE.add },
     cats: SITE_CATEGORIES.filter(function (c) { return c.key === cat; }).map(function (c) {
       var d = SURVEY[c.def];
       return {
@@ -1458,6 +1458,7 @@ function publicSiteData_(cat) {
         blocks: d.blocks.map(function (b) {
           if (b.type === 'page') return { type: 'page', title: b.title, desc: b.desc || '', conditional: !!b.conditional };
           var parts = applyTitleParts_(b);
+          if (b.id === 'CO11') parts = { title: '鑑定を受ける方の情報', hint: '代表の方から順に、追加の方の分までご入力ください。' };
           return { type: 'q', id: b.id, text: parts.title, kind: b.kind, required: !!b.required, choices: b.choices || null, help: [b.help, parts.hint].filter(Boolean).join('\n'), gate: !!b.gate };
         })
       };
@@ -1508,7 +1509,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-22-b';
+var SITE_VERSION = '2026-10-22-c';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -1536,14 +1537,67 @@ SITE_CSS_ += 'body{background:radial-gradient(1200px 500px at 50% -120px,rgba(13
 '.opt{border-radius:12px;padding:13px 14px;background:var(--card);border:1.5px solid var(--line);transition:all .12s;align-items:center}.opt input{width:20px;height:20px;margin:0;accent-color:var(--accent);flex:none}.opt:hover{border-color:var(--accent)}.opt:has(input:checked){border-color:var(--accent);background:rgba(47,74,125,.08)}' +
 '.btn{margin-top:26px;border-radius:14px;padding:16px;font-size:16px;letter-spacing:.06em;box-shadow:0 8px 20px rgba(47,74,125,.25);transition:transform .1s,box-shadow .1s}.btn:active{transform:translateY(1px);box-shadow:0 3px 10px rgba(47,74,125,.25)}.btn:disabled{box-shadow:none}' +
 '.fee{display:block;background:linear-gradient(90deg,rgba(138,109,59,.16),rgba(138,109,59,.05));border-left:3px solid var(--accent2);border-radius:8px;padding:10px 14px;font-size:14px;margin:4px 0 6px;color:var(--ink)}' +
-'.bank{border-radius:14px;padding:16px 18px;line-height:1.9}.big{margin-bottom:6px}.line{border-radius:14px;padding:15px;box-shadow:0 8px 20px rgba(6,199,85,.25)}.ok{width:64px;height:64px;line-height:64px;margin:0 auto 10px;border-radius:50%;background:rgba(46,125,79,.12);font-size:32px}.banner{border-left:4px solid var(--err);border-radius:8px}footer{padding:18px 16px 48px}.card .desc+h2{margin-top:26px}.card .bank{margin:12px 0}.card .bank+.desc{margin-top:14px}.card .ok+h2{text-align:left}';
+'.bank{border-radius:14px;padding:16px 18px;line-height:1.9}.big{margin-bottom:6px}.line{border-radius:14px;padding:15px;box-shadow:0 8px 20px rgba(6,199,85,.25)}.ok{width:64px;height:64px;line-height:64px;margin:0 auto 10px;border-radius:50%;background:rgba(46,125,79,.12);font-size:32px}.banner{border-left:4px solid var(--err);border-radius:8px}footer{padding:18px 16px 48px}.card .desc+h2{margin-top:26px}.card .bank{margin:12px 0}.card .bank+.desc{margin-top:14px}.card .ok+h2{text-align:left}.card.sub{box-shadow:none;background:var(--bg);margin:14px 0;padding:16px}.card.sub h2{font-size:15px}.persons{margin-top:12px}.card.sub .q{margin-top:14px}.card.sub.bad{border-color:var(--err)}.card.sub .err{display:block}';
+
+/** 法人の申込: 追加人数に合わせて、鑑定を受ける方(代表+追加の方)の入力欄を増やす(ブラウザで動く。toString で埋め込む) */
+function corpPersons_(el, getAdd, base, addFee) {
+  var rows = [], node = el('div', 'persons'), note = el('div', 'fee'), list = el('div', '');
+  node.appendChild(note); node.appendChild(list);
+  function yen(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '円'; }
+  function validBirth(v) { if (!/^[0-9]{8}$/.test(v)) return false; var y = +v.slice(0, 4), m = +v.slice(4, 6), d = +v.slice(6, 8), t = new Date(y, m - 1, d); return y > 1900 && t.getFullYear() === y && t.getMonth() === m - 1 && t.getDate() === d && t <= new Date(); }
+  function field(label, ph) {
+    var w = el('div', 'q'); w.appendChild(el('label', 't', label));
+    var i = document.createElement('input'); i.type = 'text'; i.placeholder = ph || ''; i.autocomplete = 'off'; w.appendChild(i); return { w: w, i: i };
+  }
+  function refresh() {
+    var n = getAdd() + 1;
+    note.textContent = 'お見積り: 鑑定料 ' + yen(base + addFee * (n - 1)) + '(代表の方 ' + yen(base) + (n > 1 ? ' + 追加' + (n - 1) + '名 × ' + yen(addFee) : '') + ')';
+    while (rows.length > n) rows.pop();
+    while (rows.length < n) {
+      var idx = rows.length, card = el('div', 'card sub'), r = { card: card };
+      card.appendChild(el('h2', '', idx === 0 ? '鑑定を受ける方 1(代表の方)' : '鑑定を受ける方 ' + (idx + 1) + '(追加の方)'));
+      var nm = field('お名前(フルネーム)'), bd = field('生年月日(例:19850612)', '8桁の数字'), ro = field('役職(担当部署)');
+      var g = el('div', 'q'); g.appendChild(el('label', 't', '性別'));
+      ['男性', '女性'].forEach(function (v) { var lab = el('label', 'opt'), rd = document.createElement('input'); rd.type = 'radio'; rd.name = 'pg_' + idx; rd.value = v; lab.appendChild(rd); lab.appendChild(el('span', '', v)); g.appendChild(lab); });
+      bd.i.inputMode = 'numeric';
+      card.appendChild(nm.w); card.appendChild(g); card.appendChild(bd.w); card.appendChild(ro.w);
+      r.name = nm.i; r.birth = bd.i; r.role = ro.i; r.gender = g; r.err = el('div', 'err'); card.appendChild(r.err);
+      rows.push(r);
+    }
+    list.innerHTML = '';
+    rows.forEach(function (r) { list.appendChild(r.card); });
+  }
+  function gender(r) { var x = r.gender.querySelector('input:checked'); return x ? x.value : ''; }
+  function check() {
+    var bad = null;
+    rows.forEach(function (r, i) {
+      var e = null, nm = r.name.value.trim(), bd = r.birth.value.trim(), ro = r.role.value.trim();
+      if (!nm || !gender(r) || !bd || !ro) e = 'お名前・性別・生年月日・役職(担当部署)を、すべてご入力ください';
+      else if (!validBirth(bd)) e = '生年月日は、8桁の半角数字で入力してください(例:19850612)';
+      else if (/[\/\r\n]/.test(nm + ro)) e = 'お名前・役職に「/」は使えません';
+      r.err.textContent = e || ''; r.card.classList.toggle('bad', !!e);
+      if (e && !bad) bad = e;
+    });
+    return bad;
+  }
+  function get() {
+    if (check()) return '';
+    return rows.map(function (r) { return [r.name.value.trim(), gender(r), r.birth.value.trim(), r.role.value.trim()].join('/'); }).join('\n');
+  }
+  refresh();
+  return { node: node, refresh: refresh, get: get, check: check };
+}
+
+/** 追加人数の選択肢(「追加なし(代表のみ)」「3名追加」)から、追加の人数を取り出す */
+function corpAddCount_(label) { var m = /^([0-9]+)名追加/.exec(String(label || '')); return m ? +m[1] : 0; }
+
 
 var APPLY_HTML = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
 '<title>算命学の鑑定 お申込み | KAGAMI</title><style>' +
 SITE_CSS_ + '</style></head><body>' +
 '<header><div class="brand">KAGAMI</div><h1>算命学の鑑定 お申込み</h1><p>必要事項を入力して、送信してください。送信後に、お振込先をご案内します。</p></header>' +
 '<main><div id="app"></div></main><footer id="foot"></footer>' +
-'<script>var SITE = __DATA__;' +
+'<script>var SITE = __DATA__;' + corpPersons_.toString() + corpAddCount_.toString() + ';' +
 'var el=function(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e;};' +
 'var cur=null,fields={},app=document.getElementById("app");' +
 'function linkify(box,text){String(text).split(/(https?:\\/\\/[^\\s]+)/).forEach(function(p){if(/^https?:/.test(p)){var a=el("a","",p);a.href=p;a.target="_blank";a.rel="noopener";box.appendChild(a);}else box.appendChild(document.createTextNode(p));});}' +
@@ -1556,13 +1610,14 @@ SITE_CSS_ + '</style></head><body>' +
 '  if(b.id==="AP_VIEW")return;if(!card){card=el("div","card");app.appendChild(card);}' +
 '  var q=el("div","q"),l=el("label","t",b.text);if(b.required){l.appendChild(el("span","req","必須"));}q.appendChild(l);if(b.help){var h=el("div","help");linkify(h,b.help);q.appendChild(h);}' +
 '  var f={b:b,q:q,get:null};' +
-'  if(b.kind==="single"){var name="r_"+b.id;(b.choices||[]).forEach(function(c){var lab=el("label","opt"),r=document.createElement("input");r.type="radio";r.name=name;r.value=c;lab.appendChild(r);lab.appendChild(el("span","",c));q.appendChild(lab);});f.get=function(){var x=q.querySelector("input:checked");return x?x.value:"";};}' +
+'  var isP=(cur.key==="corp"&&b.id==="CO11");if(isP){var pr=corpPersons_(el,function(){return corpAddCount_(fields.CO10?fields.CO10.get():"");},SITE.corp.base,SITE.corp.add);q.appendChild(pr.node);f.get=pr.get;f.check=pr.check;if(fields.CO10)fields.CO10.onchange=pr.refresh;}' +
+'  else if(b.kind==="single"){var name="r_"+b.id;(b.choices||[]).forEach(function(c){var lab=el("label","opt"),r=document.createElement("input");r.type="radio";r.name=name;r.value=c;r.onchange=function(){if(f.onchange)f.onchange();};lab.appendChild(r);lab.appendChild(el("span","",c));q.appendChild(lab);});f.get=function(){var x=q.querySelector("input:checked");return x?x.value:"";};}' +
 '  else if(b.kind==="consent"||b.kind==="check"){var lab=el("label","opt"),r=document.createElement("input");r.type="checkbox";lab.appendChild(r);lab.appendChild(el("span","",b.choices[0]));q.appendChild(lab);f.get=function(){return r.checked?b.choices[0]:"";};}' +
 '  else{var inp=b.kind==="text"?document.createElement("textarea"):document.createElement("input");if(b.kind!=="text")inp.type=b.kind==="email"?"email":b.kind==="phone"?"tel":"text";if(b.kind==="birth")inp.inputMode="numeric";inp.autocomplete="off";q.appendChild(inp);f.get=function(){return inp.value.trim();};}' +
 '  q.appendChild(el("div","err"));card.appendChild(q);fields[b.id]=f;});' +
 ' var hp=el("div","hp");var hpi=document.createElement("input");hpi.type="text";hpi.tabIndex=-1;hpi.autocomplete="off";hp.appendChild(hpi);app.appendChild(hp);' +
 ' var btn=el("button","btn","同意して、送信する");btn.type="button";app.appendChild(btn);' +
-' btn.onclick=function(){var ans={},bad=null;Object.keys(fields).forEach(function(id){var f=fields[id],v=f.get(),e=null;ans[id]=v;if(f.b.required&&!v)e=f.b.kind==="consent"||f.b.kind==="check"?"チェックをお願いします":"入力してください";else if(v&&checks[f.b.kind]&&!checks[f.b.kind](v))e=msg[f.b.kind];f.q.classList.toggle("bad",!!e);f.q.querySelector(".err").textContent=e||"";if(e&&!bad)bad=f.q;});' +
+' btn.onclick=function(){var ans={},bad=null;Object.keys(fields).forEach(function(id){var f=fields[id],v=f.get(),e=null;ans[id]=v;if(f.check){e=f.check();}else if(f.b.required&&!v)e=f.b.kind==="consent"||f.b.kind==="check"?"チェックをお願いします":"入力してください";else if(v&&checks[f.b.kind]&&!checks[f.b.kind](v))e=msg[f.b.kind];f.q.classList.toggle("bad",!!e);f.q.querySelector(".err").textContent=e||"";if(e&&!bad)bad=f.q;});' +
 '  ["AP2:AP3","CH4:CH5","GE4:GE5","CO4:CO5"].forEach(function(p){var a=p.split(":");if(fields[a[0]]&&ans[a[0]]&&ans[a[1]]&&ans[a[0]]!==ans[a[1]]){var f=fields[a[1]];f.q.classList.add("bad");f.q.querySelector(".err").textContent="上のメールアドレスと一致していません";if(!bad)bad=f.q;}});' +
 '  if(bad){banner.style.display="block";banner.textContent="入力内容を、ご確認ください(赤い項目)";bad.scrollIntoView({behavior:"smooth",block:"center"});return;}' +
 '  banner.style.display="none";btn.disabled=true;btn.textContent="送信しています…";' +

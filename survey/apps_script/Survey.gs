@@ -394,10 +394,10 @@ var PAYMENT = {
   holder: 'EnReaLizeハヤシリュウスケ'
 };
 var FEE = { career: 30000, general: 30000 };
-var CORP_PLANS = [
-  { label: '代表のみ 50,000円', fee: 50000, headcount: 1 },
-  { label: '代表+幹部2名 100,000円', fee: 100000, headcount: 3 }
-];
+// 法人: 代表1名で50,000円。従業員の方を追加するときは、1名につき25,000円
+var CORP_FEE = { base: 50000, add: 25000, maxAdd: 10 };
+function corpAddLabel_(n) { return n === 0 ? '追加なし(代表のみ)' : n + '名追加'; }
+var CORP_ADD_CHOICES = (function () { var a = []; for (var i = 0; i <= CORP_FEE.maxAdd; i++) a.push(corpAddLabel_(i)); return a; })();
 
 var GENDERS = ['男性', '女性'];
 var EXTRA_PLANS = ['レポートのみ 5,000円', 'オンライン鑑定希望 10,000円'];
@@ -489,8 +489,8 @@ SURVEY.applyB = {
     CHK_('CO8', '林 竜輔の公式LINEを追加しましたか?', '公式LINEの追加確認'),
     Q_({ id: 'CO9', text: '紹介者氏名(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)', kind: 'katakana', axis: AXIS.ID, system: true, required: true, purpose: '紹介者(個人情報)' }),
     P_('鑑定を受ける方の情報'),
-    SEL_('CO10', 'ご希望のプラン', CORP_PLANS.map(function (p) { return p.label; }), true, '鑑定のプラン(代表のみ/代表+幹部2名)。鑑定料が変わる'),
-    PARA_('CO11', '鑑定を受ける方の、お名前・性別・生年月日(1行に1名ずつ。例:山田 太郎/男性/19850612。代表のみの場合は1名、代表+幹部2名の場合は3名)', '鑑定を受ける方の氏名・性別・生年月日(個人情報)', true),
+    SEL_('CO10', '追加で鑑定を受ける従業員の方は、何名ですか?(1名追加につき25,000円)', CORP_ADD_CHOICES, true, '追加人数。鑑定料=50,000円+25,000円×追加人数'),
+    PARA_('CO11', '鑑定を受ける方の、お名前・性別・生年月日・役職(担当部署)(1行に1名ずつ、代表の方から順にご入力ください。例:山田 太郎/男性/19850612/代表取締役)', '鑑定を受ける方の氏名・性別・生年月日・役職(個人情報)', true),
     PARA_('CO12', 'ご希望の内容(任意)', '鑑定の希望内容(任意)', false),
     T1_('CO13', '請求書・領収書の宛名(任意)', '請求書・領収書の宛名(任意)', false),
     PARA_('CO14', '自由記入欄(質問がありましたら、内容をご記入ください)', '連絡事項・質問(任意)', false),
@@ -506,16 +506,19 @@ SURVEY.applyFormKeys = ['APPLY', 'APPLY_G', 'APPLY_B'];
 // ---------- お振込先・鑑定料の表示文(申込後の画面・受付確認メール・フォームの完了画面) ----------
 function yen_(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '円'; }
 
+/** 追加人数の選択肢から、プランを作る。{label, fee, headcount, additional}。選択肢にないときは null */
 function findPlan_(label) {
-  for (var i = 0; i < CORP_PLANS.length; i++) if (CORP_PLANS[i].label === label) return CORP_PLANS[i];
-  return null;
+  var n = CORP_ADD_CHOICES.indexOf(label);
+  if (n < 0) return null;
+  var fee = CORP_FEE.base + CORP_FEE.add * n;
+  return { label: n === 0 ? '代表のみ ' + yen_(fee) : '代表+追加' + n + '名 ' + yen_(fee), fee: fee, headcount: n + 1, additional: n };
 }
 
-/** 鑑定料の行。法人は、プランが分かればその金額、分からなければ(フォームの完了画面)両方のプランを出す */
+/** 鑑定料の行。法人は、人数が分かればその金額、分からなければ(フォームの完了画面)「50,000円〜」と追加料金を出す */
 function feeLines_(category, plan) {
   if (category === 'corp') {
     if (plan) return ['ご希望のプラン:' + plan.label, '鑑定料:' + yen_(plan.fee)];
-    return ['鑑定料(ご希望のプランの金額をお振込みください):'].concat(CORP_PLANS.map(function (p) { return '・' + p.label.replace(/ (?=[0-9])/, ':'); }));
+    return ['鑑定料:' + yen_(CORP_FEE.base) + '〜', '(従業員の方を追加する場合は、1名につき' + yen_(CORP_FEE.add) + 'を加えた金額を、お振込みください)'];
   }
   return ['鑑定料:' + yen_(FEE[category])];
 }

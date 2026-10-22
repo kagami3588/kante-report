@@ -214,7 +214,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const r4 = E.run('submitApplication')('general', Object.assign({}, GE, { GE4: 'x@example.com' }), 'bot');
   t('サイト申込: 隠し欄に入力があれば(ボット)黙って捨てる', r4.ok && r4.silent && E.roster.values.length === 2);
   t('サイト申込: 区分が不正ならエラー', !!throws(() => E.run('submitApplication')('hack', GE, '')));
-  const rb = E.run('submitApplication')('corp', { CO1: '株式会社サンプル', CO3: '鈴木 花子', CO4: 'suzuki@sample.co.jp', CO5: 'suzuki@sample.co.jp', CO6: '03-1234-5678', CO7: 'l', CO8: '追加しました', CO9: 'ナシ', CO10: '代表のみ 50,000円', CO11: '鈴木 花子/女性/19800101', CONSENT_ALL: '全てに同意しました', EVIL: 'x' }, '');
+  const rb = E.run('submitApplication')('corp', { CO1: '株式会社サンプル', CO3: '鈴木 花子', CO4: 'suzuki@sample.co.jp', CO5: 'suzuki@sample.co.jp', CO6: '03-1234-5678', CO7: 'l', CO8: '追加しました', CO9: 'ナシ', CO10: '追加なし(代表のみ)', CO11: '鈴木 花子/女性/19800101', CONSENT_ALL: '全てに同意しました', EVIL: 'x' }, '');
   t('サイト申込(法人): プラン代表のみ → 50,000円、プランが名簿に入る、知らない項目は捨てる', rb.ok && /50,000円/.test(rb.fee.join()) && E.roster.values[2][E.rc('plan')] === '代表のみ 50,000円');
   const E2 = makeEnv('');
   let n = 0; for (let i = 0; i < 8; i++) { const x = E2.run('submitApplication')('general', Object.assign({}, GE, { GE1: 'n' + i, GE4: 'same@example.com', GE5: 'same@example.com' }), ''); if (!x.ok && /多すぎ/.test((x.errors || []).join())) n++; }
@@ -237,8 +237,8 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 進路の申込ページには、法人・個人の項目やプラン(50,000円/100,000円)が含まれない', !/50,000円|100,000円|株式会社|法人名/.test(pa.html) && /お子様/.test(pa.html));
   t('区分ごとのURL: 法人の申込ページには、進路・個人の項目が含まれない(お子様・追加の鑑定)', !/お子様|追加の鑑定/.test(pc.html) && /50,000円/.test(pc.html));
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
-  t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/GE1|AP1|CO1|CONSENT_ALL/.test(pn.html) && !/GE1|AP1|CO1/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-22-b/.test(pa.html) && /2026-10-22-b/.test(pn.html));
+  t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-22-c/.test(pa.html) && /2026-10-22-c/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
