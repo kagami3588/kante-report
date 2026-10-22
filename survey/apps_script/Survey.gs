@@ -419,3 +419,76 @@ SURVEY.apply = {
   ]
 };
 SURVEY.apply.confirm = 'お申込みを受け付けました。受付確認のメールをお送りします。数分たっても届かない場合は、迷惑メールフォルダをご確認のうえ、' + CONTACT_MAIL + ' までご連絡ください。日程の調整は、運営から改めてご連絡します。';
+
+// ---------- 一般鑑定者用・法人鑑定者用の申込フォーム(研究アンケートと研究の同意は付けない。個人情報の利用の同意のみ) ----------
+var CATEGORY_LABEL = { career: '進路相談用', general: '一般鑑定者用', corp: '法人鑑定者用' };
+var CATEGORY_PREFIX = { career: 'F', general: 'G', corp: 'B' };
+
+var PRIVACY_TEXT = '【個人情報の取り扱い】\nお預かりする個人情報(お名前、メールアドレス、生年月日、ご連絡先など)は、責任を持ってお預かりします。\n・使う目的:鑑定をご提供するため(日程調整、ご連絡、鑑定書のお渡し)。\n・保管のしかた:運営(KAGAMI)のみが取り扱います。\n・保管の期間:このプロジェクトが終了するときまでを予定しています。\n・ご本人の同意なく、第三者にお渡しすることはありません。\n・削除をご希望の場合は、下の連絡先まで、お申し出ください。お申し出があれば、削除します。\n\n運営:KAGAMI\n責任者:' + RESPONSIBLE + '\n連絡先:' + CONTACT_MAIL;
+
+function INT_(id, text, purpose) {
+  return Q_({ id: id, text: text, kind: 'int', axis: AXIS.ID, system: true, required: true, purpose: purpose });
+}
+function PH_(id, text, purpose) {
+  return Q_({ id: id, text: text, kind: 'phone', axis: AXIS.ID, system: true, required: true, purpose: purpose });
+}
+function PARA_(id, text, purpose, required) {
+  return Q_({ id: id, text: text, kind: 'text', axis: AXIS.ID, system: true, required: !!required, purpose: purpose });
+}
+
+SURVEY.applyG = {
+  key: 'APPLY_G', category: 'general',
+  title: '算命学の鑑定 お申込みフォーム(一般の方)',
+  intro: 'このフォームは、算命学の鑑定へのお申込み用です(一般の方向け)。\n\n・最初に個人情報の取り扱いをお読みいただき、そのあと、ご情報をご入力ください。入力は、この1回だけです。\n・お申込み後、運営から、日程調整のご連絡をします。',
+  blocks: [
+    P_('個人情報の取り扱い', { desc: PRIVACY_TEXT }),
+    P_('お申込み者の情報'),
+    T1_('GE1', '名前(フルネーム)', '申込者の氏名(個人情報)', true),
+    SEL_('GE2', '性別', GENDERS, true, '申込者の性別(個人情報)'),
+    BD_('GE3', '生年月日(例:20000218)', '申込者の生年月日(個人情報。算命学の鑑定に使用)'),
+    EM_('GE4', 'メールアドレス', 'ご連絡の送信先(個人情報)'),
+    EM_('GE5', 'メールアドレス(確認のため、もう一度入力してください)', '入力ミスの確認'),
+    T1_('GE6', 'LINE検索ID', 'LINEでの連絡用(個人情報)', true),
+    T1_('GE7', 'Instagramのアカウント(任意)', 'Instagramのアカウント(任意。個人情報)', false),
+    CHK_('GE8', '林 竜輔の公式LINEを追加しましたか?', '公式LINEの追加確認'),
+    Q_({ id: 'GE9', text: '紹介者氏名(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)', kind: 'katakana', axis: AXIS.ID, system: true, required: true, purpose: '紹介者(個人情報)' }),
+    PARA_('GE10', 'ご希望の内容(任意)', '鑑定の希望内容(任意)', false),
+    PARA_('GE11', '自由記入欄(質問がありましたら、内容をご記入ください)', '連絡事項・質問(任意)', false),
+    P_('同意の確認', { desc: '上の「個人情報の取り扱い」をお読みのうえ、ご確認ください。チェックをいただいた場合に、お申込みできます。' }),
+    CK_('CONSENT_PI', 'お名前・メールアドレス・生年月日などを、鑑定のご提供(日程調整、ご連絡、鑑定書のお渡し)のために使うことに同意します。', '個人情報の取扱いへの同意')
+  ]
+};
+SURVEY.applyG.confirm = 'お申込みを受け付けました。受付確認のメールをお送りします。数分たっても届かない場合は、迷惑メールフォルダをご確認のうえ、' + CONTACT_MAIL + ' までご連絡ください。日程の調整は、運営から改めてご連絡します。';
+
+SURVEY.applyB = {
+  key: 'APPLY_B', category: 'corp',
+  title: '算命学の鑑定 お申込みフォーム(法人の方)',
+  intro: 'このフォームは、算命学の鑑定へのお申込み用です(法人の方向け)。\n\n・最初に個人情報の取り扱いをお読みいただき、そのあと、法人様と、鑑定を受ける方のご情報をご入力ください。\n・お申込み後、運営から、日程調整のご連絡をします。',
+  blocks: [
+    P_('個人情報の取り扱い', { desc: PRIVACY_TEXT }),
+    P_('法人様・ご担当者様の情報'),
+    T1_('CO1', '法人名(会社名・屋号)', '法人名', true),
+    T1_('CO2', '部署・役職(任意)', '部署・役職(任意)', false),
+    T1_('CO3', 'ご担当者様のお名前(フルネーム)', '担当者の氏名(個人情報)', true),
+    EM_('CO4', 'メールアドレス', 'ご連絡の送信先(個人情報)'),
+    EM_('CO5', 'メールアドレス(確認のため、もう一度入力してください)', '入力ミスの確認'),
+    PH_('CO6', '電話番号(例:0312345678。ハイフンなしでも可)', '担当者の電話番号(個人情報)'),
+    T1_('CO7', 'LINE検索ID', 'LINEでの連絡用(個人情報)', true),
+    CHK_('CO8', '林 竜輔の公式LINEを追加しましたか?', '公式LINEの追加確認'),
+    Q_({ id: 'CO9', text: '紹介者氏名(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)', kind: 'katakana', axis: AXIS.ID, system: true, required: true, purpose: '紹介者(個人情報)' }),
+    P_('鑑定を受ける方の情報'),
+    INT_('CO10', '鑑定を受ける人数(半角の数字)', '鑑定を受ける人数'),
+    PARA_('CO11', '鑑定を受ける方の、お名前・性別・生年月日(1行に1名ずつ。例:山田 太郎/男性/19850612)', '鑑定を受ける方の氏名・性別・生年月日(個人情報)', true),
+    PARA_('CO12', 'ご希望の内容(任意)', '鑑定の希望内容(任意)', false),
+    T1_('CO13', '請求書・領収書の宛名(任意)', '請求書・領収書の宛名(任意)', false),
+    PARA_('CO14', '自由記入欄(質問がありましたら、内容をご記入ください)', '連絡事項・質問(任意)', false),
+    P_('同意の確認', { desc: '上の「個人情報の取り扱い」をお読みのうえ、ご確認ください。すべてにチェックをいただいた場合に、お申込みできます。' }),
+    CK_('CONSENT_PI', '担当者様と、鑑定を受ける方のお名前・性別・生年月日・連絡先などを、鑑定のご提供(日程調整、ご連絡、鑑定書のお渡し)のために使うことに同意します。', '個人情報の取扱いへの同意'),
+    CK_('CONSENT_TARGET', '鑑定を受ける方に、個人情報(お名前・性別・生年月日)を運営にお渡しすることを説明し、ご本人の了解を得ています。', '鑑定を受ける方への説明と了解の確認')
+  ]
+};
+SURVEY.applyB.confirm = SURVEY.applyG.confirm;
+
+SURVEY.apply.category = 'career';
+SURVEY.applyForms = { career: SURVEY.apply, general: SURVEY.applyG, corp: SURVEY.applyB };
+SURVEY.applyFormKeys = ['APPLY', 'APPLY_G', 'APPLY_B'];

@@ -299,9 +299,9 @@ t('同意書・説明書のリンク用の設定(CONSENT_DOC_URL)がある。空
 const NVA = (o) => { const base = { AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'hanako@example.com', AP3: 'hanako@example.com', AP8: 'hanako_line', AP9: '', AP10: '追加しました', AP11: 'ナシ', AP5: '', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH4: 'taro@example.com', CH5: 'taro@example.com', CH6: '', EX1: '', EX2: '', AP_VIEW: '', CONSENT: '同意します', CONSENT_CHILD: '同意します', CONSENT_PI: '同意します', CONSENT_ANON: '同意します' }; const m = Object.assign(base, o); const out = {}; ap.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
 const pa = vm.runInContext('processApplication_', ctx);
 let pr = pa(NVA({}), [], '2026-11-01T10:00:00');
-t('申込OK → F0001を発行し、名簿の行(24列)を作る', pr.ok && pr.id === 'F0001' && pr.row.length === 24 && pr.row[0] === 'F0001' && pr.row[15] === '参加中');
+t('申込OK → F0001を発行し、名簿の行(32列)を作る', pr.ok && pr.id === 'F0001' && pr.row.length === 32 && pr.row[0] === 'F0001' && pr.row[15] === '参加中' && pr.row[run('RC.category')] === 'career');
 t('名簿の列の位置(RC)と行の内容が一致', pr.row[run('RC.pname')] === '山田 花子' && pr.row[run('RC.pgender')] === '女性' && pr.row[run('RC.pbirth')] === '19850612' && pr.row[run('RC.pemail')] === 'hanako@example.com' && pr.row[run('RC.line')] === 'hanako_line' && pr.row[run('RC.officialLine')] === '追加しました' && pr.row[run('RC.referrer')] === 'ナシ' && pr.row[run('RC.cname')] === '山田 太郎' && pr.row[run('RC.cgender')] === '男性' && pr.row[run('RC.cbirth')] === '20100315' && pr.row[run('RC.cemail')] === 'taro@example.com' && pr.row[run('RC.session')] === '' && pr.row[run('RC.status')] === '参加中');
-t('名簿の見出し数 = 行の列数', run('HEAD.roster.length') === 24 && run('RC.memo') === 23);
+t('名簿の見出し数 = 行の列数', run('HEAD.roster.length') === 32 && run('RC.memo') === 23 && run('RC.request') === 31);
 pr = pa(NVA({ EX1: '山田 次郎', EX2: 'レポートのみ 5,000円' }), [], 't');
 t('追加の鑑定の名前と希望が名簿に入る', pr.ok && pr.row[run('RC.exName')] === '山田 次郎' && pr.row[run('RC.exPlan')] === 'レポートのみ 5,000円');
 pr = pa(NVA({ EX2: 'オンライン鑑定希望 10,000円' }), [], 't');
@@ -309,7 +309,7 @@ t('追加の鑑定の希望だけで名前が空 → 要確認', !pr.ok && /対�
 pr = pa(NVA({}), [{ id: 'F0001', email: 'x@example.com', childName: 'a' }, { id: 'F0007', email: 'y@example.com', childName: 'b' }, { id: 'F9999', email: 't@example.com', childName: 't' }], 't');
 t('次のIDは最大値+1(F0008)。テストID(F9999)は数えない', pr.ok && pr.id === 'F0008');
 pr = pa(NVA({ AP3: 'hanako@exampl.com' }), [], 't');
-t('保護者メールが確認欄と不一致 → IDを発行せず要確認', !pr.ok && /保護者のメールアドレスが確認欄と一致しない/.test(pr.reason) && pr.pendingRow.length === 6);
+t('保護者メールが確認欄と不一致 → IDを発行せず要確認', !pr.ok && /保護者のメールアドレスが確認欄と一致しない/.test(pr.reason) && pr.pendingRow.length === 7 && pr.pendingRow[1] === '進路相談用');
 pr = pa(NVA({ CH5: 'tar@example.com' }), [], 't');
 t('お子様メールが確認欄と不一致 → 要確認', !pr.ok && /お子様のメールアドレスが確認欄と一致しない/.test(pr.reason));
 pr = pa(NVA({ AP2: 'abc', AP3: 'abc' }), [], 't');
@@ -392,7 +392,7 @@ const subsD = [
   ['s4', 't', 'F9999', '子ども', 'CT0', 'T0', 'TRUE', '', 1, 0, 0, 0, 'TRUE']
 ];
 const safD = [['2026-11-20T10:00:00', 'F0001', 'CT2', 'F8', 'a', '送信済み', '2026-11-21 10:00', '未対応', '', '', ''], ['2026-11-20T10:00:00', 'F0002', 'CT2', 'F7', 'a', '送信済み', 'd', '対応済', '', '', '']];
-const dd = vm.runInContext('buildDashboardData_', ctx)(rosterD, [['2026-11-02T10:00:00', 'z', 'z@example.com', 'q', 'メールが確認欄と一致しない', '']], subsD, safD, '2026-11-10');
+const dd = vm.runInContext('buildDashboardData_', ctx)(rosterD, [['2026-11-02T10:00:00', '進路相談用', 'z', 'z@example.com', 'q', 'メールが確認欄と一致しない', '']], subsD, safD, '2026-11-10');
 t('ダッシュボード: 家庭数・参加中・辞退の集計', dd.summary.total === 3 && dd.summary.active === 2 && dd.summary.withdrawn === 1);
 t('ダッシュボード: 要確認の申込・鑑定日未入力・未対応の安全確認・追加鑑定の希望', dd.summary.pending === 1 && dd.summary.noSession === 1 && dd.summary.safetyOpen === 1 && dd.summary.extraRequests === 1);
 t('ダッシュボード: T0の回答済みは、子ども・保護者の両方が分析採用で回答した家庭のみ(重複・テストを数えない)', dd.summary.responded.T0 === 1 && dd.families.find(f => f.id === 'F0001').resp.CT0 && dd.families.find(f => f.id === 'F0001').resp.PT0);
@@ -415,7 +415,94 @@ t('ページのJavaScriptが構文エラーなし', scriptOk);
   const view = all(ids.view);
   t('ダッシュボード描画: エラーなく描画され、家庭の行・次にやること・進捗が出る', !err && /F0001/.test(view) && /山田 花子 \/ 山田 太郎/.test(view) && /T1のリンクを送る/.test(view) && /T0/.test(view), err && err.message);
   t('ダッシュボード描画: 注入された文字列はテキストとして扱われる(要素にならない)', /<\/script><b>x/.test(view));
-  t('ダッシュボード描画: サマリーのカード', /申込\(参加中\)/.test(all(ids.cards)) && /要確認の申込/.test(all(ids.cards)));
+  t('ダッシュボード描画: サマリーのカード', /進路相談用\(参加中\)/.test(all(ids.cards)) && /一般鑑定者用\(参加中\)/.test(all(ids.cards)) && /法人鑑定者用\(参加中\)/.test(all(ids.cards)) && /要確認の申込/.test(all(ids.cards)));
+}
+
+
+// 15. 一般鑑定者用・法人鑑定者用の申込フォーム
+const apG = run('SURVEY.applyG'), apB = run('SURVEY.applyB');
+const qG = apG.blocks.filter(b => b.type === 'q'), qB = apB.blocks.filter(b => b.type === 'q');
+const textOf = (d) => d.intro + d.blocks.map(b => (b.desc || '') + (b.text || '')).join('\n');
+t('3つの申込フォーム(進路相談用・一般鑑定者用・法人鑑定者用)と区分ラベル', run('SURVEY.applyFormKeys.join()') === 'APPLY,APPLY_G,APPLY_B' && run('CATEGORY_LABEL.career') === '進路相談用' && run('CATEGORY_LABEL.general') === '一般鑑定者用' && run('CATEGORY_LABEL.corp') === '法人鑑定者用');
+t('一般・法人の申込フォームに、研究アンケート・研究参加の同意・お子様の項目がない', [apG, apB].every(d => !/研究|アンケート|お子様|お子さま|匿名の/.test(textOf(d))) && !qG.concat(qB).some(q => /^(CONSENT$|CONSENT_CHILD|CONSENT_ANON|CH\d|AP_VIEW)/.test(q.id)));
+t('一般・法人の同意は、個人情報の利用(必須)', qG.filter(q => q.kind === 'consent').map(q => q.id).join() === 'CONSENT_PI' && qB.filter(q => q.kind === 'consent').map(q => q.id).join() === 'CONSENT_PI,CONSENT_TARGET' && qG.concat(qB).filter(q => q.kind === 'consent').every(q => q.required));
+t('一般・法人の個人情報の説明(責任を持って・鑑定のご提供・プロジェクト終了まで・削除の申し出・責任者)', [apG, apB].every(d => { const x = textOf(d); return /責任を持ってお預かりします/.test(x) && /鑑定をご提供するため/.test(x) && /このプロジェクトが終了するときまで/.test(x) && /お申し出があれば、削除します/.test(x) && /責任者:林 竜輔/.test(x); }));
+t('一般の項目: 名前・性別・生年月日・メール・LINE検索ID・Instagram(任意)・公式LINE・紹介者(カタカナ)・自由記入欄', ['GE1', 'GE2', 'GE3', 'GE4', 'GE5', 'GE6', 'GE7', 'GE8', 'GE9', 'GE11'].every(id => qG.some(q => q.id === id)) && qG.find(q => q.id === 'GE7').required === false && qG.find(q => q.id === 'GE9').kind === 'katakana');
+t('法人の項目: 法人名・部署・担当者・メール・電話・LINE・公式LINE・紹介者・人数・対象者・請求書宛名・自由記入欄', ['CO1', 'CO2', 'CO3', 'CO4', 'CO6', 'CO7', 'CO8', 'CO9', 'CO10', 'CO11', 'CO13', 'CO14'].every(id => qB.some(q => q.id === id)) && qB.find(q => q.id === 'CO2').required === false && qB.find(q => q.id === 'CO13').required === false);
+t('一般・法人の説明に費用・謝礼・補助金の記載がない', ![apG, apB].some(d => /費用|謝礼|補助金|円/.test(textOf(d))));
+{
+  ctx.__ss = { getId: () => 'reg' };
+  for (const k of ['applyG', 'applyB']) {
+    vm.runInContext(`buildFormFromDef_(SURVEY.${k}, __ss, SURVEY.${k}.confirm)`, ctx);
+    const f = created[created.length - 1];
+    t(k + ' フォーム構築・同意が必須のチェックボックス', f.items.length > 10 && f.items.filter(i => /^CONSENT/.test(i.title)).every(i => i.required && i.type === 'CHECK'));
+    t(k + ' メール欄にメール形式の検証・生年月日/カタカナ/電話/人数の検証', f.items.filter(i => i.validation && i.validation.email).length === 2 && f.items.filter(i => i.validation).length >= 4);
+  }
+  const fb = created[created.length - 1];
+  const tg = fb.items.find(i => /^CO11\./.test(i.title)), hc = fb.items.find(i => /^CO10\./.test(i.title)), ph = fb.items.find(i => /^CO6\./.test(i.title));
+  t('法人: 鑑定を受ける方の欄は必須の段落、人数は半角数字、電話は数字とハイフン', tg.type === 'PARA' && tg.required && hc.validation.pattern === '^[0-9]{1,3}$' && ph.validation.pattern === '^[0-9\\-]{9,13}$');
+}
+const NVG = (o) => { const base = { GE1: '佐藤 一郎', GE2: '男性', GE3: '19800101', GE4: 'ichiro@example.com', GE5: 'ichiro@example.com', GE6: 'ichiro_line', GE7: '', GE8: '追加しました', GE9: 'ナシ', GE10: '', GE11: '', CONSENT_PI: '同意します' }; const m = Object.assign(base, o); const out = {}; apG.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
+const NVB = (o) => { const base = { CO1: '株式会社サンプル', CO2: '総務部', CO3: '鈴木 花子', CO4: 'suzuki@sample.co.jp', CO5: 'suzuki@sample.co.jp', CO6: '03-1234-5678', CO7: 'suzuki_line', CO8: '追加しました', CO9: 'ナシ', CO10: '2', CO11: '山田 太郎/男性/19850612\n田中 次郎/男性/19900101', CO12: '', CO13: '株式会社サンプル 御中', CO14: '', CONSENT_PI: '同意します', CONSENT_TARGET: '同意します' }; const m = Object.assign(base, o); const out = {}; apB.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
+let pg = pa(NVG({}), [], '2026-11-01T10:00:00', 'general');
+t('一般の申込OK → G0001を発行し、区分=general、名簿の列に入る', pg.ok && pg.id === 'G0001' && pg.row.length === 32 && pg.row[run('RC.category')] === 'general' && pg.row[run('RC.pname')] === '佐藤 一郎' && pg.row[run('RC.pbirth')] === '19800101' && pg.row[run('RC.line')] === 'ichiro_line' && pg.row[run('RC.cname')] === '');
+pg = pa(NVG({}), [{ id: 'F0005', category: 'career', email: 'a@example.com' }, { id: 'G0003', category: 'general', email: 'z@example.com', name: 'z' }], 't', 'general');
+t('一般のIDは、進路(F)と別の連番(G0004)', pg.ok && pg.id === 'G0004');
+pg = pa(NVG({ GE5: 'x@example.com' }), [], 't', 'general');
+t('一般: メール不一致 → 要確認(7列)', !pg.ok && pg.pendingRow.length === 7 && pg.pendingRow[1] === '一般鑑定者用');
+pg = pa(NVG({ CONSENT_PI: '' }), [], 't', 'general');
+t('一般: 個人情報の同意がない → 要確認', !pg.ok && /CONSENT_PI/.test(pg.reason));
+pg = pa(NVG({ GE9: 'sato' }), [], 't', 'general');
+t('一般: 紹介者がカタカナ以外 → 要確認', !pg.ok);
+pg = pa(NVG({}), [{ id: 'G0001', category: 'general', email: 'ICHIRO@example.com', name: '佐藤　一郎' }], 't', 'general');
+t('一般: 同じメールと名前 → 重複申込', !pg.ok && /重複申込/.test(pg.reason));
+pg = pa(NVG({}), [{ id: 'F0001', category: 'career', email: 'ichiro@example.com', childName: '佐藤 一郎' }], 't', 'general');
+t('一般: 進路相談の登録と同じメールでも、重複扱いにしない', pg.ok);
+let pb = pa(NVB({}), [], '2026-11-01T10:00:00', 'corp');
+t('法人の申込OK → B0001、会社名・担当者・電話・人数・対象者・請求書宛名が名簿に入る', pb.ok && pb.id === 'B0001' && pb.row[run('RC.category')] === 'corp' && pb.row[run('RC.company')] === '株式会社サンプル' && pb.row[run('RC.pname')] === '鈴木 花子' && pb.row[run('RC.phone')] === '03-1234-5678' && pb.row[run('RC.headcount')] === '2' && /山田 太郎/.test(pb.row[run('RC.targets')]) && pb.row[run('RC.invoice')] === '株式会社サンプル 御中' && pb.row[run('RC.memo')] === '');
+pb = pa(NVB({ CO10: '3' }), [], 't', 'corp');
+t('法人: 人数と記入行数が違っても受け付け、メモで知らせる', pb.ok && /人数\(3\)と、記入された行数\(2\)が一致しません/.test(pb.row[run('RC.memo')]));
+pb = pa(NVB({ CO10: '0' }), [], 't', 'corp');
+t('法人: 人数が0 → 要確認', !pb.ok && /人数が不正/.test(pb.reason));
+pb = pa(NVB({ CO6: 'abc' }), [], 't', 'corp');
+t('法人: 電話番号が不正 → 要確認', !pb.ok && /電話番号/.test(pb.reason));
+pb = pa(NVB({ CONSENT_TARGET: '' }), [], 't', 'corp');
+t('法人: 対象者への説明・了解の同意がない → 要確認', !pb.ok && /CONSENT_TARGET/.test(pb.reason));
+pb = pa(NVB({ CO1: '' }), [], 't', 'corp');
+t('法人: 法人名が空 → 要確認(5列目に法人名)', !pb.ok && pb.pendingRow[1] === '法人鑑定者用');
+pb = pa(NVB({}), [{ id: 'B0001', category: 'corp', email: 'SUZUKI@sample.co.jp', company: '株式会社 サンプル' }], 't', 'corp');
+t('法人: 同じメールと法人名 → 重複申込', !pb.ok && /重複申込/.test(pb.reason));
+pb = pa(NVB({}), [{ id: 'B0001', category: 'corp', email: 'suzuki@sample.co.jp', company: '別の会社' }], 't', 'corp');
+t('法人: 同じメールでも別の法人 → 別の申込として登録(B0002)', pb.ok && pb.id === 'B0002');
+
+// 16. 区分の扱い(リンク送信・次にやること・ダッシュボード)
+t('リンク送信の対象は進路相談用だけ(一般・法人は対象外)', lr([base({ category: 'general' })], 'T0', '2026-11-01').length === 0 && lr([base({ category: 'corp' })], 'T0', '2026-11-01').length === 0 && lr([base({ category: 'career' })], 'T0', '2026-11-01').length === 1 && lr([base({})], 'T0', '2026-11-01').length === 1);
+t('次にやること(一般・法人): 鑑定日の入力 → 鑑定待ち → 鑑定日を過ぎた', na(F({ category: 'general' }), {}, '2026-11-01') === '日程調整 → 鑑定日を入力' && /鑑定待ち\(9日後\)/.test(na(F({ category: 'corp', sessionDate: '2026-11-10' }), {}, '2026-11-01')) && /鑑定日を過ぎました/.test(na(F({ category: 'general', sessionDate: '2026-11-10' }), {}, '2026-11-11')));
+t('受付確認メール(一般・法人・進路)の文面', /佐藤 一郎 様/.test(vm.runInContext('buildApplyReceiptEmail_', ctx)({ name: '佐藤 一郎' }, 'general').body) && /株式会社サンプル 様のお申込み/.test(vm.runInContext('buildApplyReceiptEmail_', ctx)({ name: '鈴木 花子', company: '株式会社サンプル' }, 'corp').body) && /お子様:太郎 さん/.test(vm.runInContext('buildApplyReceiptEmail_', ctx)({ name: '山田', childName: '太郎' }, 'career').body));
+const rosterC = rosterD.concat([
+  Object.assign({}, rosterD[0], { row: 5, id: 'G0001', category: 'general', name: '佐藤 一郎', childName: '', childEmail: '', sessionDate: '2026-11-20', sent: { T0: '', T1: '', T2: '' } }),
+  Object.assign({}, rosterD[0], { row: 6, id: 'B0001', category: 'corp', name: '鈴木 花子', company: '株式会社サンプル', headcount: '2', targets: '山田 太郎/男性/19850612', childName: '', childEmail: '', sessionDate: '', sent: { T0: '', T1: '', T2: '' } })
+]);
+const dc = vm.runInContext('buildDashboardData_', ctx)(rosterC, [], subsD, safD, '2026-11-10');
+t('ダッシュボード: 区分ごとの集計(進路3・一般1・法人1、うち辞退1)', dc.summary.by.career.total === 3 && dc.summary.by.career.active === 2 && dc.summary.by.general.total === 1 && dc.summary.by.corp.total === 1 && dc.summary.by.corp.noSession === 1);
+t('ダッシュボード: T0〜T2の送信対象・回答済みは、進路相談用だけ', dc.summary.toSend.T0 === 0 && dc.summary.toSend.T1 === 1 && dc.summary.careerActive === 2 && dc.summary.responded.T0 === 1);
+t('ダッシュボード: 各家庭に区分が入る(空欄は進路相談用)', dc.families.find(f => f.id === 'G0001').category === 'general' && dc.families.find(f => f.id === 'F0002').category === 'career');
+{ // 区分のタブの描画
+  const mk = (tag) => { const e = { tag, children: [], style: {}, _text: '', className: '', appendChild(c) { this.children.push(c); return c; }, set innerHTML(v) { this.children = []; this._text = ''; }, get innerHTML() { return ''; }, set textContent(v) { this._text = String(v); }, get textContent() { return this._text; }, set colSpan(v) {}, value: '' }; return e; };
+  const ids = {}; const doc = { createElement: mk, createTextNode: (x) => { const e = mk('#text'); e._text = x; return e; }, getElementById: (id) => ids[id] || (ids[id] = mk(id)) };
+  ids.q = mk('q'); ids.st = mk('st');
+  const pageC = vm.runInContext('dashboardPage_', ctx)(dc);
+  const srcC = pageC.slice(pageC.indexOf('<script>') + 8, pageC.lastIndexOf('</script>'));
+  const win = vm.createContext({ document: doc });
+  const all = (n) => [n._text].concat(...n.children.map(all)).join('|');
+  vm.runInContext(srcC, win);
+  const tabsTxt = all(ids.tabs);
+  t('タブ: 進路相談用・一般鑑定者用・法人鑑定者用・要確認・安全確認', /進路相談用 \(3\)/.test(tabsTxt) && /一般鑑定者用 \(1\)/.test(tabsTxt) && /法人鑑定者用 \(1\)/.test(tabsTxt) && /要確認の申込/.test(tabsTxt) && /安全確認/.test(tabsTxt));
+  t('進路相談用のタブ: 進路の家庭だけ(一般・法人を含まない)', /F0001/.test(all(ids.view)) && !/G0001|B0001/.test(all(ids.view)));
+  ids.tabs.children.find(b => /一般鑑定者用/.test(b._text)).onclick();
+  t('一般鑑定者用のタブ: 一般の申込だけ', /G0001/.test(all(ids.view)) && /佐藤 一郎/.test(all(ids.view)) && !/F0001|B0001/.test(all(ids.view)));
+  ids.tabs.children.find(b => /法人鑑定者用/.test(b._text)).onclick();
+  t('法人鑑定者用のタブ: 法人名・人数が出る', /B0001/.test(all(ids.view)) && /株式会社サンプル \/ 鈴木 花子/.test(all(ids.view)) && /人数/.test(all(ids.view)));
 }
 
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
