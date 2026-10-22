@@ -919,6 +919,7 @@ function sendT2Selected() { sendLinks_('T2', 'selected'); }
 
 /** 対象の家庭に、保護者宛・お子様宛のリンクをメールで送り、送信日時を名簿に記録する(メニューとサイトの共通処理) */
 function sendLinksToFamilies_(reg, time, due) {
+  var site = requireSurveySiteUrl_(reg);
   var sh = reg.getSheetByName(SHEETS.roster);
   var log = reg.getSheetByName(SHEETS.sendlog);
   var col = RC.T0 + 1 + LINK_TIMES.indexOf(time);
@@ -927,8 +928,7 @@ function sendLinksToFamilies_(reg, time, due) {
     var stamp = nowStr_();
     var okParent = false, okChild = false;
     try {
-      var site = surveySiteUrl_(reg);
-      var mails = buildLinkEmails_(time, d, site ? { site: true, child: site, parent: site } : { child: getPrefilledUrl_('CT' + time.charAt(1), d.id), parent: getPrefilledUrl_('PT' + time.charAt(1), d.id) });
+      var mails = buildLinkEmails_(time, d, { site: true, child: site, parent: site });
       try { sendMail_(d.email, mails.parent.subject, mails.parent.body); okParent = true; log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '送信済み']); } catch (e1) { log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '【失敗】' + e1]); }
       try { sendMail_(d.childEmail, mails.child.subject, mails.child.body); okChild = true; log.appendRow([stamp, d.id, time + ' お子様宛', d.childEmail, '送信済み']); } catch (e2) { log.appendRow([stamp, d.id, time + ' お子様宛', d.childEmail, '【失敗】' + e2]); }
     } catch (err) {
@@ -1704,6 +1704,14 @@ function submitApplication(category, answers, honeypot) {
 
 /** アンケートサイトのURL(設定シートB7)。空欄なら、Googleフォームのリンクを使う */
 function surveySiteUrl_(reg) { return String(reg.getSheetByName(SHEETS.settings).getRange('B7').getValue() || '').trim(); }
+
+/** アンケートサイトのURL(設定B7)を返す。未入力・形式が違うときは、メールを送る前に、理由を知らせて止める */
+function requireSurveySiteUrl_(reg) {
+  var u = surveySiteUrl_(reg);
+  if (!u) throw new Error('台帳の「設定」シートのB7に、アンケートサイトのURLが入力されていません。公開用URLの末尾に ?page=survey を付けたものを入力してから、もう一度送ってください(未入力のため、メールは送っていません)');
+  if (!/^https:\/\/[^\s]+\?page=survey$/.test(u)) throw new Error('設定B7のURLの形式が正しくありません。「https://…/exec?page=survey」の形で、スペースや改行を入れずに入力してください(現在の値: ' + u.slice(0, 80) + ')');
+  return u;
+}
 
 function surveyFormKey_(role, time) { return (role === 'child' ? 'CT' : 'PT') + time.charAt(1); }
 

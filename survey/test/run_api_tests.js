@@ -43,7 +43,7 @@ function makeEnv(activeEmail) {
   const H = (n) => vm.runInContext('HEAD.' + n, env);
   const roster = reg.add('名簿', H('roster'));
   const settings = reg.add('設定', ['項目', '値', '説明']);
-  settings.values.push(['安全', 'safe@example.com'], ['代理', ''], ['', ''], ['', ''], ['運営メール', 'op@example.com']);
+  settings.values.push(['安全', 'safe@example.com'], ['代理', ''], ['', ''], ['', ''], ['運営メール', 'op@example.com'], ['アンケートサイトURL', 'https://site.example/exec?page=survey']);
   const sendlog = reg.add('送信ログ', H('sendlog'));
   reg.add('申込要確認', H('pending')); reg.add('安全対応ログ', H('safety'));
   const subs = db.add('Submissions', H('submissions')), long = db.add('Long', H('long')), opts = db.add('LongOptions', H('options'));
@@ -105,7 +105,11 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   E.run('apiSetSessionDate')('F0001', '2026-11-10');
   let r = E.run('apiSendLinks')('T0', null);
   t('API送信: 鑑定日が入力済みの家庭(F0001)だけに、保護者宛1通・お子様宛1通', r.sent === 1 && E.sent.length === 2 && E.sent[0].to === 'hanako@example.com' && E.sent[1].to === 'taro@example.com');
-  t('API送信: 保護者宛には保護者用リンクのみ、お子様宛にはお子様用リンクのみ', /forms\.example\/f4\?rid=F0001/.test(E.sent[0].body) && !/forms\.example\/f1/.test(E.sent[0].body) && /forms\.example\/f1\?rid=F0001/.test(E.sent[1].body) && !/forms\.example\/f4/.test(E.sent[1].body));
+  t('API送信: 案内メールに、アンケートサイトのURLと、入力するメールアドレスが載る(Googleフォームのリンクは載らない)', /site\.example\/exec\?page=survey/.test(E.sent[0].body) && /hanako@example\.com/.test(E.sent[0].body) && !/forms\.example|docs\.google\.com\/forms/.test(E.sent[0].body) && /site\.example\/exec\?page=survey/.test(E.sent[1].body) && /taro@example\.com/.test(E.sent[1].body) && !/hanako@example\.com/.test(E.sent[1].body));
+  const E0 = makeEnv('me@example.com'); E0.addFamily({}); E0.run('apiSetSessionDate')('F0001', '2026-11-10'); E0.reg.getSheetByName('設定').values[6][1] = '';
+  t('API送信: 設定B7(アンケートサイトのURL)が空欄なら、メールを送らずに止め、理由を知らせる(送信済みにもならない)', /B7/.test(throws(() => E0.run('apiSendLinks')('T0', null)) || '') && E0.sent.length === 0 && E0.roster.values[1][E0.rc('T0')] === '');
+  E0.reg.getSheetByName('設定').values[6][1] = 'https://site.example/exec';
+  t('API送信: B7に ?page=survey がない場合も止める', /形式/.test(throws(() => E0.run('apiSendLinks')('T0', null)) || '') && E0.sent.length === 0);
   t('API送信: 送信日時(T0)が名簿に記録される', String(E.roster.values[1][E.rc('T0')]).length > 10 && E.roster.values[2][E.rc('T0')] === '');
   t('API送信: 送信ログに保護者宛・お子様宛が記録される', E.sendlog.values.length === 3);
   r = E.run('apiSendLinks')('T0', null);
