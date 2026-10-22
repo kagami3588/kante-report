@@ -200,21 +200,21 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
 
 
 { // 専用サイト(公開の申込ページ)
-  const GE = { GE1: '佐藤 一郎', GE2: '男性', GE3: '19800101', GE4: 'ichiro@example.com', GE5: 'ichiro@example.com', GE6: 'ichiro_line', GE8: '追加しました', GE9: 'ナシ', CONSENT_PI: '同意します' };
+  const GE = { GE1: '佐藤 一郎', GE2: '男性', GE3: '19800101', GE4: 'ichiro@example.com', GE5: 'ichiro@example.com', GE6: 'ichiro_line', GE8: '追加しました', GE9: 'ナシ', CONSENT_ALL: '全てに同意しました' };
   const E = makeEnv('');
   const r = E.run('submitApplication')('general', GE, '');
   t('サイト申込(一般): 受付 → G0001・名簿に33列で登録', r.ok && E.roster.values.length === 2 && E.roster.values[1][0] === 'G0001' && E.roster.values[1].length === 33);
   t('サイト申込: 完了画面に鑑定料・お振込先・LINEを返す', /30,000円/.test(r.fee.join()) && /7332659/.test(r.bank.join()) && r.line === 'https://lin.ee/ewijo32');
   t('サイト申込: 申込者に受付メール(HTMLつき・お振込先入り)と、運営に通知', E.sent.some(m => m.to === 'ichiro@example.com' && /7332659/.test(m.body) && /7332659/.test(m.htmlBody)) && E.sent.some(m => m.to === 'op@example.com'));
   t('サイト申込: 送信ログに記録', E.sendlog.values.some(x => /申込受付/.test(x[2])));
-  const r2 = E.run('submitApplication')('general', Object.assign({}, GE, { CONSENT_PI: '' }), '');
+  const r2 = E.run('submitApplication')('general', Object.assign({}, GE, { CONSENT_ALL: '' }), '');
   t('サイト申込: 同意なし → 修正点を返し、登録しない', !r2.ok && /同意/.test(r2.errors.join()) && E.roster.values.length === 2);
   const r3 = E.run('submitApplication')('general', GE, '');
   t('サイト申込: 同じ内容の重複申込は登録しない', !r3.ok && E.roster.values.length === 2);
   const r4 = E.run('submitApplication')('general', Object.assign({}, GE, { GE4: 'x@example.com' }), 'bot');
   t('サイト申込: 隠し欄に入力があれば(ボット)黙って捨てる', r4.ok && r4.silent && E.roster.values.length === 2);
   t('サイト申込: 区分が不正ならエラー', !!throws(() => E.run('submitApplication')('hack', GE, '')));
-  const rb = E.run('submitApplication')('corp', { CO1: '株式会社サンプル', CO3: '鈴木 花子', CO4: 'suzuki@sample.co.jp', CO5: 'suzuki@sample.co.jp', CO6: '03-1234-5678', CO7: 'l', CO8: '追加しました', CO9: 'ナシ', CO10: '代表のみ 50,000円', CO11: '鈴木 花子/女性/19800101', CONSENT_PI: '同意します', CONSENT_TARGET: '同意します', EVIL: 'x' }, '');
+  const rb = E.run('submitApplication')('corp', { CO1: '株式会社サンプル', CO3: '鈴木 花子', CO4: 'suzuki@sample.co.jp', CO5: 'suzuki@sample.co.jp', CO6: '03-1234-5678', CO7: 'l', CO8: '追加しました', CO9: 'ナシ', CO10: '代表のみ 50,000円', CO11: '鈴木 花子/女性/19800101', CONSENT_ALL: '全てに同意しました', EVIL: 'x' }, '');
   t('サイト申込(法人): プラン代表のみ → 50,000円、プランが名簿に入る、知らない項目は捨てる', rb.ok && /50,000円/.test(rb.fee.join()) && E.roster.values[2][E.rc('plan')] === '代表のみ 50,000円');
   const E2 = makeEnv('');
   let n = 0; for (let i = 0; i < 8; i++) { const x = E2.run('submitApplication')('general', Object.assign({}, GE, { GE1: 'n' + i, GE4: 'same@example.com', GE5: 'same@example.com' }), ''); if (!x.ok && /多すぎ/.test((x.errors || []).join())) n++; }

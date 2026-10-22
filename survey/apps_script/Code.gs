@@ -393,7 +393,7 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   else if (normEmail_(a.CH4) !== normEmail_(a.CH5)) problems.push('お子様のメールアドレスが確認欄と一致しない');
   if (a.EX2 && !a.EX1) problems.push('追加の鑑定の対象者名が未入力');
   if (a.EX2 && EXTRA_PLANS.indexOf(a.EX2) === -1) problems.push('追加の鑑定の希望内容が不正');
-  ['CONSENT', 'CONSENT_CHILD', 'CONSENT_PI', 'CONSENT_ANON'].forEach(function (id) { if (!a[id]) problems.push('同意未確認:' + id); });
+  if (!a.CONSENT_ALL) problems.push('同意未確認');
   var dup = (existing || []).filter(function (e) { return (e.category || 'career') === 'career'; }).some(function (e) { return normEmail_(e.email) === normEmail_(a.AP2) && normName_(e.childName) === normName_(a.CH1); });
   if (dup) problems.push('重複申込(同じ保護者メールとお子様名がすでに登録済み)');
   if (problems.length) {
@@ -428,7 +428,7 @@ function processGeneralApplication_(namedValues, existing, tsIso) {
   if (!a.GE6) problems.push('LINE検索IDが未入力');
   if (!a.GE8) problems.push('公式LINEの追加が未確認');
   if (!isKatakana_(a.GE9)) problems.push('紹介者氏名がカタカナではない(いない場合は「ナシ」)');
-  if (!a.CONSENT_PI) problems.push('同意未確認:CONSENT_PI');
+  if (!a.CONSENT_ALL) problems.push('同意未確認');
   var dup = (existing || []).filter(function (e) { return e.category === 'general'; }).some(function (e) { return normEmail_(e.email) === normEmail_(a.GE4) && normName_(e.name) === normName_(a.GE1); });
   if (dup) problems.push('重複申込(同じメールと名前がすでに登録済み)');
   if (problems.length) return { ok: false, reason: problems.join(' / '), pendingRow: [tsIso, CATEGORY_LABEL.general, a.GE1, a.GE4, '', problems.join(' / '), a.GE11] };
@@ -455,7 +455,7 @@ function processCorpApplication_(namedValues, existing, tsIso) {
   var plan = findPlan_(a.CO10);
   if (!plan) problems.push('ご希望のプランが未選択');
   if (!a.CO11) problems.push('鑑定を受ける方の情報が未入力');
-  ['CONSENT_PI', 'CONSENT_TARGET'].forEach(function (id) { if (!a[id]) problems.push('同意未確認:' + id); });
+  if (!a.CONSENT_ALL) problems.push('同意未確認');
   var dup = (existing || []).filter(function (e) { return e.category === 'corp'; }).some(function (e) { return normEmail_(e.email) === normEmail_(a.CO4) && normName_(e.company) === normName_(a.CO1); });
   if (dup) problems.push('重複申込(同じメールと法人名がすでに登録済み)');
   if (problems.length) return { ok: false, reason: problems.join(' / '), pendingRow: [tsIso, CATEGORY_LABEL.corp, a.CO3, a.CO4, a.CO1, problems.join(' / '), a.CO14] };
@@ -1711,12 +1711,9 @@ function runStaticTests() {
   ['CT0', 'PT0'].forEach(function (k) {
     add(k + ' 同意項目がない(同意は申込フォームのみ)', FormApp.openById(formIds[k]).getItems().every(function (i) { return i.getTitle().indexOf('CONSENT') !== 0; }));
   });
-  [['APPLY', 4], ['APPLY_G', 1], ['APPLY_B', 2]].forEach(function (x) {
-    var reqConsent = FormApp.openById(formIds[x[0]]).getItems().filter(function (i) { return i.getTitle().indexOf('CONSENT') === 0; });
-    add(x[0] + ' 同意の' + x[1] + '項目がすべて必須', reqConsent.length === x[1] && reqConsent.every(function (i) { return i.asCheckboxItem().isRequired(); }), String(reqConsent.length));
-  });
-  ['APPLY_G', 'APPLY_B'].forEach(function (k) {
-    add(k + ' 研究の同意・アンケートの項目がない', FormApp.openById(formIds[k]).getItems().every(function (i) { return !/^CONSENT(_CHILD|_ANON)?\./.test(i.getTitle()); }));
+  ['APPLY', 'APPLY_G', 'APPLY_B'].forEach(function (k) {
+    var reqConsent = FormApp.openById(formIds[k]).getItems().filter(function (i) { return i.getTitle() === '上の内容について'; });
+    add(k + ' 同意のチェック(全てに同意しました)が1つで必須', reqConsent.length === 1 && reqConsent[0].asCheckboxItem().isRequired(), String(reqConsent.length));
   });
   var sh = reg.getSheetByName(SHEETS.tests);
   sh.getRange(2, 1, Math.max(sh.getLastRow(), 2), 3).clearContent();

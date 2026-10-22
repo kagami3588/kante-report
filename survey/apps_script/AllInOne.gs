@@ -353,6 +353,15 @@ function CK_(id, text, purpose) {
   return Q_({ id: id, text: text, kind: 'consent', axis: AXIS.CONSENT, system: true, required: true, choices: ['同意します'], purpose: purpose });
 }
 
+/** 同意の確認ページに並べる「同意いただく内容」(番号つき)。チェックは、最後の1つ(全てに同意しました)だけ */
+function consentList_(items) {
+  var marks = ['①', '②', '③', '④', '⑤'];
+  return '【同意いただく内容】\n' + items.map(function (t, i) { return marks[i] + ' ' + t; }).join('\n');
+}
+function CKALL_() {
+  return Q_({ id: 'CONSENT_ALL', text: '上の内容について', kind: 'consent', axis: AXIS.CONSENT, system: true, required: true, choices: ['全てに同意しました'], purpose: '同意(上に表示した全ての内容への同意の確認)' });
+}
+
 var RESPONSIBLE = '林 竜輔';
 // 同意書・説明書(同じ内容)を公開したページのURL。設定すると、同意の確認ページにリンクが表示される(空欄なら表示しない)
 var CONSENT_DOC_URL = '';
@@ -399,11 +408,8 @@ var EXTRA_PLANS = ['レポートのみ 5,000円', 'オンライン鑑定希望 1
 SURVEY.apply = {
   key: 'APPLY',
   title: '算命学の鑑定 お申込みフォーム',
-  intro: 'このフォームは、算命学の鑑定と、その研究アンケートへのお申込み用です。\n\n・最初に説明書をお読みいただき、そのあと、保護者の方・お子様の情報をご入力ください。入力は、この1回だけです。\n・お申込み後、運営から、日程調整のご連絡をします。以後のアンケートのご案内は、ご登録のメールアドレスに届きます。',
+  intro: 'このフォームは、算命学の鑑定と、その研究アンケートへのお申込み用です。\n\n・保護者の方・お子様の情報をご入力ください。入力は、この1回だけです。最後のページに、説明書と、同意の確認があります。\n・お申込み後、運営から、日程調整のご連絡をします。以後のアンケートのご案内は、ご登録のメールアドレスに届きます。',
   blocks: [
-    P_('研究へのご協力のお願い(説明書・同意書)', { desc: APPLY_EXPLAIN_1 }),
-    P_('研究へのご協力のお願い(続き)', { desc: APPLY_EXPLAIN_2 }),
-    P_('研究へのご協力のお願い(続き)', { desc: APPLY_EXPLAIN_3 }),
     P_('お子様へのご説明について', { desc: 'お申込みの前に、お子様にも、この研究の内容を説明してください。小学生にも分かる言いかたの説明が必要な場合は、下で「見る」を選ぶと表示されます。見なくても、先へ進めます。' }),
     Q_({
       id: 'AP_VIEW', text: 'お子様向けのご説明を、画面で見ますか?', kind: 'single', axis: AXIS.CONSENT, system: true, required: false,
@@ -431,11 +437,8 @@ SURVEY.apply = {
     P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、研究への参加とは関係ありません。)' }),
     Q_({ id: 'EX1', text: '追加の鑑定をしてほしい人の名前', kind: 'text1', axis: AXIS.ID, system: true, required: false, purpose: '追加の鑑定の対象者(任意。個人情報)' }),
     SEL_('EX2', '追加の鑑定のご希望の内容', EXTRA_PLANS, false, '追加の鑑定の希望内容(任意)'),
-    P_('同意の確認', { desc: '下の説明書(【1. 研究の目的】から【9. お問い合わせ】まで)をお読みのうえ、そのあとの項目をご確認ください。すべてにチェックをいただいた場合に、お申込みできます。\n\n' + APPLY_EXPLAIN_1 + '\n\n' + APPLY_EXPLAIN_2 + '\n\n' + APPLY_EXPLAIN_3 + '\n\n責任者:' + RESPONSIBLE + '(KAGAMI)\n連絡先:' + CONTACT_MAIL + (CONSENT_DOC_URL ? '\n\n同意書・説明書(上の説明と同じ内容)は、こちらからもご覧いただけます:' + CONSENT_DOC_URL : '') }),
-    CK_('CONSENT', '説明書を読み、内容を理解したうえで、お子様とともに、この研究に協力することに同意します。', '研究参加の同意(保護者)'),
-    CK_('CONSENT_CHILD', 'お子様にも内容を説明し、お子様が参加することを確認しました。', '子どもへの説明・本人の意思の確認(保護者による確認)'),
-    CK_('CONSENT_PI', 'お名前・メールアドレス・生年月日などを、鑑定のご提供(日程調整、ご連絡、アンケートのご案内)のために使うことに同意します。', '個人情報の取扱いへの同意'),
-    CK_('CONSENT_ANON', '今後、必要になった場合に、個人情報(お名前・連絡先)は一切お渡しせず、匿名の年齢と性別の表記と、データの数値のみを表示することがあることに同意します。(説明書の【8. 匿名の数値の表示について】)', '匿名の数値の表示への同意')
+    P_('同意の確認', { desc: '下の説明書(【1. 研究の目的】から【9. お問い合わせ】まで)と、同意いただく内容をお読みのうえ、いちばん下の項目にチェックをお願いします。チェックをいただいた場合に、お申込みできます。\n\n' + APPLY_EXPLAIN_1 + '\n\n' + APPLY_EXPLAIN_2 + '\n\n' + APPLY_EXPLAIN_3 + '\n\n' + consentList_(['説明書を読み、内容を理解したうえで、お子様とともに、この研究に協力することに同意します。', 'お子様にも内容を説明し、お子様が参加することを確認しました。', 'お名前・メールアドレス・生年月日などを、鑑定のご提供(日程調整、ご連絡、アンケートのご案内)のために使うことに同意します。', '今後、必要になった場合に、個人情報(お名前・連絡先)は一切お渡しせず、匿名の年齢と性別の表記と、データの数値のみを表示することがあることに同意します。(説明書の【8. 匿名の数値の表示について】)']) + '\n\n責任者:' + RESPONSIBLE + '(KAGAMI)\n連絡先:' + CONTACT_MAIL + (CONSENT_DOC_URL ? '\n\n同意書・説明書(上の説明と同じ内容)は、こちらからもご覧いただけます:' + CONSENT_DOC_URL : '') }),
+    CKALL_()
   ]
 };
 
@@ -473,8 +476,8 @@ SURVEY.applyG = {
     Q_({ id: 'GE9', text: '紹介者氏名(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)', kind: 'katakana', axis: AXIS.ID, system: true, required: true, purpose: '紹介者(個人情報)' }),
     PARA_('GE10', 'ご希望の内容(任意)', '鑑定の希望内容(任意)', false),
     PARA_('GE11', '自由記入欄(質問がありましたら、内容をご記入ください)', '連絡事項・質問(任意)', false),
-    P_('同意の確認', { desc: '前のページの【個人情報の取り扱い】をお読みのうえ、ご確認ください。チェックをいただいた場合に、お申込みできます。' }),
-    CK_('CONSENT_PI', 'お名前・メールアドレス・生年月日などを、鑑定のご提供(日程調整、ご連絡、鑑定書のお渡し)のために使うことに同意します。', '個人情報の取扱いへの同意')
+    P_('同意の確認', { desc: '前のページの【個人情報の取り扱い】と、同意いただく内容をお読みのうえ、いちばん下の項目にチェックをお願いします。チェックをいただいた場合に、お申込みできます。\n\n' + consentList_(['お名前・メールアドレス・生年月日などを、鑑定のご提供(日程調整、ご連絡、鑑定書のお渡し)のために使うことに同意します。']) }),
+    CKALL_()
   ]
 };
 
@@ -500,9 +503,8 @@ SURVEY.applyB = {
     PARA_('CO12', 'ご希望の内容(任意)', '鑑定の希望内容(任意)', false),
     T1_('CO13', '請求書・領収書の宛名(任意)', '請求書・領収書の宛名(任意)', false),
     PARA_('CO14', '自由記入欄(質問がありましたら、内容をご記入ください)', '連絡事項・質問(任意)', false),
-    P_('同意の確認', { desc: '前のページの【個人情報の取り扱い】をお読みのうえ、ご確認ください。すべてにチェックをいただいた場合に、お申込みできます。' }),
-    CK_('CONSENT_PI', '担当者様と、鑑定を受ける方のお名前・性別・生年月日・連絡先などを、鑑定のご提供(日程調整、ご連絡、鑑定書のお渡し)のために使うことに同意します。', '個人情報の取扱いへの同意'),
-    CK_('CONSENT_TARGET', '鑑定を受ける方に、個人情報(お名前・性別・生年月日)を運営にお渡しすることを説明し、ご本人の了解を得ています。', '鑑定を受ける方への説明と了解の確認')
+    P_('同意の確認', { desc: '前のページの【個人情報の取り扱い】と、同意いただく内容をお読みのうえ、いちばん下の項目にチェックをお願いします。チェックをいただいた場合に、お申込みできます。\n\n' + consentList_(['担当者様と、鑑定を受ける方のお名前・性別・生年月日・連絡先などを、鑑定のご提供(日程調整、ご連絡、鑑定書のお渡し)のために使うことに同意します。', '鑑定を受ける方に、個人情報(お名前・性別・生年月日)を運営にお渡しすることを説明し、ご本人の了解を得ています。']) }),
+    CKALL_()
   ]
 };
 
@@ -940,7 +942,7 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   else if (normEmail_(a.CH4) !== normEmail_(a.CH5)) problems.push('お子様のメールアドレスが確認欄と一致しない');
   if (a.EX2 && !a.EX1) problems.push('追加の鑑定の対象者名が未入力');
   if (a.EX2 && EXTRA_PLANS.indexOf(a.EX2) === -1) problems.push('追加の鑑定の希望内容が不正');
-  ['CONSENT', 'CONSENT_CHILD', 'CONSENT_PI', 'CONSENT_ANON'].forEach(function (id) { if (!a[id]) problems.push('同意未確認:' + id); });
+  if (!a.CONSENT_ALL) problems.push('同意未確認');
   var dup = (existing || []).filter(function (e) { return (e.category || 'career') === 'career'; }).some(function (e) { return normEmail_(e.email) === normEmail_(a.AP2) && normName_(e.childName) === normName_(a.CH1); });
   if (dup) problems.push('重複申込(同じ保護者メールとお子様名がすでに登録済み)');
   if (problems.length) {
@@ -975,7 +977,7 @@ function processGeneralApplication_(namedValues, existing, tsIso) {
   if (!a.GE6) problems.push('LINE検索IDが未入力');
   if (!a.GE8) problems.push('公式LINEの追加が未確認');
   if (!isKatakana_(a.GE9)) problems.push('紹介者氏名がカタカナではない(いない場合は「ナシ」)');
-  if (!a.CONSENT_PI) problems.push('同意未確認:CONSENT_PI');
+  if (!a.CONSENT_ALL) problems.push('同意未確認');
   var dup = (existing || []).filter(function (e) { return e.category === 'general'; }).some(function (e) { return normEmail_(e.email) === normEmail_(a.GE4) && normName_(e.name) === normName_(a.GE1); });
   if (dup) problems.push('重複申込(同じメールと名前がすでに登録済み)');
   if (problems.length) return { ok: false, reason: problems.join(' / '), pendingRow: [tsIso, CATEGORY_LABEL.general, a.GE1, a.GE4, '', problems.join(' / '), a.GE11] };
@@ -1002,7 +1004,7 @@ function processCorpApplication_(namedValues, existing, tsIso) {
   var plan = findPlan_(a.CO10);
   if (!plan) problems.push('ご希望のプランが未選択');
   if (!a.CO11) problems.push('鑑定を受ける方の情報が未入力');
-  ['CONSENT_PI', 'CONSENT_TARGET'].forEach(function (id) { if (!a[id]) problems.push('同意未確認:' + id); });
+  if (!a.CONSENT_ALL) problems.push('同意未確認');
   var dup = (existing || []).filter(function (e) { return e.category === 'corp'; }).some(function (e) { return normEmail_(e.email) === normEmail_(a.CO4) && normName_(e.company) === normName_(a.CO1); });
   if (dup) problems.push('重複申込(同じメールと法人名がすでに登録済み)');
   if (problems.length) return { ok: false, reason: problems.join(' / '), pendingRow: [tsIso, CATEGORY_LABEL.corp, a.CO3, a.CO4, a.CO1, problems.join(' / '), a.CO14] };
@@ -2258,12 +2260,9 @@ function runStaticTests() {
   ['CT0', 'PT0'].forEach(function (k) {
     add(k + ' 同意項目がない(同意は申込フォームのみ)', FormApp.openById(formIds[k]).getItems().every(function (i) { return i.getTitle().indexOf('CONSENT') !== 0; }));
   });
-  [['APPLY', 4], ['APPLY_G', 1], ['APPLY_B', 2]].forEach(function (x) {
-    var reqConsent = FormApp.openById(formIds[x[0]]).getItems().filter(function (i) { return i.getTitle().indexOf('CONSENT') === 0; });
-    add(x[0] + ' 同意の' + x[1] + '項目がすべて必須', reqConsent.length === x[1] && reqConsent.every(function (i) { return i.asCheckboxItem().isRequired(); }), String(reqConsent.length));
-  });
-  ['APPLY_G', 'APPLY_B'].forEach(function (k) {
-    add(k + ' 研究の同意・アンケートの項目がない', FormApp.openById(formIds[k]).getItems().every(function (i) { return !/^CONSENT(_CHILD|_ANON)?\./.test(i.getTitle()); }));
+  ['APPLY', 'APPLY_G', 'APPLY_B'].forEach(function (k) {
+    var reqConsent = FormApp.openById(formIds[k]).getItems().filter(function (i) { return i.getTitle() === '上の内容について'; });
+    add(k + ' 同意のチェック(全てに同意しました)が1つで必須', reqConsent.length === 1 && reqConsent[0].asCheckboxItem().isRequired(), String(reqConsent.length));
   });
   var sh = reg.getSheetByName(SHEETS.tests);
   sh.getRange(2, 1, Math.max(sh.getLastRow(), 2), 3).clearContent();
