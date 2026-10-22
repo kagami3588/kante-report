@@ -91,10 +91,7 @@ for (const k of ['CT0', 'CT1', 'CT2', 'PT0', 'PT1', 'PT2']) {
   t(k + ' 回答メール収集なし・編集不可・サマリー非公開', f.settings.collectEmail === false && f.settings.edits === false && f.settings.summary === false);
   const first = f.items[0];
   t(k + ' 先頭がページ区切りではない(Googleフォームの制約)', first.type !== 'PAGE');
-  const pgs = f.items.filter(i => i.type === 'PAGE');
-  const cond = run('SURVEY.forms.' + k + '.blocks.filter(b => b.type === "page" && b.conditional).map(b => b.title.replace(/^[A-Z](-[0-9]+)?\\.\\s*/, ""))');
-  const nums = pgs.filter(i => cond.indexOf(i.title) === -1).map(i => /^【(\d+)\/(\d+)】/.exec(i.title));
-  t(k + ' 進捗バーが有効で、ページの題名に【いま/全体】が付く', f.settings.progress === true && nums.length > 0 && nums.every(m => !!m) && nums[nums.length - 1][1] === nums[nums.length - 1][2]);
+  t(k + ' 進捗バーが有効(ページの題名に番号は付けない)', f.settings.progress === true && f.items.filter(i => i.type === 'PAGE').every(i => !/【\d+\/\d+】/.test(i.title)));
   t(k + ' 質問・ページの題名に、設問番号や区分の記号(D1.・A.)が付かない', f.items.every(i => !/^[A-Z][A-Za-z0-9_\-]*\.\s/.test(i.title)));
   // 質問の必須: RID/CONSENT以外は任意
   const badReq = f.items.filter(i => i.required && !/^(調査用ID|上の内容について)/.test(i.title) && i.type !== 'PAGE' && i.type !== 'HEADER').map(i => i.title);

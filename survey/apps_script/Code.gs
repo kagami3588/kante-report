@@ -638,16 +638,10 @@ function buildFormFromDef_(def, ss, confirmMessage) {
   var pages = [];
   var pendingGates = [];
   var firstBlock = true;
-  // 進み具合が分かるように、ページの題名の先頭に 【いま/全体】 を付け、区分の記号(A. など)は見せない。先頭に質問があるときは、それも1ページと数える
-  var totalPages = def.blocks.filter(function (x) { return x.type === 'page' && !x.conditional; }).length + (def.blocks[0] && def.blocks[0].type === 'q' ? 1 : 0);
-  var pageNo = def.blocks[0] && def.blocks[0].type === 'q' ? 1 : 0;
-
   def.blocks.forEach(function (b) {
     if (b.type === 'page') {
       var item;
-      if (!b.conditional) pageNo++;
-      var plain = b.title.replace(/^[A-Z](-[0-9]+)?\.\s*/, '');
-      var pageTitle = (totalPages > 1 && !b.conditional) ? '【' + pageNo + '/' + totalPages + '】' + plain : plain;
+      var pageTitle = b.title.replace(/^[A-Z](-[0-9]+)?\.\s*/, '');
       if (firstBlock) {
         item = form.addSectionHeaderItem().setTitle(pageTitle);
         if (b.desc) item.setHelpText(b.desc);
