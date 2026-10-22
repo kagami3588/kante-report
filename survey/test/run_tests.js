@@ -365,6 +365,59 @@ t('申込の受付確認メール: 日程調整は改めて連絡する旨', /�
 const dr = vm.runInContext('dropRowsById_', ctx)([['h', '研究用ID'], ['a', 'F0001'], ['b', 'F0002'], ['c', 'F0001']], 1, 'F0001');
 t('指定IDの行だけを削除(見出しと他の家庭は残す)', dr.removed === 2 && dr.kept.length === 2 && dr.kept[1][1] === 'F0002');
 
+
+// 14. 申込を確認するサイト(ダッシュボード)
+const na = vm.runInContext('nextAction_', ctx);
+const F = (o) => Object.assign({ id: 'F0001', status: '参加中', sessionDate: '', sent: { T0: '', T1: '', T2: '' } }, o);
+t('次にやること: 鑑定日が未入力', na(F({}), {}, '2026-11-01') === '日程調整 → 鑑定日を入力');
+t('次にやること: T0を送る', na(F({ sessionDate: '2026-11-10' }), {}, '2026-11-01') === 'T0のリンクを送る');
+t('次にやること: T0の回答待ち(片方だけ回答)', na(F({ sessionDate: '2026-11-10', sent: { T0: 'x' } }), { CT0: 'x' }, '2026-11-01') === 'T0の回答待ち');
+t('次にやること: 鑑定待ち', /鑑定待ち\(9日後\)/.test(na(F({ sessionDate: '2026-11-10', sent: { T0: 'x' } }), { CT0: 'x', PT0: 'x' }, '2026-11-01')));
+t('次にやること: 鑑定日以降はT1を送る', na(F({ sessionDate: '2026-11-10', sent: { T0: 'x' } }), { CT0: 'x', PT0: 'x' }, '2026-11-10') === 'T1のリンクを送る');
+t('次にやること: T1の回答待ち', na(F({ sessionDate: '2026-11-10', sent: { T0: 'x', T1: 'x' } }), { CT0: 'x', PT0: 'x' }, '2026-11-11') === 'T1の回答待ち');
+t('次にやること: T2待ち(あと日数)', /T2待ち\(あと\d+日\)/.test(na(F({ sessionDate: '2026-11-10', sent: { T0: 'x', T1: 'x' } }), { CT0: 'x', PT0: 'x', CT1: 'x', PT1: 'x' }, '2026-12-10')));
+t('次にやること: 90日後にT2を送る', na(F({ sessionDate: '2026-11-10', sent: { T0: 'x', T1: 'x' } }), { CT0: 'x', PT0: 'x', CT1: 'x', PT1: 'x' }, '2027-02-08') === 'T2のリンクを送る');
+t('次にやること: 完了', na(F({ sessionDate: '2026-11-10', sent: { T0: 'x', T1: 'x', T2: 'x' } }), { CT0: 'x', PT0: 'x', CT1: 'x', PT1: 'x', CT2: 'x', PT2: 'x' }, '2027-02-20') === '完了');
+t('次にやること: 辞退・削除済みは対象外の表示', na(F({ status: '辞退' }), {}, 'x') === '(辞退)' && na(F({ status: '削除済み' }), {}, 'x') === '(削除済み)');
+
+const rosterD = [
+  { row: 2, id: 'F0001', appliedAt: '2026-11-01T10:00:00', name: '山田 花子', pGender: '女性', pBirth: '19850612', email: 'h@example.com', line: 'hana', insta: '', officialLine: '追加しました', referrer: 'ナシ', childName: '山田 太郎', cGender: '男性', cBirth: '20100315', childEmail: 't@example.com', sessionDate: '2026-11-10', status: '参加中', sent: { T0: '2026-11-02T09:00:00', T1: '', T2: '' }, exName: '', exPlan: '', pNote: '', cNote: '', memo: '' },
+  { row: 3, id: 'F0002', appliedAt: '2026-11-05T10:00:00', name: '</script><b>x', pGender: '男性', pBirth: '19900101', email: 'x@example.com', line: 'x', insta: '', officialLine: '追加しました', referrer: 'ナシ', childName: 'b', cGender: '女性', cBirth: '20120101', childEmail: 'y@example.com', sessionDate: '', status: '', sent: { T0: '', T1: '', T2: '' }, exName: '山田 次郎', exPlan: 'レポートのみ 5,000円', pNote: '', cNote: '', memo: '' },
+  { row: 4, id: 'F0003', appliedAt: '2026-11-06T10:00:00', name: 'c', pGender: '女性', pBirth: '19900101', email: 'c@example.com', line: 'c', insta: '', officialLine: '追加しました', referrer: 'ナシ', childName: 'c', cGender: '女性', cBirth: '20120101', childEmail: 'c2@example.com', sessionDate: '', status: '辞退', sent: { T0: '', T1: '', T2: '' }, exName: '', exPlan: '', pNote: '', cNote: '', memo: '' }
+];
+const subsD = [
+  ['s1', '2026-11-03T10:00:00', 'F0001', '子ども', 'CT0', 'T0', 'TRUE', '', 1, 0, 0, 0, 'FALSE'],
+  ['s2', '2026-11-03T11:00:00', 'F0001', '保護者', 'PT0', 'T0', 'TRUE', '', 1, 0, 0, 0, 'FALSE'],
+  ['s3', '2026-11-03T12:00:00', 'F0001', '保護者', 'PT0', 'T0', 'FALSE', '重複送信', 1, 0, 0, 0, 'FALSE'],
+  ['s4', 't', 'F9999', '子ども', 'CT0', 'T0', 'TRUE', '', 1, 0, 0, 0, 'TRUE']
+];
+const safD = [['2026-11-20T10:00:00', 'F0001', 'CT2', 'F8', 'a', '送信済み', '2026-11-21 10:00', '未対応', '', '', ''], ['2026-11-20T10:00:00', 'F0002', 'CT2', 'F7', 'a', '送信済み', 'd', '対応済', '', '', '']];
+const dd = vm.runInContext('buildDashboardData_', ctx)(rosterD, [['2026-11-02T10:00:00', 'z', 'z@example.com', 'q', 'メールが確認欄と一致しない', '']], subsD, safD, '2026-11-10');
+t('ダッシュボード: 家庭数・参加中・辞退の集計', dd.summary.total === 3 && dd.summary.active === 2 && dd.summary.withdrawn === 1);
+t('ダッシュボード: 要確認の申込・鑑定日未入力・未対応の安全確認・追加鑑定の希望', dd.summary.pending === 1 && dd.summary.noSession === 1 && dd.summary.safetyOpen === 1 && dd.summary.extraRequests === 1);
+t('ダッシュボード: T0の回答済みは、子ども・保護者の両方が分析採用で回答した家庭のみ(重複・テストを数えない)', dd.summary.responded.T0 === 1 && dd.families.find(f => f.id === 'F0001').resp.CT0 && dd.families.find(f => f.id === 'F0001').resp.PT0);
+t('ダッシュボード: 送れる家庭の数(T1=鑑定日10日・当日)', dd.summary.toSend.T1 === 1 && dd.summary.toSend.T0 === 0);
+t('ダッシュボード: 申込日の新しい順', dd.families[0].id === 'F0003');
+t('ダッシュボード: 状況が空欄なら「参加中」', dd.families.find(f => f.id === 'F0002').status === '参加中');
+t('閲覧者の確認: 本人のみ許可、空(匿名)は不許可、許可リストは許可', run('isAllowedViewer_("a@x.com","A@x.com",[])') && !run('isAllowedViewer_("","a@x.com",[])') && !run('isAllowedViewer_("b@x.com","a@x.com",[])') && run('isAllowedViewer_("b@x.com","a@x.com",["B@x.com"])'));
+const page = vm.runInContext('dashboardPage_', ctx)(dd);
+t('ページに</script>を含む名前があっても、scriptタグが壊れない(エスケープ)', (page.match(/<\/script>/g) || []).length === 1 && page.indexOf('\\u003c/script\\u003e') !== -1);
+const scriptSrc = page.slice(page.indexOf('<script>') + 8, page.lastIndexOf('</script>'));
+let scriptOk = true; try { new vm.Script(scriptSrc); } catch (e) { scriptOk = false; console.log(e.message); }
+t('ページのJavaScriptが構文エラーなし', scriptOk);
+{ // 簡易DOMで描画を実行
+  const mk = (tag) => { const e = { tag, children: [], style: {}, _text: '', className: '', appendChild(c) { this.children.push(c); return c; }, set innerHTML(v) { this.children = []; this._text = ''; }, get innerHTML() { return ''; }, set textContent(v) { this._text = String(v); }, get textContent() { return this._text; }, set colSpan(v) {}, value: '' }; return e; };
+  const ids = {}; const doc = { createElement: mk, createTextNode: (x) => { const e = mk('#text'); e._text = x; return e; }, getElementById: (id) => ids[id] || (ids[id] = mk(id)) };
+  ids.q = mk('q'); ids.st = mk('st');
+  const win = vm.createContext({ document: doc });
+  let err = null; try { vm.runInContext(scriptSrc, win); } catch (e) { err = e; }
+  const all = (n) => [n._text].concat(...n.children.map(all)).join('|');
+  const view = all(ids.view);
+  t('ダッシュボード描画: エラーなく描画され、家庭の行・次にやること・進捗が出る', !err && /F0001/.test(view) && /山田 花子 \/ 山田 太郎/.test(view) && /T1のリンクを送る/.test(view) && /T0/.test(view), err && err.message);
+  t('ダッシュボード描画: 注入された文字列はテキストとして扱われる(要素にならない)', /<\/script><b>x/.test(view));
+  t('ダッシュボード描画: サマリーのカード', /申込\(参加中\)/.test(all(ids.cards)) && /要確認の申込/.test(all(ids.cards)));
+}
+
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
 

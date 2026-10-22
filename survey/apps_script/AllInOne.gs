@@ -1082,10 +1082,14 @@ function readRoster_(reg) {
   var v = reg.getSheetByName(SHEETS.roster).getDataRange().getValues();
   v.shift();
   function ds(d) { return (d instanceof Date) ? Utilities.formatDate(d, 'Asia/Tokyo', 'yyyy-MM-dd') : String(d || '').trim(); }
+  function ts(d) { return (d instanceof Date) ? Utilities.formatDate(d, 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ss") : String(d || '').trim(); }
+  function t(x) { return String(x === undefined || x === null ? '' : x).trim(); }
   return v.map(function (r, i) {
-    return { row: i + 2, id: String(r[RC.id]).trim(), name: String(r[RC.pname]).trim(), email: String(r[RC.pemail]).trim(),
-      childName: String(r[RC.cname]).trim(), childEmail: String(r[RC.cemail]).trim(),
-      sessionDate: ds(r[RC.session]), status: r[RC.status], sent: { T0: ds(r[RC.T0]), T1: ds(r[RC.T1]), T2: ds(r[RC.T2]) } };
+    return { row: i + 2, id: t(r[RC.id]), appliedAt: ts(r[RC.ts]), name: t(r[RC.pname]), pGender: t(r[RC.pgender]), pBirth: t(r[RC.pbirth]), email: t(r[RC.pemail]),
+      line: t(r[RC.line]), insta: t(r[RC.insta]), officialLine: t(r[RC.officialLine]), referrer: t(r[RC.referrer]),
+      childName: t(r[RC.cname]), cGender: t(r[RC.cgender]), cBirth: t(r[RC.cbirth]), childEmail: t(r[RC.cemail]),
+      sessionDate: ds(r[RC.session]), status: r[RC.status], sent: { T0: ts(r[RC.T0]), T1: ts(r[RC.T1]), T2: ts(r[RC.T2]) },
+      exName: t(r[RC.exName]), exPlan: t(r[RC.exPlan]), pNote: t(r[RC.pnote]), cNote: t(r[RC.cnote]), memo: t(r[RC.memo]) };
   }).filter(function (r) { return r.id; });
 }
 
@@ -1368,6 +1372,160 @@ function checkReminders() {
     '次の家庭・フォームが未回答です。声かけをお願いします。リマインドは1つのフォームにつき最大2回です。\n' +
     '辞退された家庭には送らないでください(名簿の「参加状況」を「辞退」にすると、通知が止まります)。\n\n' + lines.join('\n') +
     '\n\n--- 文面の例(強制にならないようにしてください) ---\nアンケートへのご協力ありがとうございます。まだ回答がお済みでないようでしたら、お時間のあるときに、できる範囲でご回答いただけると助かります。答えにくい質問は飛ばしていただいて大丈夫です。\n' + reg.getUrl());
+}
+
+
+// ======================================================================
+// 申込データを確認するサイト(ウェブアプリ)
+// ======================================================================
+
+/** 次にやること(運営向け)。resp: {CT0:ts,...}(分析採用の送信) */
+function nextAction_(f, resp, today) {
+  if (!isParticipating_(f.status)) return String(f.status || '') === '削除済み' ? '(削除済み)' : '(' + f.status + ')';
+  function both(t) { return !!(resp['CT' + t.charAt(1)] && resp['PT' + t.charAt(1)]); }
+  if (!f.sessionDate) return '日程調整 → 鑑定日を入力';
+  if (!f.sent.T0) return 'T0のリンクを送る';
+  if (!both('T0')) return 'T0の回答待ち';
+  var d = dayDiff_(today, f.sessionDate);
+  if (d < 0) return '鑑定待ち(' + (-d) + '日後)';
+  if (!f.sent.T1) return 'T1のリンクを送る';
+  if (!both('T1')) return 'T1の回答待ち';
+  if (d < CONFIG.T2_AFTER_DAYS) return 'T2待ち(あと' + (CONFIG.T2_AFTER_DAYS - d) + '日)';
+  if (!f.sent.T2) return 'T2のリンクを送る';
+  if (!both('T2')) return 'T2の回答待ち';
+  return '完了';
+}
+
+/**
+ * ダッシュボード用のデータを組み立てる。
+ * roster: readRoster_の結果  pending: [[受付日時, 保護者名, メール, お子様名, 理由, 連絡事項]]
+ * subs: Submissionsの行(見出しなし)  safety: 安全対応ログの行(見出しなし)
+ */
+function buildDashboardData_(roster, pending, subs, safety, today) {
+  var respBy = {};
+  subs.forEach(function (r) {
+    if (r[6] !== 'TRUE' || r[12] === 'TRUE') return;
+    (respBy[r[2]] = respBy[r[2]] || {})[r[4]] = String(r[1]);
+  });
+  var families = roster.map(function (f) {
+    var resp = respBy[f.id] || {};
+    return { id: f.id, appliedAt: f.appliedAt, name: f.name, pGender: f.pGender, pBirth: f.pBirth, email: f.email, line: f.line, insta: f.insta,
+      officialLine: f.officialLine, referrer: f.referrer, childName: f.childName, cGender: f.cGender, cBirth: f.cBirth, childEmail: f.childEmail,
+      sessionDate: f.sessionDate, status: String(f.status || '参加中'), sent: f.sent, resp: resp, exName: f.exName, exPlan: f.exPlan,
+      pNote: f.pNote, cNote: f.cNote, memo: f.memo, next: nextAction_(f, resp, today) };
+  });
+  var active = roster.filter(function (f) { return isParticipating_(f.status); });
+  function cnt(time) { return linksDue_(roster, time, today, null).length; }
+  function responded(time) {
+    return active.filter(function (f) { var r = respBy[f.id] || {}; return r['CT' + time.charAt(1)] && r['PT' + time.charAt(1)]; }).length;
+  }
+  var safetyOpen = safety.filter(function (r) { return r[7] !== '対応済'; });
+  return {
+    generatedAt: today,
+    summary: {
+      total: roster.length, active: active.length,
+      withdrawn: roster.filter(function (f) { return String(f.status || '').trim() === '辞退'; }).length,
+      deleted: roster.filter(function (f) { return String(f.status || '').trim() === '削除済み'; }).length,
+      pending: pending.length,
+      noSession: active.filter(function (f) { return !f.sessionDate; }).length,
+      toSend: { T0: cnt('T0'), T1: cnt('T1'), T2: cnt('T2') },
+      responded: { T0: responded('T0'), T1: responded('T1'), T2: responded('T2') },
+      safetyOpen: safetyOpen.length,
+      extraRequests: roster.filter(function (f) { return f.exName || f.exPlan; }).length
+    },
+    families: families.sort(function (a, b) { return a.appliedAt < b.appliedAt ? 1 : -1; }),
+    pending: pending.map(function (r) { return { at: String(r[0]), name: r[1], email: r[2], child: r[3], reason: r[4], note: r[5] }; }),
+    safety: safetyOpen.map(function (r) { return { at: String(r[0]), id: r[1], form: r[2], reason: r[3], due: String(r[6]), status: r[7] }; })
+  };
+}
+
+/** 見てよい人かを判定する。ウェブアプリは「自分のみ」で公開する想定の、二重の確認 */
+function isAllowedViewer_(active, effective, allowed) {
+  var a = String(active || '').trim().toLowerCase();
+  if (!a) return false;
+  if (a === String(effective || '').trim().toLowerCase()) return true;
+  return (allowed || []).some(function (x) { return String(x || '').trim().toLowerCase() === a; });
+}
+
+/** JSONを<script>に埋め込むときのエスケープ(</script>や<!--で壊れない・注入されない) */
+function safeJson_(obj) {
+  return JSON.stringify(obj).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+}
+
+var DASHBOARD_HTML = [
+  '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>申込・進捗ダッシュボード</title>',
+  '<style>',
+  ':root{--bg:#f6f7f9;--fg:#1f2933;--mut:#6b7785;--card:#fff;--line:#dfe3e8;--acc:#2e6da4;--warn:#b45309;--bad:#b42318;--ok:#1a7f4b}',
+  '@media(prefers-color-scheme:dark){:root{--bg:#14181d;--fg:#e6e9ee;--mut:#9aa6b2;--card:#1d232a;--line:#2d3640;--acc:#6aa6dc;--warn:#e0a458;--bad:#f08a80;--ok:#6fcf97}}',
+  '*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}',
+  'main{max-width:1200px;margin:0 auto;padding:16px}h1{font-size:18px;margin:0 0 4px}.sub{color:var(--mut);margin-bottom:12px}',
+  '.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px}',
+  '.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px}.card b{display:block;font-size:22px}.card span{color:var(--mut);font-size:12px}',
+  '.card.warn b{color:var(--warn)}.card.bad b{color:var(--bad)}',
+  '.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}.tabs button{border:1px solid var(--line);background:var(--card);color:var(--fg);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}',
+  '.tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}',
+  '.tools{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}input,select{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit}input{flex:1;min-width:180px}',
+  '.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:8px}table{border-collapse:collapse;width:100%;min-width:760px}',
+  'th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--mut);font-weight:600;font-size:12px;white-space:nowrap}',
+  'tr.row{cursor:pointer}tr.row:hover{background:rgba(46,109,164,.08)}tr.det td{background:var(--bg)}',
+  '.dl{display:grid;grid-template-columns:140px 1fr;gap:2px 12px}.dl dt{color:var(--mut)}.dl dd{margin:0;word-break:break-all}',
+  '.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;border:1px solid var(--line)}.tag.ok{color:var(--ok);border-color:var(--ok)}.tag.warn{color:var(--warn);border-color:var(--warn)}.tag.bad{color:var(--bad);border-color:var(--bad)}',
+  '.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;border:1px solid var(--mut)}.dot.on{background:var(--ok);border-color:var(--ok)}.dot.sent{background:var(--warn);border-color:var(--warn)}',
+  '.empty{padding:24px;text-align:center;color:var(--mut)}.note{color:var(--mut);font-size:12px;margin-top:10px}',
+  '</style></head><body><main>',
+  '<h1>申込・進捗ダッシュボード</h1><div class="sub" id="sub"></div>',
+  '<div class="cards" id="cards"></div>',
+  '<div class="tabs" id="tabs"></div>',
+  '<div class="tools" id="tools"><input id="q" placeholder="名前・ID・メール・LINE・紹介者で検索"><select id="st"><option value="">すべての状況</option><option value="参加中">参加中</option><option value="辞退">辞退</option><option value="完了">完了</option><option value="削除済み">削除済み</option></select></div>',
+  '<div class="wrap" id="view"></div>',
+  '<div class="note">この画面は閲覧専用です。リンクの送信・鑑定日の入力・削除は、台帳のスプレッドシートで行います。個人情報を含むため、画面を他の人に見せたり、URLを共有したりしないでください。</div>',
+  '</main><script>',
+  'var DATA=__DATA__;',
+  'function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}',
+  'var tab="fam";',
+  'function card(l,v,k){var d=el("div","card"+(k?" "+k:""));d.appendChild(el("b",null,String(v)));d.appendChild(el("span",null,l));return d}',
+  'function renderCards(){var s=DATA.summary,c=document.getElementById("cards");c.innerHTML="";',
+  'c.appendChild(card("申込(参加中)",s.active));c.appendChild(card("要確認の申込",s.pending,s.pending?"bad":""));c.appendChild(card("鑑定日が未入力",s.noSession,s.noSession?"warn":""));',
+  'c.appendChild(card("T0を送れる家庭",s.toSend.T0,s.toSend.T0?"warn":""));c.appendChild(card("T1を送れる家庭",s.toSend.T1,s.toSend.T1?"warn":""));c.appendChild(card("T2を送れる家庭",s.toSend.T2,s.toSend.T2?"warn":""));',
+  'c.appendChild(card("T0 回答済み",s.responded.T0+" / "+s.active));c.appendChild(card("T1 回答済み",s.responded.T1+" / "+s.active));c.appendChild(card("T2 回答済み",s.responded.T2+" / "+s.active));',
+  'c.appendChild(card("未対応の安全確認",s.safetyOpen,s.safetyOpen?"bad":""));c.appendChild(card("追加の鑑定の希望",s.extraRequests));c.appendChild(card("辞退・削除済み",s.withdrawn+s.deleted));',
+  'document.getElementById("sub").textContent="更新: "+DATA.generatedAt+" 時点 / 申込 全"+s.total+"件"}',
+  'function renderTabs(){var t=document.getElementById("tabs");t.innerHTML="";[["fam","申込一覧・進捗"],["pend","要確認の申込 ("+DATA.pending.length+")"],["saf","安全確認 ("+DATA.safety.length+")"]].forEach(function(x){var b=el("button",tab===x[0]?"on":"",x[1]);b.onclick=function(){tab=x[0];render()};t.appendChild(b)})}',
+  'function dots(f,t){var n=t.charAt(1),c=!!f.resp["CT"+n],p=!!f.resp["PT"+n],w=el("span");var a=el("span","dot"+(c?" on":f.sent[t]?" sent":""));a.title="子ども "+(c?"回答済み":f.sent[t]?"送信済み・未回答":"未送信");var b=el("span","dot"+(p?" on":f.sent[t]?" sent":""));b.title="保護者 "+(p?"回答済み":f.sent[t]?"送信済み・未回答":"未送信");w.appendChild(el("span",null,t+" "));w.appendChild(a);w.appendChild(b);w.appendChild(document.createTextNode("  "));return w}',
+  'function dl(f){var d=el("dl","dl");[["研究用ID",f.id],["申込日時",f.appliedAt],["保護者",f.name+"("+f.pGender+" / "+f.pBirth+")"],["保護者メール",f.email],["LINE検索ID",f.line],["Instagram",f.insta||"-"],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["お子様",f.childName+"("+f.cGender+" / "+f.cBirth+")"],["お子様メール",f.childEmail],["鑑定日",f.sessionDate||"未入力"],["参加状況",f.status],["送信日時 T0/T1/T2",[f.sent.T0,f.sent.T1,f.sent.T2].map(function(x){return x||"-"}).join(" / ")],["追加の鑑定",(f.exName||"-")+" "+(f.exPlan||"")],["保護者の連絡事項",f.pNote||"-"],["お子様の連絡事項",f.cNote||"-"],["メモ",f.memo||"-"]].forEach(function(r){d.appendChild(el("dt",null,r[0]));d.appendChild(el("dd",null,r[1]))});return d}',
+  'function renderFam(v){var q=document.getElementById("q").value.trim().toLowerCase(),st=document.getElementById("st").value;',
+  'var rows=DATA.families.filter(function(f){if(st&&f.status!==st)return false;if(!q)return true;return [f.id,f.name,f.childName,f.email,f.childEmail,f.line,f.insta,f.referrer].join(" ").toLowerCase().indexOf(q)>=0});',
+  'if(!rows.length){v.appendChild(el("div","empty","該当する申込はありません"));return}',
+  'var t=el("table"),h=el("tr");["ID","申込日","保護者 / お子様","鑑定日","進捗(● 子ども・保護者)","次にやること","状況"].forEach(function(x){h.appendChild(el("th",null,x))});t.appendChild(h);',
+  'rows.forEach(function(f){var r=el("tr","row");r.appendChild(el("td",null,f.id));r.appendChild(el("td",null,(f.appliedAt||"").slice(0,10)));r.appendChild(el("td",null,f.name+" / "+f.childName));r.appendChild(el("td",null,f.sessionDate||"未入力"));',
+  'var p=el("td");["T0","T1","T2"].forEach(function(x){p.appendChild(dots(f,x))});r.appendChild(p);',
+  'var n=el("td"),tg=el("span","tag"+(/送る|入力/.test(f.next)?" warn":/完了/.test(f.next)?" ok":""),f.next);n.appendChild(tg);r.appendChild(n);',
+  'var s=el("td"),sg=el("span","tag"+(f.status==="参加中"?" ok":" bad"),f.status);s.appendChild(sg);r.appendChild(s);',
+  'var d=el("tr","det");d.style.display="none";var dc=el("td");dc.colSpan=7;dc.appendChild(dl(f));d.appendChild(dc);r.onclick=function(){d.style.display=d.style.display==="none"?"":"none"};t.appendChild(r);t.appendChild(d)});v.appendChild(t)}',
+  'function renderPend(v){if(!DATA.pending.length){v.appendChild(el("div","empty","要確認の申込はありません"));return}var t=el("table"),h=el("tr");["受付日時","保護者","メール","お子様","理由","連絡事項"].forEach(function(x){h.appendChild(el("th",null,x))});t.appendChild(h);DATA.pending.forEach(function(p){var r=el("tr");[p.at,p.name,p.email,p.child,p.reason,p.note].forEach(function(x){r.appendChild(el("td",null,x||""))});t.appendChild(r)});v.appendChild(t)}',
+  'function renderSaf(v){if(!DATA.safety.length){v.appendChild(el("div","empty","未対応の安全確認はありません"));return}var t=el("table"),h=el("tr");["受信日時","研究用ID","フォーム","理由","対応期限","状況"].forEach(function(x){h.appendChild(el("th",null,x))});t.appendChild(h);DATA.safety.forEach(function(p){var r=el("tr");[p.at,p.id,p.form,p.reason,p.due,p.status].forEach(function(x){r.appendChild(el("td",null,x||""))});t.appendChild(r)});v.appendChild(t)}',
+  'function render(){renderCards();renderTabs();var v=document.getElementById("view");v.innerHTML="";document.getElementById("tools").style.display=tab==="fam"?"":"none";if(tab==="fam")renderFam(v);else if(tab==="pend")renderPend(v);else renderSaf(v)}',
+  'document.getElementById("q").oninput=render;document.getElementById("st").onchange=render;render();',
+  '</script></body></html>'
+].join('\n');
+
+function dashboardPage_(data) {
+  return DASHBOARD_HTML.replace('__DATA__', function () { return safeJson_(data); });
+}
+
+/** ウェブアプリ: 申込・進捗を確認する画面(閲覧専用)。デプロイは「自分のみ」にする */
+function doGet() {
+  var props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('REG_SS_ID')) return HtmlService.createHtmlOutput('セットアップが済んでいません。setup() を実行してください。');
+  var reg = regSS_();
+  var allowed = [opMail_(reg)];
+  var ok = isAllowedViewer_(Session.getActiveUser().getEmail(), Session.getEffectiveUser().getEmail(), allowed);
+  if (!ok) return HtmlService.createHtmlOutput('この画面を見る権限がありません。').setTitle('権限がありません');
+  var db = dbSS_();
+  var roster = readRoster_(reg);
+  function rows(ss, name) { var sh = ss.getSheetByName(name); if (!sh || sh.getLastRow() < 2) return []; return sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues(); }
+  var data = buildDashboardData_(roster, rows(reg, SHEETS.pending), rows(db, SHEETS.submissions), rows(reg, SHEETS.safety), todayStr_());
+  return HtmlService.createHtmlOutput(dashboardPage_(data)).setTitle('申込・進捗ダッシュボード').addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
 // ======================================================================
