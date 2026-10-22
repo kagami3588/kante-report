@@ -1688,7 +1688,7 @@ function checkReminders() {
   var to = opMail_(reg);
   var lines = due.map(function (d) {
     var f = byId[d.id] || {};
-    return d.id + ' ' + (f.name || '') + ' <' + (f.email || '') + '> / ' + d.form + '(' + (d.form.charAt(0) === 'C' ? '子ども' : '保護者') + ')/ ' + d.nth + '回目\n  ' + getPrefilledUrl_(d.form, d.id);
+    return d.id + ' ' + (f.name || '') + ' <' + (f.email || '') + '> / ' + d.form + '(' + (d.form.charAt(0) === 'C' ? '子ども' : '保護者') + ')/ ' + d.nth + '回目\n  ' + (surveySiteUrl_(reg) || getPrefilledUrl_(d.form, d.id));
   });
   var log = reg.getSheetByName(SHEETS.reminders);
   due.forEach(function (d) { log.appendRow([today, d.id, d.form, d.nth, to]); });
