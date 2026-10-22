@@ -44,7 +44,7 @@ function makeFormApp() {
     DestinationType: { SPREADSHEET: 'SPREADSHEET' },
     createTextValidation() {
       const v = {};
-      const b = { requireTextMatchesPattern(p) { v.pattern = p; return b; }, requireNumberBetween(a, c) { v.range = [a, c]; return b; }, setHelpText() { return b; }, build() { return v; } };
+      const b = { requireTextMatchesPattern(p) { v.pattern = p; return b; }, requireNumberBetween(a, c) { v.range = [a, c]; return b; }, requireTextIsEmail() { v.email = true; return b; }, setHelpText() { return b; }, build() { return v; } };
       return b;
     },
     create(title) { const f = new Form(title); created.push(f); return f; }
@@ -229,14 +229,89 @@ t('テストIDは対象外', rem([{ id: 'F9999', sessionDate: '2026-11-10', stat
 t('1フォームのリマインドは最大2回', JSON.stringify(run('REMINDER_RULES')) === JSON.stringify({ T0: [-5, -3], T1: [1, 3], T2: [93, 97] }));
 t('月をまたぐ日数計算(2026-11-30 → 2026-12-02 = 2日)', run('dayDiff_("2026-12-02","2026-11-30")') === 2);
 
-// 10. 匿名での感想利用の同意(任意)
-r = vm.runInContext('processSubmission_', ctx)('CT0', nv('CT0', { CONSENT: '同意します', CONSENT_AD: '同意します', RID: 'F0001' }), 't', 'sid20', ctxOk);
-t('匿名感想の同意あり → Submissionsに TRUE', r.submission[13] === 'TRUE' && r.flags.length === 0);
-r = vm.runInContext('processSubmission_', ctx)('CT0', nv('CT0', { CONSENT: '同意します', RID: 'F0001' }), 't', 'sid21', ctxOk);
-t('匿名感想の同意なし → FALSE。研究参加の同意だけで送信でき、フラグなし', r.submission[13] === 'FALSE' && r.flags.length === 0);
-r = vm.runInContext('processSubmission_', ctx)('CT1', nv('CT1', { RID: 'F0001' }), 't', 'sid22', ctxOk);
-t('同意ページのないフォームでは空欄', r.submission[13] === '');
-t('CT0・PT0に研究参加の同意(必須)と匿名感想の同意(任意)の2項目', ['CT0', 'PT0'].every(k => run(`questionsOf_("${k}").filter(q=>q.kind==="consent").map(q=>q.id+":"+!!q.required).join(",")`) === 'CONSENT:true,CONSENT_AD:false'));
+// 10. 同意は申込フォームのみ
+t('CT0・PT0に同意項目がない(同意は申込フォームのみ)', ['CT0', 'PT0'].every(k => run(`questionsOf_("${k}").filter(q=>q.kind==="consent").length`) === 0));
+t('submissionsの列数が見出しと一致', run('HEAD.submissions.length') === 13 && vm.runInContext('processSubmission_', ctx)('CT0', nv('CT0', { RID: 'F0001' }), 't', 'x', ctxOk).submission.length === 13);
+
+// 11. 申込フォーム
+const ap = run('SURVEY.apply');
+const apQs = ap.blocks.filter(b => b.type === 'q');
+const consents = apQs.filter(q => q.kind === 'consent');
+t('申込フォームの同意は4項目(研究参加・子どもへの説明・個人情報・匿名の数値)で、すべて必須', consents.length === 4 && consents.every(q => q.required) && ['CONSENT', 'CONSENT_CHILD', 'CONSENT_PI', 'CONSENT_ANON'].every(id => consents.some(q => q.id === id)));
+const adultText = ap.intro + ap.blocks.filter(b => b.type === 'page' && !b.conditional).map(b => b.desc || '').join('\n') + consents.map(q => q.text).join('\n');
+const childPage = ap.blocks.find(b => b.type === 'page' && b.conditional);
+t('お子さま向けの説明は、条件ページ(「見る」を選んだ人だけ)にある', !!childPage && /ききたい ことが/.test(childPage.desc));
+t('お子さま向けの説明の文は、保護者向けの本文に混ざっていない', !/こたえたく ないときは|おとうさん・おかあさんとは、べつの/.test(adultText));
+const gate = apQs.find(q => q.id === 'AP_VIEW');
+t('AP_VIEWが分岐ゲート(「見ない」でお子さま向けページをスキップ)', !!gate && !!gate.gate && gate.gate.skip.indexOf('見ない') === 0 && gate.required === false);
+t('責任者が「林 竜輔」、連絡先が運営メール', /責任者:林 竜輔/.test(adultText) && /kagami\.3588@gmail\.com/.test(adultText));
+t('削除のお申し出の文(保護者向け・お子さま向け)', /ご回答の削除をご希望の場合は、下の連絡先まで、お申し出ください。お申し出があれば、削除します/.test(adultText) && /こたえを けして ほしい ときは/.test(childPage.desc));
+t('途中でやめた場合の回答の活用・回答でみなし同意の文', /それまでにご回答いただいた分を、研究に活用させていただきます/.test(adultText) && /同意いただいたものとみなします/.test(adultText));
+t('個人情報:責任を持ってお預かり、プロジェクト終了まで保管、鑑定の提供のため', /責任を持ってお預かりします/.test(adultText) && /このプロジェクトが終了するときまでを予定/.test(adultText) && /鑑定をご提供するため/.test(adultText));
+t('回答は鑑定を行うまで確認しない', /鑑定を行うまで、確認しません/.test(adultText));
+t('匿名の年齢・性別・数値のみ表示、個人情報は一切お渡ししない', /個人情報\(お名前・連絡先\)は一切お渡しせず、匿名の年齢と性別の表記と、データの数値のみ/.test(adultText));
+t('費用・謝礼・補助金・データの利用範囲の記載がない', !/費用|謝礼|補助金|学会|論文|円/.test(adultText + childPage.desc));
+t('「回答したくない」「学年」が申込フォームに無い', !/回答したくない|学年/.test(adultText + childPage.desc));
+t('「保管期間は【要記入】」が残っていない', !/【要記入】/.test(adultText + childPage.desc));
+
+{ // 申込フォームの構築(モック)
+  ctx.__ss = { getId: () => 'reg' };
+  vm.runInContext('buildFormFromDef_(SURVEY.apply, __ss, SURVEY.apply.confirm)', ctx);
+  const f = created[created.length - 1];
+  t('申込フォーム構築', f.items.length > 10);
+  const view = f.items.find(i => i.title.indexOf('AP_VIEW.') === 0);
+  const skip = view.choices.find(c => c.value.indexOf('見ない') === 0), show = view.choices.find(c => c.value === '見る');
+  t('「見る」→次(お子さま向けページ)へ、「見ない」→その次の非条件ページへ移動', show.nav === 'CONTINUE' && skip.nav && skip.nav.type === 'PAGE');
+  const vi = f.items.indexOf(view), si = f.items.indexOf(skip.nav);
+  const childIdx = f.items.findIndex(i => i.title.indexOf('お子さま向けのご説明(小学生') === 0);
+  t('お子さま向けページは、ゲートとスキップ先の間にある', childIdx > vi && childIdx < si);
+  const emailItems = f.items.filter(i => /^AP[23]\./.test(i.title));
+  t('メールアドレス欄にメール形式の検証', emailItems.length === 2 && emailItems.every(i => i.validation && i.validation.email));
+  t('4つの同意が必須のチェックボックス', f.items.filter(i => /^CONSENT/.test(i.title)).length === 4 && f.items.filter(i => /^CONSENT/.test(i.title)).every(i => i.required));
+}
+
+// 12. 申込の処理
+const NVA = (o) => { const base = { AP1: '山田 花子', AP2: 'hanako@example.com', AP3: 'hanako@example.com', AP4: 'たろう', AP5: '', AP_VIEW: '', CONSENT: '同意します', CONSENT_CHILD: '同意します', CONSENT_PI: '同意します', CONSENT_ANON: '同意します' }; const m = Object.assign(base, o); const out = {}; ap.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
+const pa = vm.runInContext('processApplication_', ctx);
+let pr = pa(NVA({}), [], '2026-11-01T10:00:00');
+t('申込OK → F0001を発行し、名簿の行を作る', pr.ok && pr.id === 'F0001' && pr.row[0] === 'F0001' && pr.row[6] === '参加中' && pr.row.length === 12);
+pr = pa(NVA({}), [{ id: 'F0001', email: 'x@example.com', nickname: 'a' }, { id: 'F0007', email: 'y@example.com', nickname: 'b' }, { id: 'F9999', email: 't@example.com', nickname: 't' }], 't');
+t('次のIDは最大値+1(F0008)。テストID(F9999)は数えない', pr.ok && pr.id === 'F0008');
+pr = pa(NVA({ AP3: 'hanako@exampl.com' }), [], 't');
+t('メールが確認欄と不一致 → IDを発行せず要確認', !pr.ok && /一致しない/.test(pr.reason) && pr.pendingRow.length === 6);
+pr = pa(NVA({ AP2: 'abc', AP3: 'abc' }), [], 't');
+t('メール形式不正 → 要確認', !pr.ok && /形式が不正/.test(pr.reason));
+pr = pa(NVA({ CONSENT_PI: '' }), [], 't');
+t('必須の同意が欠けている → 要確認', !pr.ok && /同意未確認:CONSENT_PI/.test(pr.reason));
+pr = pa(NVA({}), [{ id: 'F0001', email: 'HANAKO@example.com ', nickname: 'たろう ' }], 't');
+t('同じメールと呼び名(大文字小文字・空白を無視)→ 重複申込', !pr.ok && /重複申込/.test(pr.reason));
+pr = pa(NVA({ AP4: 'はなこ' }), [{ id: 'F0001', email: 'hanako@example.com', nickname: 'たろう' }], 't');
+t('同じメールでも呼び名が違えば(兄弟姉妹)別の家庭として登録', pr.ok && pr.id === 'F0002');
+pr = pa(NVA({ AP1: '' }), [], 't');
+t('保護者名が空 → 要確認', !pr.ok);
+t('nextId_: 空なら F0001', run('nextId_([])') === 'F0001');
+
+// 13. リンク送信の対象
+const lr = vm.runInContext('linksDue_', ctx);
+const base = (o) => Object.assign({ row: 2, id: 'F0001', email: 'a@example.com', status: '参加中', sessionDate: '2026-11-10', sent: { T0: '', T1: '', T2: '' } }, o);
+t('T0: 鑑定日が入力済み・未送信 → 対象', lr([base({})], 'T0', '2026-11-01').length === 1);
+t('T0: 鑑定日が未入力 → 対象外', lr([base({ sessionDate: '' })], 'T0', '2026-11-01').length === 0);
+t('T0: 送信済み → 対象外(二重送信しない)', lr([base({ sent: { T0: '2026-11-02T10:00:00' } })], 'T0', '2026-11-03').length === 0);
+t('T1: 鑑定日の前 → 対象外、当日以降 → 対象', lr([base({})], 'T1', '2026-11-09').length === 0 && lr([base({})], 'T1', '2026-11-10').length === 1);
+t('T2: 鑑定の89日後 → 対象外、90日後 → 対象', lr([base({})], 'T2', '2027-02-07').length === 0 && lr([base({})], 'T2', '2027-02-08').length === 1);
+t('辞退・削除済みの家庭は対象外', lr([base({ status: '辞退' })], 'T0', '2026-11-01').length === 0 && lr([base({ status: '削除済み' })], 'T0', '2026-11-01').length === 0);
+t('メールアドレスが無い・不正 → 対象外', lr([base({ email: '' })], 'T0', '2026-11-01').length === 0 && lr([base({ email: 'abc' })], 'T0', '2026-11-01').length === 0);
+t('テストIDは対象外', lr([base({ id: 'F9999' })], 'T0', '2026-11-01').length === 0);
+t('選択した家庭は、日付の条件なしで対象(未送信・参加中・メールありのみ)', lr([base({ sessionDate: '' }), base({ row: 3, id: 'F0002' })], 'T0', '2026-11-01', { 2: true }).length === 1);
+const em = vm.runInContext('buildLinkEmail_', ctx)('T0', { name: '山田 花子', nickname: 'たろう', sessionDate: '2026-11-10' }, { child: 'https://forms.example/c', parent: 'https://forms.example/p' });
+t('リンクメール: 宛名・子ども用/保護者用リンク・別々に回答のお願い・本人が回答', /山田 花子 様/.test(em.body) && /forms\.example\/c/.test(em.body) && /forms\.example\/p/.test(em.body) && /別の端末/.test(em.body) && /お子さまご本人が回答/.test(em.body) && /2026-11-10/.test(em.body));
+t('リンクメールに費用・謝礼の記載がない', !/費用|謝礼|円/.test(em.body));
+const rc = vm.runInContext('buildReceiptEmail_', ctx)('CT1', { name: '山田 花子' });
+t('受付確認メール: 回答内容を含まない・お子さま用と分かる', /お子さま用/.test(rc.body) && /回答の内容は、このメールには記載していません/.test(rc.body) && !/D\d/.test(rc.body));
+// 削除
+const dr = vm.runInContext('dropRowsById_', ctx)([['h', '研究用ID'], ['a', 'F0001'], ['b', 'F0002'], ['c', 'F0001']], 1, 'F0001');
+t('指定IDの行だけを削除(見出しと他の家庭は残す)', dr.removed === 2 && dr.kept.length === 2 && dr.kept[1][1] === 'F0002');
+
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
 
