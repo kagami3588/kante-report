@@ -50,7 +50,7 @@ function makeEnv(activeEmail) {
   const resp = db.add('resp_CT0', ['タイムスタンプ', '調査用ID(運営から届いた専用リンクで自動入力されます。変更しないでください)', 'S1. x']);
   const rc = (n) => vm.runInContext('RC.' + n, env);
   function addFamily(o) {
-    const row = new Array(33).fill('');
+    const row = new Array(34).fill('');
     Object.entries({ id: 'F0001', ts: '2026-11-01T10:00:00', pname: '山田 花子', pgender: '女性', pbirth: '19850612', pemail: 'hanako@example.com', line: 'hana', officialLine: '追加しました', referrer: 'ナシ',
       cname: '山田 太郎', cgender: '男性', cbirth: '20100315', cemail: 'taro@example.com', status: '参加中', category: 'career' }).forEach(([k, v]) => { row[rc(k)] = (o && o[k] !== undefined) ? o[k] : v; });
     Object.keys(o || {}).forEach(k => { row[rc(k)] = o[k]; });
@@ -144,7 +144,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const ids = {}; const doc = { createElement: mk, createTextNode: (x) => { const e = mk('#text'); e._text = x; return e; }, getElementById: (id) => ids[id] || (ids[id] = mk(id)) };
   ids.q = mk('q'); ids.st = mk('st');
   const calls = [];
-  const gsr = () => { let ok, ng; const o = { withSuccessHandler: (f) => { ok = f; return o; }, withFailureHandler: (f) => { ng = f; return o; } }; ['apiSetSessionDate', 'apiSetStatus', 'apiSendLinks', 'apiDeleteFamily'].forEach(n => { o[n] = (...a) => { calls.push([n, a]); ok({ message: n + ' ok', data }); }; }); return o; };
+  const gsr = () => { let ok, ng; const o = { withSuccessHandler: (f) => { ok = f; return o; }, withFailureHandler: (f) => { ng = f; return o; } }; ['apiSetSessionDate', 'apiSetStatus', 'apiSendLinks', 'apiDeleteFamily', 'apiEndSession'].forEach(n => { o[n] = (...a) => { calls.push([n, a]); ok({ message: n + ' ok', data }); }; }); return o; };
   const win = vm.createContext({ document: doc, window: {}, google: { script: { run: null } }, setTimeout: () => 1, clearTimeout: () => {} });
   win.window.google = win.google; win.google.script.run = gsr();
   vm.runInContext(src, win);
@@ -161,6 +161,8 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const inp = findAll(det, n => n.tag === 'input')[0]; inp.value = '2026-12-01';
   findAll(det, n => n.tag === 'button' && n._text === '保存')[0].onclick();
   t('画面: 鑑定日の保存で apiSetSessionDate("F0001", "2026-12-01")', calls.some(c => c[0] === 'apiSetSessionDate' && c[1][0] === 'F0001' && c[1][1] === '2026-12-01'));
+  const endBtn = findAll(findAll(ids.view, n => n.className === 'acts')[0], n => n.tag === 'button' && /セッション終了/.test(n._text))[0];
+  t('画面: 詳細に「セッション終了(アンケートを送る)」ボタンがあり、2回押して apiEndSession が呼ばれる', !!endBtn && (endBtn.onclick(), !calls.some(c => c[0] === 'apiEndSession')) && (endBtn.onclick(), calls.some(c => c[0] === 'apiEndSession' && c[1][0] === 'F0001')));
   const del = findAll(findAll(ids.view, n => n.className === 'acts')[0], n => n.tag === 'button' && /データを削除/.test(n._text))[0];
   del.onclick();
   t('画面: 削除ボタンも、1回目は確認表示のみ', !calls.some(c => c[0] === 'apiDeleteFamily'));
@@ -203,7 +205,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const GE = { GE1: '佐藤 一郎', GE2: '男性', GE3: '19800101', GE4: 'ichiro@example.com', GE5: 'ichiro@example.com', GE6: 'ichiro_line', GE8: '追加しました', GE9: 'ナシ', CONSENT_ALL: '全てに同意しました' };
   const E = makeEnv('');
   const r = E.run('submitApplication')('general', GE, '');
-  t('サイト申込(一般): 受付 → G0001・名簿に33列で登録', r.ok && E.roster.values.length === 2 && E.roster.values[1][0] === 'G0001' && E.roster.values[1].length === 33);
+  t('サイト申込(一般): 受付 → G0001・名簿に34列で登録', r.ok && E.roster.values.length === 2 && E.roster.values[1][0] === 'G0001' && E.roster.values[1].length === 34);
   t('サイト申込: 完了画面に鑑定料・お振込先・LINEを返す', /30,000円/.test(r.fee.join()) && /7332659/.test(r.bank.join()) && r.line === 'https://lin.ee/ewijo32');
   t('サイト申込: 申込者に受付メール(HTMLつき・お振込先入り)と、運営に通知', E.sent.some(m => m.to === 'ichiro@example.com' && /7332659/.test(m.body) && /7332659/.test(m.htmlBody)) && E.sent.some(m => m.to === 'op@example.com'));
   t('サイト申込: 送信ログに記録', E.sendlog.values.some(x => /申込受付/.test(x[2])));
@@ -239,7 +241,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-22-e/.test(pa.html) && /2026-10-22-e/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-22-f/.test(pa.html) && /2026-10-22-f/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -273,11 +275,14 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const rp = login('hanako@example.com');
   t('サイト入室: 保護者のメールアドレスなら、保護者用T0(PT0)が出る', rp.ok && rp.def.key === 'PT0');
   // 送信
-  const ans = { A1: '13', S1: '3：少しそう思う', B1: ['特にない'], EVIL: 'x' };
+  const fullAns = (def) => { const a = {}; def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { a[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.kind === 'age' ? '13' : q.choices[0]; }); return a; };
+  const ans = Object.assign(fullAns(r.def), { EVIL: 'x' });
+  const missing = E.run('surveySubmit')(r.token, { A1: '13' });
+  t('サイト送信: 未回答の必須の設問があると、記録せずに、案内を返す', !missing.ok && /まだ答えていない質問/.test(missing.message) && E.subs.values.length === 1);
   const before = E.subs.values.length;
   const sr = E.run('surveySubmit')(r.token, ans);
   const row = E.subs.values[E.subs.values.length - 1];
-  t('サイト送信: 回答DBに記録(調査用ID=F0001、フォーム=CT0)・長い形式の回答も入る', sr.ok && E.subs.values.length === before + 1 && row[2] === 'F0001' && row[4] === 'CT0' && E.long.values.length > 1 && E.long.values.some(x => x[1] === 'F0001' && x[5] === 'S1' && x[7] === 3));
+  t('サイト送信: 回答DBに記録(調査用ID=F0001、フォーム=CT0)・長い形式の回答も入る', sr.ok && E.subs.values.length === before + 1 && row[2] === 'F0001' && row[4] === 'CT0' && E.long.values.length > 1 && E.long.values.some(x => x[1] === 'F0001' && x[5] === 'S1' && x[7] === 4));
   t('サイト送信: お子様に受付確認メールが届く(回答内容は載らない)', E.sent.some(m => m.to === 'taro@example.com' && /受け付け/.test(m.subject + m.body)) && !E.sent.some(m => /少しそう思う/.test(m.body)));
   const again = E.run('surveySubmit')(r.token, ans);
   t('サイト送信: 同じ合い鍵での2回目は受け付けない(二重送信なし)', !again.ok && E.subs.values.length === before + 1);
@@ -313,7 +318,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const def = E.run('surveyClientDef_')('CT2');
   const pg = E.run('surveyPage_')();
   const src = pg.slice(pg.indexOf('<script>') + 8, pg.lastIndexOf('</script>'));
-  const mk = (tag) => { const e = { tag, children: [], style: {}, _text: '', className: '', disabled: false, value: '', checked: false, appendChild(c) { this.children.push(c); return c; }, set innerHTML(v) { this.children = []; this._text = ''; }, get innerHTML() { return ''; }, set textContent(v) { this._text = String(v); }, get textContent() { return this._text; } }; return e; };
+  const mk = (tag) => { const e = { tag, children: [], style: {}, _text: '', className: '', disabled: false, value: '', checked: false, classList: { toggle() {}, add() {}, remove() {} }, querySelector() { return null; }, scrollIntoView() {}, appendChild(c) { this.children.push(c); return c; }, set innerHTML(v) { this.children = []; this._text = ''; }, get innerHTML() { return ''; }, set textContent(v) { this._text = String(v); }, get textContent() { return this._text; } }; return e; };
   const ids = { app: mk('app'), foot: mk('foot') };
   const doc = { createElement: mk, getElementById: (id) => ids[id] || (ids[id] = mk(id)) };
   const calls = []; let pending = null;
@@ -338,9 +343,14 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const gateQ = def.blocks.find(b => b.type === 'q' && b.gate);
   let steps = 0, sawCond = false;
   const condTitle = def.blocks[firstCond].title;
-  while (btn('つぎへ →') && steps < 40) {
-    const radios = find(ids.app, n => n.tag === 'input' && n.type === 'radio');
-    radios.forEach(r => { if (r.value === 'いいえ') { r.checked = true; r.onchange(); } });
+  btn('つぎへ →').onclick();
+  t('画面(アンケート): 必須の設問が未回答のままだと、つぎへ進めず、案内が出る', find(ids.app, n => n.className === 'err').length > 0 && /ご回答をお願いします/.test(text(ids.app)) && find(ids.app, n => n.className === 'prog').length === 1 && !btn('← もどる'));
+  while (btn('つぎへ →') && steps < 60) {
+    const groups = {};
+    find(ids.app, n => n.tag === 'input' && n.type === 'radio').forEach(r => { (groups[r.name] = groups[r.name] || []).push(r); });
+    Object.values(groups).forEach(g => { const pick = g.find(r => r.value === 'いいえ') || g[0]; pick.checked = true; pick.onchange(); });
+    find(ids.app, n => n.tag === 'input' && n.type === 'checkbox').forEach(cb => { if (!cb.checked) { cb.checked = true; cb.onchange(); } });
+    find(ids.app, n => n.tag === 'input' && n.type === 'text').forEach(i => { i.value = '13'; i.oninput(); });
     if (text(ids.app).indexOf(condTitle) !== -1) sawCond = true;
     btn('つぎへ →').onclick(); steps++;
   }
@@ -351,6 +361,20 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('画面(アンケート): 送信で surveySubmit(合い鍵, 回答) が呼ばれ、非表示の設問の回答は含まれない', !!sub && sub[1] === 'T'.repeat(64) && sub[2][gateQ.id] === 'いいえ' && !Object.keys(sub[2]).some(k => { const q = def.blocks.find(b => b.id === k); return q && q.hiddenWhen && sub[2][q.hiddenWhen.id] === q.hiddenWhen.value; }));
   pending.ok({ ok: true });
   t('画面(アンケート): 送信が済むと、お礼の画面が出る', /ご回答ありがとうございました/.test(text(ids.app)));
+}
+{ // セッション終了ボタン
+  const E = makeEnv('me@example.com'); E.addFamily({}); E.addFamily({ id: 'G0001', category: 'general', cemail: '' });
+  const r = E.run('apiEndSession')('F0001');
+  t('セッション終了: 終了日時が名簿に記録され、鑑定直後(T1)のリンクが、保護者とお子様に1通ずつ届く', String(E.roster.values[1][E.rc('ended')]).length > 10 && String(E.roster.values[1][E.rc('T1')]).length > 10 && E.sent.length === 2 && E.sent.some(m => m.to === 'hanako@example.com') && E.sent.some(m => m.to === 'taro@example.com') && /鑑定直後/.test(E.sent[0].subject) && /送りました/.test(r.message));
+  const r2 = E.run('apiEndSession')('F0001');
+  t('セッション終了: 2回目は、T1を二重に送らない', E.sent.length === 2 && /すでに送信済み/.test(r2.message));
+  t('セッション終了: 進路相談以外・辞退した家庭・存在しないIDはエラー', !!throws(() => E.run('apiEndSession')('G0001')) && !!throws(() => E.run('apiEndSession')('F0099')));
+  E.addFamily({ id: 'F0002', pemail: 'p2@example.com', cemail: 'c2@example.com', status: '辞退' });
+  t('セッション終了: 辞退した家庭は送らない', !!throws(() => E.run('apiEndSession')('F0002')) && E.sent.length === 2);
+  const E3 = makeEnv('other@example.com'); E3.addFamily({});
+  t('セッション終了: 管理者以外は呼べない', /権限がありません/.test(throws(() => E3.run('apiEndSession')('F0001')) || ''));
+  const d = E.run('apiData')();
+  t('ダッシュボードのデータに、セッション終了日時が入る', !!d.families.find(f => f.id === 'F0001').ended);
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

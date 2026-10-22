@@ -106,7 +106,7 @@ var BEHAVIORS = [
 // ---------- 子ども:鑑定前 CT0 ----------
 SURVEY.forms.CT0 = {
   key: 'CT0', role: 'child', time: 'T0', title: '【子ども用】算命学の鑑定についてのアンケート(鑑定前)',
-  intro: 'このアンケートは、算命学の鑑定を受ける前の、あなたの考え方を知るためのものです。\n\n・正解はありません。感じたまま答えてください。\n・できれば最後まで答えてもらえると、とても助かります。答えにくい質問は、飛ばしても大丈夫です。途中でやめたくなったら、やめても大丈夫です。やめても、困ることはありません。\n・自由に書く欄には、名前や学校名などを書かないでください。\n・答えは、ふつうは家族にも鑑定をする人にも見せません。',
+  intro: 'このアンケートは、算命学の鑑定を受ける前の、あなたの考え方を知るためのものです。\n\n・正解はありません。感じたまま答えてください。\n・すべての質問に、答えてください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、困ることはありません。\n・自由に書く欄には、名前や学校名などを書かないでください。\n・答えは、ふつうは家族にも鑑定をする人にも見せません。',
   blocks: [
     ID_(),
     P_('A. 基本情報'),
@@ -160,7 +160,7 @@ SURVEY.forms.CT0 = {
 // ---------- 子ども:鑑定直後 CT1 ----------
 SURVEY.forms.CT1 = {
   key: 'CT1', role: 'child', time: 'T1', title: '【子ども用】算命学の鑑定についてのアンケート(鑑定直後)',
-  intro: 'このアンケートは、今回の鑑定を受けて感じたことを知るためのものです。\n\n・正解はありません。感じたまま答えてください。\n・できれば最後まで答えてもらえると、とても助かります。答えにくい質問は、飛ばしても大丈夫です。途中でやめたくなったら、やめても大丈夫です。やめても、困ることはありません。\n・自由に書く欄には、名前や学校名などを書かないでください。\n・答えは、ふつうは家族にも鑑定をする人にも見せません。',
+  intro: 'このアンケートは、今回の鑑定を受けて感じたことを知るためのものです。\n\n・正解はありません。感じたまま答えてください。\n・すべての質問に、答えてください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、困ることはありません。\n・自由に書く欄には、名前や学校名などを書かないでください。\n・答えは、ふつうは家族にも鑑定をする人にも見せません。',
   blocks: [
     P_('A. 鑑定満足度'),
     SG_('D1', '今回の算命学の鑑定に、どの程度満足しましたか。', 'SAT4', AXIS.SAT, '鑑定体験への評価(自己理解などの変化とは別指標)'),
@@ -221,7 +221,7 @@ SURVEY.forms.CT1 = {
   blocks.push(TX_('F10', '鑑定を受けてから、気になっていることや困ったことがあれば教えてください。', '気がかり・困りごと(任意)', { concern: true }));
   SURVEY.forms.CT2 = {
     key: 'CT2', role: 'child', time: 'T2', title: '【子ども用】算命学の鑑定についてのアンケート(鑑定から約3か月後)',
-    intro: 'このアンケートは、鑑定から約3か月たった今の、あなたの気持ちや様子を知るためのものです。\n\n・正解はありません。感じたまま答えてください。\n・できれば最後まで答えてもらえると、とても助かります。答えにくい質問は、飛ばしても大丈夫です。途中でやめたくなったら、やめても大丈夫です。やめても、困ることはありません。\n・自由に書く欄には、名前や学校名などを書かないでください。\n・答えは、ふつうは家族にも鑑定をする人にも見せません。',
+    intro: 'このアンケートは、鑑定から約3か月たった今の、あなたの気持ちや様子を知るためのものです。\n\n・正解はありません。感じたまま答えてください。\n・すべての質問に、答えてください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、困ることはありません。\n・自由に書く欄には、名前や学校名などを書かないでください。\n・答えは、ふつうは家族にも鑑定をする人にも見せません。',
     blocks: blocks
   };
 })();
@@ -229,7 +229,7 @@ SURVEY.forms.CT1 = {
 // ---------- 保護者:鑑定前 PT0 ----------
 SURVEY.forms.PT0 = {
   key: 'PT0', role: 'parent', time: 'T0', title: '【保護者用】算命学の鑑定についてのアンケート(鑑定前)',
-  intro: 'このアンケートは、鑑定を受ける前の、お子さまとのご様子を知るためのものです。\n\n・正解はありません。実際のご様子でお答えください。\n・できれば最後まで答えていただけると、とても助かります。答えにくい質問は、飛ばしても大丈夫です。途中でやめたくなったら、やめても大丈夫です。やめても、不利益はありません。\n・お子さまの回答は、見たり、聞き出したりしないでください(お子さまも保護者さまの回答は見ません)。\n・自由に書く欄には、個人が特定される情報を書かないでください。',
+  intro: 'このアンケートは、鑑定を受ける前の、お子さまとのご様子を知るためのものです。\n\n・正解はありません。実際のご様子でお答えください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、不利益はありません。\n・お子さまの回答は、見たり、聞き出したりしないでください(お子さまも保護者さまの回答は見ません)。\n・自由に書く欄には、個人が特定される情報を書かないでください。',
   blocks: [
     ID_(),
     P_('A. 基本情報'),
@@ -255,7 +255,7 @@ SURVEY.forms.PT0 = {
 // ---------- 保護者:鑑定直後 PT1 ----------
 SURVEY.forms.PT1 = {
   key: 'PT1', role: 'parent', time: 'T1', title: '【保護者用】算命学の鑑定についてのアンケート(鑑定直後)',
-  intro: 'このアンケートは、今回の鑑定を受けて感じたことを知るためのものです。\n\n・正解はありません。実際の感じ方でお答えください。\n・できれば最後まで答えていただけると、とても助かります。答えにくい質問は、飛ばしても大丈夫です。途中でやめたくなったら、やめても大丈夫です。やめても、不利益はありません。\n・お子さまの回答は、見たり、聞き出したりしないでください。\n・自由に書く欄には、個人が特定される情報を書かないでください。',
+  intro: 'このアンケートは、今回の鑑定を受けて感じたことを知るためのものです。\n\n・正解はありません。実際の感じ方でお答えください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、不利益はありません。\n・お子さまの回答は、見たり、聞き出したりしないでください。\n・自由に書く欄には、個人が特定される情報を書かないでください。',
   blocks: [
     ID_(),
     P_('A. 子どもへの新しい理解', { desc: '次の各項目について、あてはまるものを選んでください。' }),
@@ -277,7 +277,7 @@ SURVEY.forms.PT1 = {
 // ---------- 保護者:3か月後 PT2 ----------
 SURVEY.forms.PT2 = {
   key: 'PT2', role: 'parent', time: 'T2', title: '【保護者用】算命学の鑑定についてのアンケート(鑑定から約3か月後)',
-  intro: 'このアンケートは、鑑定から約3か月たった今のご様子を知るためのものです。\n\n・正解はありません。実際のご様子でお答えください。\n・できれば最後まで答えていただけると、とても助かります。答えにくい質問は、飛ばしても大丈夫です。途中でやめたくなったら、やめても大丈夫です。やめても、不利益はありません。\n・お子さまの回答は、見たり、聞き出したりしないでください。\n・自由に書く欄には、個人が特定される情報を書かないでください。',
+  intro: 'このアンケートは、鑑定から約3か月たった今のご様子を知るためのものです。\n\n・正解はありません。実際のご様子でお答えください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、不利益はありません。\n・お子さまの回答は、見たり、聞き出したりしないでください。\n・自由に書く欄には、個人が特定される情報を書かないでください。',
   blocks: [
     ID_(),
     P_('A. 親子の対話'),
@@ -369,7 +369,7 @@ var CONTACT_MAIL = 'kagami.3588@gmail.com';
 
 // 保護者向けの説明(同意書本体)。小学生向けの説明は含めない(別ページで任意に表示)
 var APPLY_EXPLAIN_1 = '算命学の鑑定プロジェクトにご関心をお寄せいただき、ありがとうございます。鑑定にあわせて、調査へのご協力をお願いしています。目的と個人情報は、責任を持ってお預かりします。以下をお読みいただき、ご理解のうえで、同意をお願いします。\n\n【1. 調査の目的】\n算命学の鑑定をきっかけに、お子様と保護者の方の、自分についての理解、相手(親・子)についての理解、親子の対話、将来についての考え方が、どのように変わるのか(または変わらないのか)を調べます。\n・この調査は、算命学が「当たるかどうか」を調べるものではありません。\n・鑑定の結果は、お子様の将来や能力を決めるものではありません。お子様が自分や家族について考える、一つのきっかけとしてご活用ください。\n・鑑定が良い変化をもたらすとは決めずに、変化があった場合も、なかった場合も、気持ちが落ち着かなくなった場合も、調べます。\n\n【2. ご協力いただくこと】\nアンケートに3回、ウェブ上で回答していただきます。\n・鑑定の前:お子様 約8〜10分、保護者 約6〜8分\n・鑑定の直後:お子様 約10分、保護者 約6分\n・鑑定の約3か月後:お子様 約9〜10分、保護者 約7分\n・お子様と保護者の方が、それぞれ別々に回答します。お子様用は、お子様ご本人が回答してください。別の端末、または別の場所で回答し、お互いの回答を見たり、聞き出したりしないでください。\n・自由に書く欄には、お名前や学校名など、個人が特定される情報は書かないでください。\n・アンケートの専用リンクは、お申込みいただいたメールアドレスに、それぞれの時期に届きます。';
-var APPLY_EXPLAIN_2 = '【3. ご協力は任意です】\n・ご協力は、ご自由な意思によるものです。答えにくい質問は、飛ばしても大丈夫です。途中でやめたくなったら、やめても大丈夫です。やめても、不利益はありません。\n・できれば最後まで答えていただけると、とても助かります。\n\n【4. 途中でやめた場合の回答の扱い】\n・途中でやめた場合は、それまでにご回答いただいた分を、調査に活用させていただきます。\n・アンケートにご回答いただいた時点で、そのご回答を調査に活用することに、同意いただいたものとみなします。\n・ご回答の削除をご希望の場合は、下の連絡先まで、お申し出ください。お申し出があれば、削除します。\n\n【5. ご回答の取り扱い】\n・ご回答は、鑑定を行うまで、確認しません。鑑定のあとのご回答は、責任者の' + RESPONSIBLE + 'が確認します。\n・お子様の回答の内容は、保護者の方にはお見せしません。保護者の方の回答も、お子様にはお見せしません。\n・ただし、お子様の安全に関わる心配がある場合は、お子様にお知らせしたうえで、必要最小限の連絡をすることがあります。';
+var APPLY_EXPLAIN_2 = '【3. ご協力は任意です】\n・ご協力は、ご自由な意思によるものです。すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、不利益はありません。\n・できれば最後まで答えていただけると、とても助かります。\n\n【4. 途中でやめた場合の回答の扱い】\n・途中でやめた場合は、それまでにご回答いただいた分を、調査に活用させていただきます。\n・アンケートにご回答いただいた時点で、そのご回答を調査に活用することに、同意いただいたものとみなします。\n・ご回答の削除をご希望の場合は、下の連絡先まで、お申し出ください。お申し出があれば、削除します。\n\n【5. ご回答の取り扱い】\n・ご回答は、鑑定を行うまで、確認しません。鑑定のあとのご回答は、責任者の' + RESPONSIBLE + 'が確認します。\n・お子様の回答の内容は、保護者の方にはお見せしません。保護者の方の回答も、お子様にはお見せしません。\n・ただし、お子様の安全に関わる心配がある場合は、お子様にお知らせしたうえで、必要最小限の連絡をすることがあります。';
 var APPLY_EXPLAIN_3 = '【6. 想定される負担と、気持ちへの影響】\n・アンケートに回答する時間の負担があります。\n・鑑定の内容やアンケートの質問によって、お子様や保護者の方が、不安な気持ちや、嫌な気持ちになることがあるかもしれません。そのようなときは、遠慮なく下の連絡先までご連絡ください。\n・鑑定の内容を理由に、お子様がやってみたかったことを諦めたり、保護者の方がお子様の選択を制限したりすることがないよう、お願いします。鑑定は、可能性を広げるための材料としてお使いください。\n\n【7. 個人情報の取り扱い】\nお預かりする個人情報(お名前、メールアドレスなど)は、責任を持ってお預かりします。\n・使う目的:鑑定をご提供するため(日程調整、ご連絡、アンケートのご案内)。\n・保管のしかた:アンケートのご回答とは別に保管し、運営(KAGAMI)のみが取り扱います。\n・保管の期間:このプロジェクトが終了するときまでを予定しています。\n・ご本人の同意なく、第三者にお渡しすることはありません。\n\n【8. アンケート結果の公開について】\n現在、予定はありませんが、今後、個人が特定されない匿名の形で、アンケートの結果を公開することがあります。\n・お名前・連絡先などの個人情報は、一切公開しません。\n・公開するのは、匿名の年齢・性別の区分と、集計した数値のみです。\n\n今後、個人が特定されない匿名にてアンケート結果を公開することに同意いただけますか? この点も含めて、同意をお願いします。\n\n【9. お問い合わせ】\n運営:KAGAMI\n責任者:' + RESPONSIBLE + '\n連絡先:' + CONTACT_MAIL;
 
 // お子様向けの説明(小学生にも分かる言いかた)。保護者が「見る」を選んだときだけ表示する
@@ -586,7 +586,7 @@ var SHEETS = {
 };
 
 var HEAD = {
-  roster: ['調査用ID', '申込日時', '保護者名(申込者名)', '保護者(申込者)の性別', '保護者(申込者)の生年月日', '保護者(申込者)メール', 'LINE検索ID', 'Instagram', '公式LINE追加', '紹介者', 'お子様名', 'お子様の性別', 'お子様の生年月日', 'お子様メール', '鑑定日(yyyy-mm-dd)', '参加状況(参加中/辞退/完了)', 'T0送信日時', 'T1送信日時', 'T2送信日時', '追加鑑定の対象者名', '追加鑑定の希望', '連絡事項(保護者・申込者)', 'お子様の連絡事項', 'メモ', '区分', '法人名', '部署・役職', '電話番号', '鑑定を受ける人数', '鑑定を受ける方(名前・性別・生年月日)', '請求書・領収書の宛名', 'ご希望の内容', 'プラン'],
+  roster: ['調査用ID', '申込日時', '保護者名(申込者名)', '保護者(申込者)の性別', '保護者(申込者)の生年月日', '保護者(申込者)メール', 'LINE検索ID', 'Instagram', '公式LINE追加', '紹介者', 'お子様名', 'お子様の性別', 'お子様の生年月日', 'お子様メール', '鑑定日(yyyy-mm-dd)', '参加状況(参加中/辞退/完了)', 'T0送信日時', 'T1送信日時', 'T2送信日時', '追加鑑定の対象者名', '追加鑑定の希望', '連絡事項(保護者・申込者)', 'お子様の連絡事項', 'メモ', '区分', '法人名', '部署・役職', '電話番号', '鑑定を受ける人数', '鑑定を受ける方(名前・性別・生年月日)', '請求書・領収書の宛名', 'ご希望の内容', 'プラン', 'セッション終了日時'],
   pending: ['受付日時', '区分', '名前', 'メールアドレス', 'お子様名 / 法人名', '要確認の理由', '連絡事項'],
   sendlog: ['日時', '調査用ID', '時点', '送信先', '結果'],
   submissions: ['submission_id', '回答日時', '調査用ID', '回答者区分', 'フォームID', '時点', '分析採用', 'フラグ', '回答数', '未回答数', '非表示数', '自由記述あり数', 'テスト'],
@@ -951,7 +951,7 @@ function processCareerApplication_(namedValues, existing, tsIso) {
     return { ok: false, reason: problems.join(' / '), pendingRow: [tsIso, CATEGORY_LABEL.career, a.AP1, a.AP2, a.CH1, problems.join(' / '), a.AP5] };
   }
   var id = nextId_((existing || []).map(function (e) { return e.id; }), 'F');
-  var row = [id, tsIso, a.AP1, a.AP6, a.AP7, a.AP2, a.AP8, a.AP9, a.AP10, a.AP11, a.CH1, a.CH2, a.CH3, a.CH4, '', '参加中', '', '', '', a.EX1, a.EX2, a.AP5, a.CH6, '', 'career', '', '', '', '', '', '', '', ''];
+  var row = [id, tsIso, a.AP1, a.AP6, a.AP7, a.AP2, a.AP8, a.AP9, a.AP10, a.AP11, a.CH1, a.CH2, a.CH3, a.CH4, '', '参加中', '', '', '', a.EX1, a.EX2, a.AP5, a.CH6, '', 'career', '', '', '', '', '', '', '', '', ''];
   return { ok: true, category: 'career', id: id, name: a.AP1, email: a.AP2, childName: a.CH1, childEmail: a.CH4, row: row };
 }
 
@@ -965,7 +965,7 @@ function readAnswers_(formDef, namedValues) {
   return a;
 }
 
-function blankRow_() { var r = []; for (var i = 0; i < 33; i++) r.push(''); return r; }
+function blankRow_() { var r = []; for (var i = 0; i < 34; i++) r.push(''); return r; }
 
 /** 一般鑑定者用の申込を処理する */
 function processGeneralApplication_(namedValues, existing, tsIso) {
@@ -1039,7 +1039,7 @@ function dropRowsById_(values, idCol, id) {
 }
 
 // 名簿の列の位置(0始まり。シートの列番号は +1)
-var RC = { id: 0, ts: 1, pname: 2, pgender: 3, pbirth: 4, pemail: 5, line: 6, insta: 7, officialLine: 8, referrer: 9, cname: 10, cgender: 11, cbirth: 12, cemail: 13, session: 14, status: 15, T0: 16, T1: 17, T2: 18, exName: 19, exPlan: 20, pnote: 21, cnote: 22, memo: 23, category: 24, company: 25, dept: 26, phone: 27, headcount: 28, targets: 29, invoice: 30, request: 31, plan: 32 };
+var RC = { id: 0, ts: 1, pname: 2, pgender: 3, pbirth: 4, pemail: 5, line: 6, insta: 7, officialLine: 8, referrer: 9, cname: 10, cgender: 11, cbirth: 12, cemail: 13, session: 14, status: 15, T0: 16, T1: 17, T2: 18, exName: 19, exPlan: 20, pnote: 21, cnote: 22, memo: 23, category: 24, company: 25, dept: 26, phone: 27, headcount: 28, targets: 29, invoice: 30, request: 31, plan: 32, ended: 33 };
 
 var LINK_TIMES = ['T0', 'T1', 'T2'];
 function isParticipating_(status) { var s = String(status || '').trim(); return s === '' || s === '参加中'; }
@@ -1082,7 +1082,7 @@ function buildLinkEmails_(time, p, urls) {
       (urls.site ? '■ アンケートのページ\n' + urls.parent + '\n(ページを開いたら、このメールを受け取ったメールアドレス(' + p.email + ')を入力してください。いま答えるアンケートが表示されます)\n\n' : '■ 保護者用アンケート\n' + urls.parent + '\n\n') +
       '【お願い】\n' +
       '・お子様用のアンケートのリンクは、お子様ご本人のメールアドレスにお送りしています。お子様の回答は、見たり、聞き出したりしないでください。\n' +
-      '・できれば最後まで答えていただけると、とても助かります。答えにくい質問は、飛ばしても大丈夫です。途中でやめたくなったら、やめても大丈夫です。\n' +
+      '・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n' +
       '・リンクは、他の方に転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。' + foot
   };
   var child = {
@@ -1092,7 +1092,7 @@ function buildLinkEmails_(time, p, urls) {
       '【お願い】\n' +
       '・正解はありません。思ったとおりに答えてください。\n' +
       '・お父さん・お母さんとは、別の場所(または別の端末)で、ひとりで答えてください。答えは、お父さん・お母さんには見せません。\n' +
-      '・できれば最後まで答えてもらえると、とても助かります。答えにくい質問は、飛ばしても大丈夫です。途中でやめたくなったら、やめても大丈夫です。やめても、困ることはありません。\n' +
+      '・すべての質問に、答えてください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、困ることはありません。\n' +
       '・リンクは、他の人に送らないでください。\n\n気になることがあれば、このメールに返信してください。' + foot
   };
   return { parent: parent, child: child };
@@ -1169,6 +1169,9 @@ function setValidationSafe_(item, validation) {
   catch (e) { Logger.log('【注意】入力チェックを設定できませんでした: ' + item.getTitle() + ' (' + e + ')。回答は受け付けたあとに、運営側のプログラムでも確認します。'); }
 }
 
+/** 設問が必須か。申込フォームは定義どおり。調査アンケートは、自由記述を除いて、すべて必須(調査用IDも必須) */
+function isReq_(def, q) { return def.category ? !!q.required : (q.kind === 'id' ? true : q.kind !== 'text'); }
+
 function buildFormFromDef_(def, ss, confirmMessage) {
   var form = FormApp.create(def.title);
   form.setDescription(def.intro);
@@ -1210,49 +1213,49 @@ function buildFormFromDef_(def, ss, confirmMessage) {
     } else if (b.kind === 'email') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireTextIsEmail().build());
-      it.setRequired(!!b.required);
+      it.setRequired(isReq_(def, b));
     } else if (b.kind === 'text1') {
       it = form.addTextItem().setTitle(title);
-      it.setRequired(!!b.required);
+      it.setRequired(isReq_(def, b));
     } else if (b.kind === 'birth') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern('^[0-9]{8}$').setHelpText('8桁の数字で入力してください。(例:20000218)').build());
-      it.setRequired(!!b.required);
+      it.setRequired(isReq_(def, b));
     } else if (b.kind === 'int') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern('^[0-9]{1,3}$').setHelpText('半角の数字で入力してください。').build());
-      it.setRequired(!!b.required);
+      it.setRequired(isReq_(def, b));
     } else if (b.kind === 'phone') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern('^[0-9\\-]{9,13}$').setHelpText('半角の数字(ハイフンは省略可)で入力してください。').build());
-      it.setRequired(!!b.required);
+      it.setRequired(isReq_(def, b));
     } else if (b.kind === 'katakana') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern('^[ァ-ヺー・\\s\u3000]+$').setHelpText('カタカナで入力してください。(いない場合は「ナシ」)').build());
       if (hint) it.setHelpText(hint);
-      it.setRequired(!!b.required);
+      it.setRequired(isReq_(def, b));
     } else if (b.kind === 'consent' || b.kind === 'check') {
       it = form.addCheckboxItem().setTitle(title);
       it.setChoices([it.createChoice(b.choices[0])]);
       if (b.help) it.setHelpText(b.help);
-      it.setRequired(!!b.required);
+      it.setRequired(isReq_(def, b));
     } else if (b.kind === 'age') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireNumberBetween(5, 25).setHelpText('数字(歳)で入力してください。').build());
-      it.setRequired(false);
+      it.setRequired(isReq_(def, b));
     } else if (b.kind === 'text') {
       it = form.addParagraphTextItem().setTitle(title);
-      it.setRequired(!!b.required);
+      it.setRequired(isReq_(def, b));
       if (b.note || hint) it.setHelpText([b.note, hint].filter(Boolean).join('\n'));
     } else if (b.kind === 'multi') {
       it = form.addCheckboxItem().setTitle(title);
       it.setChoices(choicesOf_(b).map(function (c) { return it.createChoice(c); }));
-      it.setRequired(false);
+      it.setRequired(isReq_(def, b));
       if (b.exclusive) it.setHelpText('「' + b.exclusive + '」を選ぶときは、他の項目は選ばないでください。');
     } else {
       it = form.addMultipleChoiceItem().setTitle(title);
       it.setChoices(choicesOf_(b).map(function (c) { return it.createChoice(c); }));
-      it.setRequired(!!b.required);
+      it.setRequired(isReq_(def, b));
       if (b.gate) pendingGates.push({ item: it, q: b, pageIndex: pages.length - 1 });
     }
   });
@@ -1392,7 +1395,7 @@ function readRoster_(reg) {
       sessionDate: ds(r[RC.session]), status: r[RC.status], sent: { T0: ts(r[RC.T0]), T1: ts(r[RC.T1]), T2: ts(r[RC.T2]) },
       exName: t(r[RC.exName]), exPlan: t(r[RC.exPlan]), pNote: t(r[RC.pnote]), cNote: t(r[RC.cnote]), memo: t(r[RC.memo]),
       category: t(r[RC.category]) || 'career', company: t(r[RC.company]), dept: t(r[RC.dept]), phone: t(r[RC.phone]), headcount: t(r[RC.headcount]),
-      targets: t(r[RC.targets]), invoice: t(r[RC.invoice]), request: t(r[RC.request]), plan: t(r[RC.plan]) };
+      targets: t(r[RC.targets]), invoice: t(r[RC.invoice]), request: t(r[RC.request]), plan: t(r[RC.plan]), ended: ts(r[RC.ended]) };
   }).filter(function (r) { return r.id; });
 }
 
@@ -1693,7 +1696,7 @@ function checkReminders() {
   sendMail_(to, '[調査アンケート] 本日のリマインド対象 ' + due.length + '件(' + today + ')',
     '次の家庭・フォームが未回答です。声かけをお願いします。リマインドは1つのフォームにつき最大2回です。\n' +
     '辞退された家庭には送らないでください(名簿の「参加状況」を「辞退」にすると、通知が止まります)。\n\n' + lines.join('\n') +
-    '\n\n--- 文面の例(強制にならないようにしてください) ---\nアンケートへのご協力ありがとうございます。まだ回答がお済みでないようでしたら、お時間のあるときに、できる範囲でご回答いただけると助かります。答えにくい質問は飛ばしていただいて大丈夫です。\n' + reg.getUrl());
+    '\n\n--- 文面の例(強制にならないようにしてください) ---\nアンケートへのご協力ありがとうございます。まだ回答がお済みでないようでしたら、お時間のあるときに、できる範囲でご回答いただけると助かります。答えにくいときや、やめたいときは、やめていただいて大丈夫です。\n' + reg.getUrl());
 }
 
 
@@ -1739,7 +1742,7 @@ function buildDashboardData_(roster, pending, subs, safety, today) {
       officialLine: f.officialLine, referrer: f.referrer, childName: f.childName, cGender: f.cGender, cBirth: f.cBirth, childEmail: f.childEmail,
       sessionDate: f.sessionDate, status: String(f.status || '参加中'), sent: f.sent, resp: resp, exName: f.exName, exPlan: f.exPlan,
       pNote: f.pNote, cNote: f.cNote, memo: f.memo, company: f.company, dept: f.dept, phone: f.phone, headcount: f.headcount,
-      targets: f.targets, invoice: f.invoice, request: f.request, plan: f.plan, next: nextAction_(f, resp, today) };
+      targets: f.targets, invoice: f.invoice, request: f.request, plan: f.plan, ended: f.ended, next: nextAction_(f, resp, today) };
   });
   var active = roster.filter(function (f) { return isParticipating_(f.status); });
   var careerActive = active.filter(function (f) { return (f.category || 'career') === 'career'; });
@@ -1865,6 +1868,26 @@ function apiSendLinks(time, ids) {
   return { sent: res.ok, ng: res.ng, message: TIME_LABEL[time] + 'のリンクを、' + res.ok + '家庭に送りました' + (res.ng ? '(失敗:' + res.ng + '家庭。「送信ログ」を確認してください)' : ''), data: dashboardData_(reg) };
 }
 
+/** 管理画面の「セッション終了」: 終了日時を記録し、鑑定直後のアンケート(T1)を、保護者・お子様に送る。進路相談の家庭のみ */
+function apiEndSession(id) {
+  var reg = apiGuard_();
+  var fam = findFamily_(reg, id);
+  if (fam.category !== 'career') throw new Error('セッション終了のアンケートは、進路相談の家庭のみです');
+  if (!isParticipating_(fam.status)) throw new Error('この家庭は、参加中ではありません(辞退・完了・削除済み)');
+  if (!isEmail_(fam.email) || !isEmail_(fam.childEmail)) throw new Error('保護者・お子様のメールアドレスが、名簿に入っていません');
+  var sh = reg.getSheetByName(SHEETS.roster);
+  if (!fam.ended) sh.getRange(fam.row, RC.ended + 1).setValue(nowStr_());
+  var msg;
+  if (fam.sent && fam.sent.T1) {
+    msg = id + ' のセッション終了を記録しました(鑑定直後のアンケートは、すでに送信済みです)';
+  } else {
+    if (MailApp.getRemainingDailyQuota() < 2) throw new Error('今日の送信上限に足りません');
+    var res = sendLinksToFamilies_(reg, 'T1', [fam]);
+    msg = res.ok ? id + ' のセッション終了を記録し、鑑定直後のアンケートを、保護者とお子様に送りました' : id + ' のセッション終了を記録しましたが、アンケートの送信に失敗しました(「送信ログ」を確認してください)';
+  }
+  return { message: msg, data: dashboardData_(reg) };
+}
+
 /** 削除のお申し出があった方のデータを削除する */
 function apiDeleteFamily(id) {
   var reg = apiGuard_();
@@ -1917,6 +1940,7 @@ var DASHBOARD_HTML = [
   'function actions(f){var a=el("div","acts"),gone=f.status==="削除済み";',
   'var l1=el("label",null,"鑑定日");a.appendChild(l1);var di=el("input");di.type="date";di.value=f.sessionDate||"";di.disabled=gone;a.appendChild(di);var sv=el("button","act","保存");sv.disabled=gone;sv.onclick=function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();call("apiSetSessionDate",[f.id,di.value])};a.appendChild(sv);',
   'var l2=el("label",null,"参加状況");a.appendChild(l2);var se=el("select");["参加中","辞退","完了"].forEach(function(x){var o=el("option",null,x);o.value=x;if(f.status===x)o.selected=true;se.appendChild(o)});se.disabled=gone;a.appendChild(se);var sv2=el("button","act","保存");sv2.disabled=gone;sv2.onclick=function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();call("apiSetStatus",[f.id,se.value])};a.appendChild(sv2);',
+  'if(f.category==="career"&&!gone&&f.status==="参加中"){a.appendChild(armBtn(f.sent.T1?"セッション終了を記録(送信済み)":"セッション終了(アンケートを送る)",function(){call("apiEndSession",[f.id])}))}',
   'if(f.category==="career"&&!gone){["T0","T1","T2"].forEach(function(t){a.appendChild(armBtn(t+"のリンクを送る",function(){call("apiSendLinks",[t,[f.id]])}))})}',
   'if(!gone)a.appendChild(armBtn("データを削除",function(){call("apiDeleteFamily",[f.id])},"danger"));return a}',
   'function renderBulk(){var b=document.getElementById("bulk");b.innerHTML="";if(tab!=="career")return;var s=DATA.summary;["T0","T1","T2"].forEach(function(t){var n=s.toSend[t];var x=armBtn(t+"のリンクを、条件に合う全家庭に送る ("+n+")",function(){call("apiSendLinks",[t,null])});x.disabled=!n;b.appendChild(x)})}',
@@ -1934,7 +1958,7 @@ var DASHBOARD_HTML = [
   'if(f.category==="career")mid=[["保護者",f.name+"("+f.pGender+" / "+f.pBirth+")"],["保護者メール",f.email],["LINE検索ID",f.line],["Instagram",f.insta||"-"],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["お子様",f.childName+"("+f.cGender+" / "+f.cBirth+")"],["お子様メール",f.childEmail],["追加の鑑定",(f.exName||"-")+" "+(f.exPlan||"")],["保護者の連絡事項",f.pNote||"-"],["お子様の連絡事項",f.cNote||"-"]];',
   'else if(f.category==="general")mid=[["お名前",f.name+"("+f.pGender+" / "+f.pBirth+")"],["メール",f.email],["LINE検索ID",f.line],["Instagram",f.insta||"-"],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["ご希望の内容",f.request||"-"],["自由記入欄",f.pNote||"-"]];',
   'else mid=[["法人名",f.company],["部署・役職",f.dept||"-"],["ご担当者",f.name],["メール",f.email],["電話番号",f.phone],["LINE検索ID",f.line],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["プラン",f.plan||"-"],["鑑定を受ける人数",f.headcount],["鑑定を受ける方",f.targets],["ご希望の内容",f.request||"-"],["請求書・領収書の宛名",f.invoice||"-"],["自由記入欄",f.pNote||"-"]];',
-  'var tail=[["鑑定日",f.sessionDate||"未入力"],["参加状況",f.status]];if(f.category==="career")tail.push(["送信日時 T0/T1/T2",[f.sent.T0,f.sent.T1,f.sent.T2].map(function(x){return x||"-"}).join(" / ")]);tail.push(["メモ",f.memo||"-"]);return base.concat(mid,tail)}',
+  'var tail=[["セッション終了",f.ended||"-"],["鑑定日",f.sessionDate||"未入力"],["参加状況",f.status]];if(f.category==="career")tail.push(["送信日時 T0/T1/T2",[f.sent.T0,f.sent.T1,f.sent.T2].map(function(x){return x||"-"}).join(" / ")]);tail.push(["メモ",f.memo||"-"]);return base.concat(mid,tail)}',
   'function dl(f){var d=el("dl","dl");fields(f).forEach(function(r){d.appendChild(el("dt",null,r[0]));d.appendChild(el("dd",null,r[1]))});return d}',
   'function renderFam(v){var q=document.getElementById("q").value.trim().toLowerCase(),st=document.getElementById("st").value;',
   'var rows=DATA.families.filter(function(f){if(f.category!==tab)return false;if(st&&f.status!==st)return false;if(!q)return true;return [f.id,f.name,f.childName,f.company,f.email,f.childEmail,f.line,f.insta,f.referrer].join(" ").toLowerCase().indexOf(q)>=0});',
@@ -2055,7 +2079,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-22-e';
+var SITE_VERSION = '2026-10-22-f';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2262,7 +2286,7 @@ function surveyClientDef_(key) {
     key: key, role: d.role, title: d.title, intro: d.intro,
     blocks: d.blocks.filter(function (b) { return !(b.type === 'q' && b.kind === 'id'); }).map(function (b) {
       if (b.type === 'page') return { type: 'page', title: String(b.title).replace(/^[A-Z](-[0-9]+)?\.\s*/, ''), desc: b.desc || '', conditional: !!b.conditional };
-      return { type: 'q', id: b.id, text: b.text, kind: b.kind, choices: choicesOf_(b), exclusive: b.exclusive || '', hiddenWhen: b.hiddenWhen || null, gate: b.gate || null, note: b.note || '' };
+      return { type: 'q', id: b.id, text: b.text, kind: b.kind, required: isReq_(d, b), choices: choicesOf_(b), exclusive: b.exclusive || '', hiddenWhen: b.hiddenWhen || null, gate: b.gate || null, note: b.note || '' };
     })
   };
 }
@@ -2292,6 +2316,20 @@ function sanitizeSurveyAnswers_(key, rid, answers) {
     nv[qTitle_(q)] = [out];
   });
   return nv;
+}
+
+/** 必須の設問(分岐で非表示のものを除く)に、未回答がないか。あれば、その設問の文を返す */
+function surveyMissing_(key, answers) {
+  answers = answers || {};
+  var d = SURVEY.forms[key], miss = null;
+  questionsOf_(key).forEach(function (q) {
+    if (miss || q.kind === 'id' || !isReq_(d, q)) return;
+    if (q.hiddenWhen && String(answers[q.hiddenWhen.id] === undefined ? '' : answers[q.hiddenWhen.id]) === q.hiddenWhen.value) return;
+    var v = answers[q.id];
+    var empty = q.kind === 'multi' ? !(Array.isArray(v) && v.length) : (v === undefined || v === null || String(v).trim() === '');
+    if (empty) miss = q.text;
+  });
+  return miss;
 }
 
 function surveyAnswered_(db) {
@@ -2339,6 +2377,8 @@ function surveySubmit(token, answers) {
     var reg = regSS_(), db = dbSS_();
     var due = surveyDue_(readRoster_(reg).filter(function (f) { return f.id === sess.id; })[0] || { id: sess.id, sent: {} }, sess.role, surveyAnswered_(db));
     if (due.state !== 'due' || due.key !== sess.key) { cache.remove('sv_tok_' + token); return { ok: false, message: 'このアンケートには、すでにご回答いただいています。ありがとうございました。', done: true }; }
+    var missing = surveyMissing_(sess.key, answers);
+    if (missing) return { ok: false, message: 'まだ答えていない質問があります。すべての質問に、ご回答をお願いします。(' + missing.slice(0, 40) + ')' };
     recordSubmission_(db, reg, sess.key, sanitizeSurveyAnswers_(sess.key, sess.id, answers));
     cache.remove('sv_tok_' + token);
     return { ok: true };
@@ -2421,7 +2461,7 @@ function surveyClient_() {
   }
 
   function renderQ(q, card) {
-    var box = el('div', 'q'); box.appendChild(el('label', 't', q.text));
+    var box = el('div', 'q'); var lt = el('label', 't', q.text); if (q.required) lt.appendChild(el('span', 'req', '必須')); box.appendChild(lt); q.box = box;
     if (q.note) box.appendChild(el('div', 'help', q.note));
     if (q.kind === 'single') {
       (q.choices || []).forEach(function (ch) {
@@ -2451,6 +2491,20 @@ function surveyClient_() {
     card.appendChild(box);
   }
 
+  /** そのページの必須の設問(分岐で非表示のものを除く)に、未回答がないか。あれば、赤字で知らせて、false を返す */
+  function pageOk(p) {
+    var first = null;
+    p.qs.forEach(function (q) {
+      if (hidden(q) || !q.required || !q.box) return;
+      var v = state.ans[q.id], empty = q.kind === 'multi' ? !(v && v.length) : (v === undefined || v === null || String(v).trim() === '');
+      q.box.classList.toggle('bad', empty);
+      var old = q.box.querySelector('.err'); if (old) old.parentNode.removeChild(old);
+      if (empty) { var e = el('div', 'err', 'ご回答をお願いします'); q.box.appendChild(e); if (!first) first = q.box; }
+    });
+    if (first && first.scrollIntoView) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return !first;
+  }
+
   /** keep=true: 画面の位置を保ったまま、選択に合わせて描き直す */
   function show(keep) {
     var y = window.pageYOffset || 0;
@@ -2468,7 +2522,7 @@ function surveyClient_() {
     var row = el('div', 'nav');
     if (state.idx > 0) { var back = el('button', 'btn ghost', '← もどる'); back.type = 'button'; back.onclick = function () { state.idx--; show(); window.scrollTo(0, 0); }; row.appendChild(back); }
     var next = el('button', 'btn', last ? '送信する' : 'つぎへ →'); next.type = 'button';
-    next.onclick = function () { if (last) submit(next); else { state.idx++; show(); window.scrollTo(0, 0); } };
+    next.onclick = function () { if (!pageOk(p)) return; if (last) submit(next); else { state.idx++; show(); window.scrollTo(0, 0); } };
     row.appendChild(next); app.appendChild(row);
     if (keep) window.scrollTo(0, y);
   }

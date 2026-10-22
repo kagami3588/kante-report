@@ -94,8 +94,9 @@ for (const k of ['CT0', 'CT1', 'CT2', 'PT0', 'PT1', 'PT2']) {
   t(k + ' 進捗バーが有効(ページの題名に番号は付けない)', f.settings.progress === true && f.items.filter(i => i.type === 'PAGE').every(i => !/【\d+\/\d+】/.test(i.title)));
   t(k + ' 質問・ページの題名に、設問番号や区分の記号(D1.・A.)が付かない', f.items.every(i => !/^[A-Z][A-Za-z0-9_\-]*\.\s/.test(i.title)));
   // 質問の必須: RID/CONSENT以外は任意
-  const badReq = f.items.filter(i => i.required && !/^(調査用ID|上の内容について)/.test(i.title) && i.type !== 'PAGE' && i.type !== 'HEADER').map(i => i.title);
-  t(k + ' 同意・IDを除き、すべて任意回答(回答を強制しない)', badReq.length === 0, badReq.join(' | '));
+  const reqOk = f.items.filter(i => i.type !== 'PAGE' && i.type !== 'HEADER').every(i => i.type === 'PARA' ? !i.required : i.required);
+  const badReq = f.items.filter(i => i.type !== 'PAGE' && i.type !== 'HEADER' && (i.type === 'PARA' ? i.required : !i.required)).map(i => i.title);
+  t(k + ' 自由記述を除いて、すべての設問が必須(自由記述は任意)', reqOk, badReq.join(' | '));
   // ゲート
   const gates = run(`questionsOf_("${k}").filter(q=>q.gate).map(q=>q.id)`);
   for (const gid of gates) {
@@ -293,9 +294,9 @@ const isQ = (def, re) => (i) => run(`SURVEY.${def}.blocks.filter(b => b.type ===
 const NVA = (o) => { const base = { AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'hanako@example.com', AP3: 'hanako@example.com', AP8: 'hanako_line', AP9: '', AP10: '追加しました', AP11: 'ナシ', AP5: '', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH4: 'taro@example.com', CH5: 'taro@example.com', CH6: '', EX1: '', EX2: '', AP_VIEW: '', CONSENT: '同意します', CONSENT_CHILD: '同意します', CONSENT_ALL: '全てに同意しました', CONSENT_ANON: '同意します' }; const m = Object.assign(base, o); const out = {}; ap.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
 const pa = vm.runInContext('processApplication_', ctx);
 let pr = pa(NVA({}), [], '2026-11-01T10:00:00');
-t('申込OK → F0001を発行し、名簿の行(33列)を作る', pr.ok && pr.id === 'F0001' && pr.row.length === 33 && pr.row[0] === 'F0001' && pr.row[15] === '参加中' && pr.row[run('RC.category')] === 'career');
+t('申込OK → F0001を発行し、名簿の行(34列)を作る', pr.ok && pr.id === 'F0001' && pr.row.length === 34 && pr.row[0] === 'F0001' && pr.row[15] === '参加中' && pr.row[run('RC.category')] === 'career');
 t('名簿の列の位置(RC)と行の内容が一致', pr.row[run('RC.pname')] === '山田 花子' && pr.row[run('RC.pgender')] === '女性' && pr.row[run('RC.pbirth')] === '19850612' && pr.row[run('RC.pemail')] === 'hanako@example.com' && pr.row[run('RC.line')] === 'hanako_line' && pr.row[run('RC.officialLine')] === '追加しました' && pr.row[run('RC.referrer')] === 'ナシ' && pr.row[run('RC.cname')] === '山田 太郎' && pr.row[run('RC.cgender')] === '男性' && pr.row[run('RC.cbirth')] === '20100315' && pr.row[run('RC.cemail')] === 'taro@example.com' && pr.row[run('RC.session')] === '' && pr.row[run('RC.status')] === '参加中');
-t('名簿の見出し数 = 行の列数', run('HEAD.roster.length') === 33 && run('RC.memo') === 23 && run('RC.request') === 31 && run('RC.plan') === 32);
+t('名簿の見出し数 = 行の列数', run('HEAD.roster.length') === 34 && run('RC.memo') === 23 && run('RC.request') === 31 && run('RC.plan') === 32 && run('RC.ended') === 33);
 pr = pa(NVA({ EX1: '山田 次郎', EX2: 'レポートのみ 5,000円' }), [], 't');
 t('追加の鑑定の名前と希望が名簿に入る', pr.ok && pr.row[run('RC.exName')] === '山田 次郎' && pr.row[run('RC.exPlan')] === 'レポートのみ 5,000円');
 pr = pa(NVA({ EX2: 'オンライン鑑定希望 10,000円' }), [], 't');
@@ -439,7 +440,7 @@ t('一般・法人の説明文(同意の文面)に費用・謝礼・補助金の
 const NVG = (o) => { const base = { GE1: '佐藤 一郎', GE2: '男性', GE3: '19800101', GE4: 'ichiro@example.com', GE5: 'ichiro@example.com', GE6: 'ichiro_line', GE7: '', GE8: '追加しました', GE9: 'ナシ', GE10: '', GE11: '', CONSENT_ALL: '全てに同意しました' }; const m = Object.assign(base, o); const out = {}; apG.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
 const NVB = (o) => { const base = { CO1: '株式会社サンプル', CO2: '総務部', CO3: '鈴木 花子', CO4: 'suzuki@sample.co.jp', CO5: 'suzuki@sample.co.jp', CO6: '03-1234-5678', CO7: 'suzuki_line', CO8: '追加しました', CO9: 'ナシ', CO10: '2名追加', CO11: '山田 太郎/男性/19850612\n田中 次郎/男性/19900101\n佐藤 三郎/男性/19800101', CO12: '', CO13: '株式会社サンプル 御中', CO14: '', CONSENT_ALL: '全てに同意しました' }; const m = Object.assign(base, o); const out = {}; apB.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
 let pg = pa(NVG({}), [], '2026-11-01T10:00:00', 'general');
-t('一般の申込OK → G0001を発行し、区分=general、名簿の列に入る', pg.ok && pg.id === 'G0001' && pg.row.length === 33 && pg.row[run('RC.category')] === 'general' && pg.row[run('RC.pname')] === '佐藤 一郎' && pg.row[run('RC.pbirth')] === '19800101' && pg.row[run('RC.line')] === 'ichiro_line' && pg.row[run('RC.cname')] === '');
+t('一般の申込OK → G0001を発行し、区分=general、名簿の列に入る', pg.ok && pg.id === 'G0001' && pg.row.length === 34 && pg.row[run('RC.category')] === 'general' && pg.row[run('RC.pname')] === '佐藤 一郎' && pg.row[run('RC.pbirth')] === '19800101' && pg.row[run('RC.line')] === 'ichiro_line' && pg.row[run('RC.cname')] === '');
 pg = pa(NVG({}), [{ id: 'F0005', category: 'career', email: 'a@example.com' }, { id: 'G0003', category: 'general', email: 'z@example.com', name: 'z' }], 't', 'general');
 t('一般のIDは、進路(F)と別の連番(G0004)', pg.ok && pg.id === 'G0004');
 pg = pa(NVG({ GE5: 'x@example.com' }), [], 't', 'general');
