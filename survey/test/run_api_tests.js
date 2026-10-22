@@ -449,5 +449,19 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('文面: 空欄の項目は、既定の文面に戻る。他の文面は、変わらない', E.run('getTemplates_')(E.reg).remind1_child.body === defaults.remind1_child.body && /ひとりで/.test(m.child.body));
   t('文面: 既定の文面に、費用・謝礼・円の記載がない', !/費用|謝礼|円/.test(JSON.stringify(Object.values(defaults))));
 }
+{ // メールの折り返し・未回答の一言
+  const E = makeEnv('me@example.com');
+  E.run('sendMail_')('a@example.com', '件名', 'こんにちは。これは長い一文です。\n次の行です。\nhttps://site.example/exec?page=survey\n<script>x</script>');
+  const m = E.sent[0];
+  t('メール: HTML本文も付く(画面の幅に合わせて自然に折り返す)。改行は<br>、URLはリンク、記号は無害化される', /<br>/.test(m.htmlBody) && /<a href="https:\/\/site\.example\/exec\?page=survey">/.test(m.htmlBody) && !/<script>/.test(m.htmlBody) && /&lt;script&gt;/.test(m.htmlBody) && /line-height/.test(m.htmlBody) && /^こんにちは/.test(m.body));
+  const p = { name: '山田 花子', email: 'h@example.com', childName: '太郎', childEmail: 'c@example.com', sessionDate: '2026-12-10' };
+  const urls = { parent: 'https://site.example/x?page=survey', child: 'https://site.example/x?page=survey' };
+  const t0 = E.run('buildLinkEmails_')('T0', p, urls), t1 = E.run('buildLinkEmails_')('T1', p, urls);
+  t('文面: 鑑定前アンケートの案内に、「未回答の方に関しては、算命学の鑑定結果には反映されません」の一言が入る(保護者・お子様)', /※未回答の方に関しては、算命学の鑑定結果には反映されません。/.test(t0.parent.body) && /こたえていない人は、算命学の鑑定の結果には入りません/.test(t0.child.body) && !/反映されません/.test(t1.parent.body));
+  t('文面: 一言が空の回(T1・T2)でも、空行が3つ以上続かない', !/\n{3,}/.test(t1.parent.body + t1.child.body));
+  const sentences = [t0.parent.body, t0.child.body].join('\n').split('\n').filter(l => l.trim() !== '');
+  const brokenMid = sentences.filter(l => /[ぁ-んァ-ン一-龠]$/.test(l) && !/^(■|【)/.test(l) && !/(様|さん)$/.test(l) && l.length > 28);
+  t('文面: 文章の途中で改行しない(長い一文は、1行のまま)', brokenMid.length === 0, brokenMid.join(' | '));
+}
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

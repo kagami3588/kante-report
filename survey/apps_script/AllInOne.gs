@@ -1066,10 +1066,10 @@ function linksDue_(rows, time, today, selectedSet) {
 var TIME_LABEL = { T0: '鑑定前', T1: '鑑定直後', T2: '鑑定から約3か月後' };
 
 // ---------- メールの文面(台帳の「メール文面」シートで編集できる) ----------
-var TEMPLATE_VARS_HELP = '使える差し込み: {{宛名}} {{保護者名}} {{お子様名}} {{鑑定日}} {{アンケート名}} {{アンケートURL}} {{入力案内}} {{期限}} {{所要時間}} {{アンケート状況}} {{署名}} {{連絡先}}';
+var TEMPLATE_VARS_HELP = '使える差し込み: {{宛名}} {{保護者名}} {{お子様名}} {{鑑定日}} {{アンケート名}} {{アンケートURL}} {{入力案内}} {{期限}} {{所要時間}} {{アンケート状況}} {{未回答の注意}} {{署名}} {{連絡先}}';
 
-var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}のアンケート(保護者用)をご案内します。{{期限}}ご回答ください。(所要時間の目安:{{所要時間}})\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・お子様用のアンケートは、お子様ご本人のメールアドレスにお送りしています。お子様の回答は、見たり、聞き出したりしないでください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n・リンクは、他の方に転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。\n\n{{署名}}';
-var TEMPLATE_BASE_CHILD = '{{宛名}}\n\n{{アンケート名}}のアンケートのご案内です。{{期限}}答えてください。(所要時間の目安:{{所要時間}})\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・正解はありません。思ったとおりに答えてください。\n・お父さん・お母さんとは、別の場所(または別の端末)で、ひとりで答えてください。答えは、お父さん・お母さんには見せません。\n・すべての質問に、答えてください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、困ることはありません。\n・リンクは、他の人に送らないでください。\n\n気になることがあれば、このメールに返信してください。\n\n{{署名}}';
+var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}のアンケート(保護者用)をご案内します。{{期限}}ご回答ください。(所要時間の目安:{{所要時間}})\n{{未回答の注意}}\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・お子様用のアンケートは、お子様ご本人のメールアドレスにお送りしています。お子様の回答は、見たり、聞き出したりしないでください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n・リンクは、他の方に転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。\n\n{{署名}}';
+var TEMPLATE_BASE_CHILD = '{{宛名}}\n\n{{アンケート名}}のアンケートのご案内です。{{期限}}答えてください。(所要時間の目安:{{所要時間}})\n{{未回答の注意}}\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・正解はありません。思ったとおりに答えてください。\n・お父さん・お母さんとは、別の場所(または別の端末)で、ひとりで答えてください。答えは、お父さん・お母さんには見せません。\n・すべての質問に、答えてください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、困ることはありません。\n・リンクは、他の人に送らないでください。\n\n気になることがあれば、このメールに返信してください。\n\n{{署名}}';
 
 var DEFAULT_TEMPLATES = (function () {
   var out = [];
@@ -1119,6 +1119,7 @@ function templateVars_(time, role, p, url) {
     'アンケートURL': url || '',
     '入力案内': url ? '(ページを開いたら、このメールを受け取ったメールアドレス(' + (addr || '') + ')を入力してください。いま答えるアンケートが表示されます)' : '',
     'アンケート状況': p.surveyNote || '',
+    '未回答の注意': time === 'T0' ? (parent ? '※未回答の方に関しては、算命学の鑑定結果には反映されません。' : '※こたえていない人は、算命学の鑑定の結果には入りません。') : '',
     '署名': CONFIG.SENDER_NAME + '\n' + CONFIG.CONTACT_MAIL, '連絡先': CONFIG.CONTACT_MAIL
   };
 }
@@ -1130,7 +1131,7 @@ function buildLinkEmails_(time, p, urls, templates) {
   function one(role, url) {
     var t = T[time + '_' + role];
     var v = templateVars_(isSurvey ? time : '', role, p, url);
-    return { subject: renderTemplate_(t.subject, v), body: renderTemplate_(t.body, v) };
+    return { subject: renderTemplate_(t.subject, v), body: renderTemplate_(t.body, v).replace(/\n{3,}/g, '\n\n') };
   }
   return { parent: one('parent', urls && urls.parent), child: one('child', urls && urls.child) };
 }
@@ -1457,9 +1458,15 @@ function getPrefilledUrl_(formKey, id) {
   return c.form.createResponse().withItemResponse(c.item.asTextItem().createResponse(id)).toPrefilledUrl();
 }
 
+/** 文章の途中で折り返されないよう、本文をHTMLにする(改行は、段落の区切りだけ。画面の幅に合わせて、自然に折り返される)。URLはリンクにする */
+function plainToHtml_(body) {
+  var t = escHtml_(String(body || '')).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
+  return '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Hiragino Sans\',\'Yu Gothic\',Meiryo,sans-serif;font-size:15px;line-height:1.9;color:#222;max-width:640px;">' + t.replace(/\r?\n/g, '<br>') + '</div>';
+}
+
 function sendMail_(to, subject, body, html) {
   var o = { to: to, subject: subject, body: body, name: CONFIG.SENDER_NAME, replyTo: CONFIG.CONTACT_MAIL };
-  if (html) o.htmlBody = html;
+  o.htmlBody = html || plainToHtml_(body);
   MailApp.sendEmail(o);
 }
 
@@ -2750,7 +2757,7 @@ function runAutomation_(reg, db) {
     if (MailApp.getRemainingDailyQuota() < 2) { errors.push('今日の送信上限に足りないため、' + t.id + ' の ' + t.kind + ' は送りませんでした(明日の朝に再実行されます)'); return; }
     if (t.kind === 'remind7' || t.kind === 'remind1') {
       var note = '';
-      if (t.kind === 'remind1') note = (answered[fam.id + '|CT0'] && answered[fam.id + '|PT0']) ? '鑑定前のアンケートへのご回答、ありがとうございました。' : '鑑定前のアンケートが、まだお済みでない場合は、メールのご案内から、お時間のあるときにご回答ください。';
+      if (t.kind === 'remind1') note = (answered[fam.id + '|CT0'] && answered[fam.id + '|PT0']) ? '鑑定前のアンケートへのご回答、ありがとうございました。' : '鑑定前のアンケートが、まだお済みでない場合は、メールのご案内から、ご回答ください。※未回答の方に関しては、算命学の鑑定結果には反映されません。';
       if (sendNotice_(reg, t.kind, fam, templates, note)) { sent++; lines.push(t.id + ' ' + (t.kind === 'remind7' ? '鑑定日のリマインド' : '前日リマインド') + ' を送りました'); }
       else errors.push(t.id + ' の ' + t.kind + ' の送信に失敗しました(「送信ログ」を確認)');
     } else {
