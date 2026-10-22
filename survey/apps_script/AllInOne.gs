@@ -808,6 +808,20 @@ function toCsv_(rows) { return rows.map(function (r) { return r.map(csvEscape_).
 // 申込・送信・受付確認の純粋ロジック(node で単体テストする)
 // ======================================================================
 
+/** スプレッドシートから読むと、"TRUE"/"FALSE" の文字は真偽値(true/false)に、日時の文字は日付(Date)に変換されている。どちらの形でも扱えるようにする */
+function isDate_(v) { return Object.prototype.toString.call(v) === '[object Date]'; }
+function isTrue_(v) { return v === true || String(v).toUpperCase() === 'TRUE'; }
+function isFalse_(v) { return v === false || String(v).toUpperCase() === 'FALSE'; }
+function cellStr_(v) {
+  if (isDate_(v)) return new Date(v.getTime() + 9 * 3600 * 1000).toISOString().replace('T', ' ').slice(0, 19);
+  return v === undefined || v === null ? '' : String(v);
+}
+/** 「yyyy-MM-dd HH:mm」の文字、またはDateを、ミリ秒に(日本時間)。読めなければNaN */
+function dueMs_(v) {
+  if (isDate_(v)) return v.getTime();
+  return new Date(String(v).trim().replace(' ', 'T') + (String(v).trim().length <= 16 ? ':00' : '') + '+09:00').getTime();
+}
+
 function normEmail_(s) { return String(s || '').trim().toLowerCase(); }
 function normName_(s) { return String(s || '').replace(/[\s　]+/g, '').toLowerCase(); }
 function isEmail_(s) { return /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(String(s || '').trim()); }
@@ -1271,8 +1285,8 @@ function opMail_(reg) { return String(reg.getSheetByName(SHEETS.settings).getRan
 function readRoster_(reg) {
   var v = reg.getSheetByName(SHEETS.roster).getDataRange().getValues();
   v.shift();
-  function ds(d) { return (d instanceof Date) ? Utilities.formatDate(d, 'Asia/Tokyo', 'yyyy-MM-dd') : String(d || '').trim(); }
-  function ts(d) { return (d instanceof Date) ? Utilities.formatDate(d, 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ss") : String(d || '').trim(); }
+  function ds(d) { return isDate_(d) ? Utilities.formatDate(d, 'Asia/Tokyo', 'yyyy-MM-dd') : String(d || '').trim(); }
+  function ts(d) { return isDate_(d) ? Utilities.formatDate(d, 'Asia/Tokyo', "yyyy-MM-dd'T'HH:mm:ss") : String(d || '').trim(); }
   function t(x) { return String(x === undefined || x === null ? '' : x).trim(); }
   return v.map(function (r, i) {
     return { row: i + 2, id: t(r[RC.id]), appliedAt: ts(r[RC.ts]), name: t(r[RC.pname]), pGender: t(r[RC.pgender]), pBirth: t(r[RC.pbirth]), email: t(r[RC.pemail]),
@@ -1547,7 +1561,7 @@ function checkOverdue() {
   var overdue = [];
   vals.forEach(function (r, i) {
     if (r[7] === '未対応' && String(r[1]) !== CONFIG.TEST_ID) {
-      var due = new Date(String(r[6]).replace(' ', 'T') + ':00+09:00').getTime();
+      var due = dueMs_(r[6]);
       if (!isNaN(due) && now > due) { overdue.push(r[1] + '(' + r[2] + ')'); sh.getRange(i + 2, 8).setValue('期限超過・未対応'); }
     }
   });
@@ -1565,7 +1579,7 @@ function checkReminders() {
   var sub = db.getSheetByName(SHEETS.submissions).getDataRange().getValues();
   sub.shift();
   var adopted = {};
-  sub.forEach(function (r) { if (r[6] === 'TRUE') adopted[r[2] + '|' + r[4]] = true; });
+  sub.forEach(function (r) { if (isTrue_(r[6])) adopted[r[2] + '|' + r[4]] = true; });
   var due = remindersDue_(roster, adopted, today);
   if (!due.length) return;
   var byId = {};
@@ -1618,8 +1632,8 @@ function nextAction_(f, resp, today) {
 function buildDashboardData_(roster, pending, subs, safety, today) {
   var respBy = {};
   subs.forEach(function (r) {
-    if (r[6] !== 'TRUE' || r[12] === 'TRUE') return;
-    (respBy[r[2]] = respBy[r[2]] || {})[r[4]] = String(r[1]);
+    if (!isTrue_(r[6]) || isTrue_(r[12])) return;
+    (respBy[r[2]] = respBy[r[2]] || {})[r[4]] = cellStr_(r[1]);
   });
   var families = roster.map(function (f) {
     var resp = respBy[f.id] || {};
@@ -1657,8 +1671,8 @@ function buildDashboardData_(roster, pending, subs, safety, today) {
       extraRequests: roster.filter(function (f) { return f.exName || f.exPlan; }).length
     },
     families: families.sort(function (a, b) { return a.appliedAt < b.appliedAt ? 1 : -1; }),
-    pending: pending.map(function (r) { return { at: String(r[0]), category: r[1], name: r[2], email: r[3], child: r[4], reason: r[5], note: r[6] }; }),
-    safety: safetyOpen.map(function (r) { return { at: String(r[0]), id: r[1], form: r[2], reason: r[3], due: String(r[6]), status: r[7] }; })
+    pending: pending.map(function (r) { return { at: cellStr_(r[0]), category: r[1], name: r[2], email: r[3], child: r[4], reason: r[5], note: r[6] }; }),
+    safety: safetyOpen.map(function (r) { return { at: cellStr_(r[0]), id: r[1], form: r[2], reason: r[3], due: cellStr_(r[6]), status: r[7] }; })
   };
 }
 
@@ -1868,7 +1882,7 @@ function buildSummary() {
   var ix = {}; head.forEach(function (h, i) { ix[h] = i; });
   var agg = {};
   data.forEach(function (r) {
-    if (r[ix['分析採用']] !== 'TRUE') return;
+    if (!isTrue_(r[ix['分析採用']])) return;
     var k = r[ix['フォームID']] + '|' + r[ix['設問ID']];
     var a = agg[k] = agg[k] || { form: r[ix['フォームID']], qid: r[ix['設問ID']], n: 0, ans: 0, miss: 0, hid: 0, codes: [], dist: {} };
     a.n++;
@@ -1913,7 +1927,7 @@ function exportCsv() {
     var ids = questionsOf_(k).filter(function (q) { return !q.system; }).map(function (q) { return q.id; });
     var bySid = {};
     longRows.forEach(function (r) {
-      if (r[ix['フォームID']] !== k || r[ix['分析採用']] !== 'TRUE') return;
+      if (r[ix['フォームID']] !== k || !isTrue_(r[ix['分析採用']])) return;
       var s = r[ix['submission_id']];
       var o = bySid[s] = bySid[s] || { rid: r[ix['研究用ID']], ts: r[ix['回答日時']], v: {} };
       var st = r[ix['状態']];
@@ -2028,7 +2042,7 @@ function verifyDataTests() {
   add('D: F4_1=はい → F5_1が「回答」', find('CT2', 'F5_1').some(function (r) { return r[ix['状態']] === '回答'; }));
   add('D: F1「わからない」は欠測ではなくコード8', find('CT2', 'F1').some(function (r) { return r[ix['数値コード']] === 8; }));
   add('D: 排他矛盾(B1)のフラグ', sub.some(function (r) { return r[2] === CONFIG.TEST_ID && r[4] === 'CT0' && String(r[7]).indexOf('排他矛盾:B1') !== -1; }));
-  add('D: 重複送信(PT1)で2件目に重複フラグ・分析採用FALSE', sub.filter(function (r) { return r[2] === CONFIG.TEST_ID && r[4] === 'PT1'; }).some(function (r) { return r[6] === 'FALSE' && String(r[7]).indexOf('重複送信') !== -1; }));
+  add('D: 重複送信(PT1)で2件目に重複フラグ・分析採用FALSE', sub.filter(function (r) { return r[2] === CONFIG.TEST_ID && r[4] === 'PT1'; }).some(function (r) { return isFalse_(r[6]) && String(r[7]).indexOf('重複送信') !== -1; }));
   var safety = reg.getSheetByName(SHEETS.safety).getDataRange().getValues();
   add('D: F8=3 で安全対応ログ(台帳)に記録', safety.some(function (r) { return r[1] === CONFIG.TEST_ID && String(r[3]).indexOf('F8') !== -1; }));
   var sh = reg.getSheetByName(SHEETS.tests);

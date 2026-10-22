@@ -505,6 +505,26 @@ t('ダッシュボード: 各家庭に区分が入る(空欄は進路相談用)'
   t('法人鑑定者用のタブ: 法人名・人数が出る', /B0001/.test(all(ids.view)) && /株式会社サンプル \/ 鈴木 花子/.test(all(ids.view)) && /人数/.test(all(ids.view)));
 }
 
+
+// 17. スプレッドシートから読んだ値の形(TRUE/FALSEは真偽値、日時はDateになる)
+t('isTrue_/isFalse_: 文字・真偽値の両方', run('isTrue_(true)') && run('isTrue_("TRUE")') && !run('isTrue_(false)') && !run('isTrue_("FALSE")') && run('isFalse_(false)') && run('isFalse_("FALSE")') && !run('isFalse_(true)'));
+t('cellStr_: Dateを日本時間の文字に。文字はそのまま', run('cellStr_(new Date(Date.UTC(2026, 9, 22, 4, 3, 12)))') === '2026-10-22 13:03:12' && run('cellStr_("abc")') === 'abc' && run('cellStr_(null)') === '');
+t('dueMs_: 文字「2026-10-23 13:04」とDateのどちらも読める。不正はNaN', run('dueMs_("2026-10-23 13:04")') === Date.UTC(2026, 9, 23, 4, 4) && run('dueMs_(new Date(Date.UTC(2026, 9, 23, 4, 4)))') === Date.UTC(2026, 9, 23, 4, 4) && isNaN(run('dueMs_("abc")')));
+{
+  const subsB = [
+    ['s1', new Date(Date.UTC(2026, 10, 3, 1, 0)), 'F0001', '子ども', 'CT0', 'T0', true, '', 1, 0, 0, 0, false],
+    ['s2', new Date(Date.UTC(2026, 10, 3, 2, 0)), 'F0001', '保護者', 'PT0', 'T0', true, '', 1, 0, 0, 0, false],
+    ['s3', 't', 'F0001', '保護者', 'PT0', 'T0', false, '重複送信', 1, 0, 0, 0, false],
+    ['s4', 't', 'F9999', '子ども', 'CT0', 'T0', true, '', 1, 0, 0, 0, true]
+  ];
+  const safB = [[new Date(Date.UTC(2026, 10, 20, 1, 0)), 'F0001', 'CT2', 'F8', 'a', '送信済み', new Date(Date.UTC(2026, 10, 21, 1, 0)), '未対応', '', '', '']];
+  const pendB = [[new Date(Date.UTC(2026, 10, 2, 1, 0)), '進路相談用', 'z', 'z@example.com', 'q', 'メール不一致', '']];
+  const ddB = vm.runInContext('buildDashboardData_', ctx)(rosterD, pendB, subsB, safB, '2026-11-10');
+  t('ダッシュボード: 分析採用が真偽値(true/false)でも、回答済みを数える。テスト(true)・重複(false)は除く', ddB.summary.responded.T0 === 1 && ddB.families.find(f => f.id === 'F0001').resp.CT0 === '2026-11-03 10:00:00');
+  t('ダッシュボード: Dateの日時を、日本時間の文字で出す(受信・期限・受付)', ddB.safety[0].at === '2026-11-20 10:00:00' && ddB.safety[0].due === '2026-11-21 10:00:00' && ddB.pending[0].at === '2026-11-02 10:00:00');
+}
+
+
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
 
