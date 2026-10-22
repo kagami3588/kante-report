@@ -266,8 +266,8 @@ t('入力欄の順序: 保護者用→お子様用→追加の鑑定→同意', 
 t('セクション見出しが「保護者用」「お子様用」', ap.blocks.some(b => b.type === 'page' && b.title === '保護者用') && ap.blocks.some(b => b.type === 'page' && b.title === 'お子様用'));
 t('同意書・説明書のリンク用の設定(CONSENT_DOC_URL)がある。空欄ならリンクを表示しない', run('typeof CONSENT_DOC_URL') === 'string' && !/https?:\/\//.test(ap.blocks.find(b => b.title === '同意の確認').desc));
 
-const qt = (def, ...ids) => ids.map(id => run(`SURVEY.${def}.blocks.find(b => b.id === '${id}').text`));
-const isQ = (def, re) => (i) => run(`SURVEY.${def}.blocks.filter(b => b.type === 'q' && /${re}/.test(b.id)).map(b => b.text)`).indexOf(i.title) !== -1;
+const qt = (def, ...ids) => ids.map(id => run(`applyTitleParts_(SURVEY.${def}.blocks.find(b => b.id === '${id}')).title`));
+const isQ = (def, re) => (i) => run(`SURVEY.${def}.blocks.filter(b => b.type === 'q' && /${re}/.test(b.id)).map(b => applyTitleParts_(b).title)`).indexOf(i.title) !== -1;
 { // 申込フォームの構築(モック)。申込フォームの題名には設問番号を付けない
   ctx.__ss = { getId: () => 'reg' };
   vm.runInContext('buildFormFromDef_(SURVEY.apply, __ss, SURVEY.apply.confirm)', ctx);

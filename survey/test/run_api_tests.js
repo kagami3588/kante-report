@@ -240,11 +240,13 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
 
 { // 題名に番号を付けない申込フォームの回答を、内部の形に戻す
   const E = makeEnv('');
+  const hint = E.run("applyTitleParts_(SURVEY.applyG.blocks.find(b => b.id === 'GE9'))");
+  t('紹介者・自由記入欄の(…)の説明は、題名から外し、フォームの説明文にする', hint.title === '紹介者氏名' && hint.hint === '(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)' && E.run("applyTitleParts_(SURVEY.applyG.blocks.find(b => b.id === 'GE11'))").title === '自由記入欄' && E.run("applyTitleParts_(SURVEY.applyG.blocks.find(b => b.id === 'GE4'))").hint === '');
   const nv = { '保護者さまの名前(フルネーム)': ['山田 花子'], 'お子様の名前(フルネーム)': ['山田 太郎'] };
   const out = E.run('normalizeApplyNamed_')(E.run('SURVEY.apply'), nv);
   t('申込フォーム: 題名が文言のみでも、内部の「ID. 文言」に戻して処理できる', out['AP1. 保護者さまの名前(フルネーム)'][0] === '山田 花子' && out['CH1. お子様の名前(フルネーム)'][0] === '山田 太郎');
   t('申込フォームの題名に、設問番号(AP1.など)が付かない', E.run("SURVEY.apply.blocks.filter(b => b.type === 'q').map(b => b.text).every(x => !/^[A-Z_0-9]+\\.\\s/.test(x))"));
-  const seen = {}; let dup = false; E.run("SURVEY.apply.blocks.filter(b => b.type === 'q').map(b => b.text)").forEach(x => { if (seen[x]) dup = true; seen[x] = 1; });
+  const seen = {}; let dup = false; E.run("SURVEY.apply.blocks.filter(b => b.type === 'q').map(b => applyTitleParts_(b).title)").forEach(x => { if (seen[x]) dup = true; seen[x] = 1; });
   t('申込フォーム内で、設問の文言が重複しない(番号なしでも区別できる)', !dup);
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');

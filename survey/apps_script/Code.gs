@@ -62,11 +62,17 @@ function parseQid_(title) {
 function qTitle_(q) { return q.id + '. ' + q.text; }
 
 /** 申込フォームは、回答者に設問番号を見せない(題名は文言のみ)。回答を受け取るときに、文言から「ID. 文言」の形へ戻す */
+function applyTitleParts_(q) {
+  var m = /^(.*?)[(（]([^()（）]*)[)）]$/.exec(String(q.text));
+  if ((q.kind === 'katakana' || q.kind === 'text') && m && m[1]) return { title: m[1], hint: '(' + m[2] + ')' };
+  return { title: q.text, hint: '' };
+}
+
 function normalizeApplyNamed_(def, namedValues) {
   var out = {};
   Object.keys(namedValues || {}).forEach(function (k) { out[k] = namedValues[k]; });
   def.blocks.forEach(function (b) {
-    if (b.type === 'q' && out[qTitle_(b)] === undefined && namedValues && namedValues[b.text] !== undefined) out[qTitle_(b)] = namedValues[b.text];
+    if (b.type === 'q' && out[qTitle_(b)] === undefined && namedValues && namedValues[applyTitleParts_(b).title] !== undefined) out[qTitle_(b)] = namedValues[applyTitleParts_(b).title];
   });
   return out;
 }
@@ -644,7 +650,8 @@ function buildFormFromDef_(def, ss, confirmMessage) {
     }
     firstBlock = false;
     var it;
-    var title = def.category ? b.text : qTitle_(b);
+    var hint = def.category ? applyTitleParts_(b).hint : '';
+    var title = def.category ? applyTitleParts_(b).title : qTitle_(b);
     if (b.kind === 'id') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern(SURVEY.idPattern).setHelpText('F0001 の形式です。専用リンクから開くと自動で入力されます。').build());
@@ -671,6 +678,7 @@ function buildFormFromDef_(def, ss, confirmMessage) {
     } else if (b.kind === 'katakana') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern('^[ァ-ヺー・\\s\u3000]+$').setHelpText('カタカナで入力してください。(いない場合は「ナシ」)').build());
+      if (hint) it.setHelpText(hint);
       it.setRequired(!!b.required);
     } else if (b.kind === 'consent' || b.kind === 'check') {
       it = form.addCheckboxItem().setTitle(title);
@@ -684,7 +692,7 @@ function buildFormFromDef_(def, ss, confirmMessage) {
     } else if (b.kind === 'text') {
       it = form.addParagraphTextItem().setTitle(title);
       it.setRequired(!!b.required);
-      if (b.note) it.setHelpText(b.note);
+      if (b.note || hint) it.setHelpText([b.note, hint].filter(Boolean).join('\n'));
     } else if (b.kind === 'multi') {
       it = form.addCheckboxItem().setTitle(title);
       it.setChoices(choicesOf_(b).map(function (c) { return it.createChoice(c); }));
@@ -1436,7 +1444,8 @@ function publicSiteData_() {
         key: c.key, label: c.label, sub: c.sub, desc: c.desc, fee: c.fee,
         blocks: d.blocks.map(function (b) {
           if (b.type === 'page') return { type: 'page', title: b.title, desc: b.desc || '', conditional: !!b.conditional };
-          return { type: 'q', id: b.id, text: b.text, kind: b.kind, required: !!b.required, choices: b.choices || null, help: b.help || '', gate: !!b.gate };
+          var parts = applyTitleParts_(b);
+          return { type: 'q', id: b.id, text: parts.title, kind: b.kind, required: !!b.required, choices: b.choices || null, help: [b.help, parts.hint].filter(Boolean).join('\n'), gate: !!b.gate };
         })
       };
     })
