@@ -238,6 +238,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 法人の申込ページには、進路・個人の項目が含まれない(お子様・追加の鑑定)', !/お子様|追加の鑑定/.test(pc.html) && /50,000円/.test(pc.html));
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/GE1|AP1|CO1|CONSENT_ALL/.test(pn.html) && !/GE1|AP1|CO1/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-22-b/.test(pa.html) && /2026-10-22-b/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }

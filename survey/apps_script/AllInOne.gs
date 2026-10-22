@@ -1993,7 +1993,7 @@ var SITE_CATEGORIES = [
 /** 公開サイトに埋め込むデータ(設問の定義だけ。お振込先は、申込のあとにだけ返す) */
 function publicSiteData_(cat) {
   return {
-    line: LINE_URL, contact: CONTACT_MAIL,
+    line: LINE_URL, contact: CONTACT_MAIL, version: SITE_VERSION,
     cats: SITE_CATEGORIES.filter(function (c) { return c.key === cat; }).map(function (c) {
       var d = SURVEY[c.def];
       return {
@@ -2049,6 +2049,9 @@ function rateLimited_(cache, key, max, ttlSec) {
   return false;
 }
 
+
+/** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
+var SITE_VERSION = '2026-10-22-b';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2112,7 +2115,7 @@ SITE_CSS_ + '</style></head><body>' +
 ' if(!r.silent){c.appendChild(el("h2","","鑑定料・お振込先"));var b=el("div","bank");b.appendChild(el("div","big",(r.fee||[])[0]||""));var rest=(r.fee||[]).slice(1).concat([""]).concat(r.bank||[]);b.appendChild(document.createTextNode(rest.join("\\n")));c.appendChild(b);c.appendChild(el("div","desc","お支払い方法は、口座振込のみです。日程の調整は、運営から改めてご連絡します。"));' +
 ' c.appendChild(el("div","desc","林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください。"));var a=el("a","line","公式LINEを追加する");a.href=r.line;a.target="_blank";a.rel="noopener";c.appendChild(a);}' +
 ' app.appendChild(c);window.scrollTo(0,0);}' +
-'document.getElementById("foot").textContent="運営: KAGAMI / 責任者: " + "' + RESPONSIBLE + '" + " / お問い合わせ: " + SITE.contact;' +
+'document.getElementById("foot").textContent="運営: KAGAMI / 責任者: " + "' + RESPONSIBLE + '" + " / お問い合わせ: " + SITE.contact + " / 版: " + SITE.version;' +
 'if(SITE.cats.length){show(SITE.cats[0].key);}else{var g=el("div","card");g.appendChild(el("h2","","お申込みのページ"));g.appendChild(el("div","desc","お申込みは、ご案内したURLからお願いします。URLがお分かりにならない場合は、"+SITE.contact+" までご連絡ください。"));app.appendChild(g);}' +
 '</script></body></html>';
 
@@ -2444,8 +2447,8 @@ var SURVEY_SITE_HTML = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-
 '</style></head><body>' +
 '<header><div class="brand">KAGAMI</div><h1>算命学の鑑定 アンケート</h1><p>ご協力ありがとうございます。</p></header>' +
 '<main><div id="app"></div></main><footer id="foot"></footer>' +
-'<script>var SURVEY_SITE = {contact:"' + CONTACT_MAIL + '",responsible:"' + RESPONSIBLE + '"};(' + surveyClient_.toString() + ')();' +
-'document.getElementById("foot").textContent="運営: KAGAMI / 責任者: "+SURVEY_SITE.responsible+" / お問い合わせ: "+SURVEY_SITE.contact;</script></body></html>';
+'<script>var SURVEY_SITE = {contact:"' + CONTACT_MAIL + '",responsible:"' + RESPONSIBLE + '",version:"' + SITE_VERSION + '"};(' + surveyClient_.toString() + ')();' +
+'document.getElementById("foot").textContent="運営: KAGAMI / 責任者: "+SURVEY_SITE.responsible+" / お問い合わせ: "+SURVEY_SITE.contact+" / 版: "+SURVEY_SITE.version;</script></body></html>';
 
 function surveyPage_() { return SURVEY_SITE_HTML; }
 
