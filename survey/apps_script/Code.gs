@@ -61,6 +61,16 @@ function parseQid_(title) {
 
 function qTitle_(q) { return q.id + '. ' + q.text; }
 
+/** 申込フォームは、回答者に設問番号を見せない(題名は文言のみ)。回答を受け取るときに、文言から「ID. 文言」の形へ戻す */
+function normalizeApplyNamed_(def, namedValues) {
+  var out = {};
+  Object.keys(namedValues || {}).forEach(function (k) { out[k] = namedValues[k]; });
+  def.blocks.forEach(function (b) {
+    if (b.type === 'q' && out[qTitle_(b)] === undefined && namedValues && namedValues[b.text] !== undefined) out[qTitle_(b)] = namedValues[b.text];
+  });
+  return out;
+}
+
 function questionsOf_(formKey) {
   return SURVEY.forms[formKey].blocks.filter(function (b) { return b.type === 'q'; });
 }
@@ -634,7 +644,7 @@ function buildFormFromDef_(def, ss, confirmMessage) {
     }
     firstBlock = false;
     var it;
-    var title = qTitle_(b);
+    var title = def.category ? b.text : qTitle_(b);
     if (b.kind === 'id') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern(SURVEY.idPattern).setHelpText('F0001 の形式です。専用リンクから開くと自動で入力されます。').build());
@@ -858,7 +868,7 @@ function onApplySubmit(e) {
     if (!category) return;
     var tsIso = nowStr_();
     var existing = readRoster_(reg).map(function (r) { return { id: r.id, email: r.email, childName: r.childName, name: r.name, company: r.company, category: r.category }; });
-    var res = processApplication_(e.namedValues, existing, tsIso, category);
+    var res = processApplication_(normalizeApplyNamed_(SURVEY[{ career: 'apply', general: 'applyG', corp: 'applyB' }[category]], e.namedValues), existing, tsIso, category);
     var label = CATEGORY_LABEL[category];
     if (res.ok) {
       finishApplication_(reg, category, res, tsIso);

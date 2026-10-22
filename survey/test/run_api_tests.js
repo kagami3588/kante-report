@@ -238,5 +238,14 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('申込ページのスクリプトに構文エラーがない', ok);
 }
 
+{ // 題名に番号を付けない申込フォームの回答を、内部の形に戻す
+  const E = makeEnv('');
+  const nv = { '保護者さまの名前(フルネーム)': ['山田 花子'], 'お子様の名前(フルネーム)': ['山田 太郎'] };
+  const out = E.run('normalizeApplyNamed_')(E.run('SURVEY.apply'), nv);
+  t('申込フォーム: 題名が文言のみでも、内部の「ID. 文言」に戻して処理できる', out['AP1. 保護者さまの名前(フルネーム)'][0] === '山田 花子' && out['CH1. お子様の名前(フルネーム)'][0] === '山田 太郎');
+  t('申込フォームの題名に、設問番号(AP1.など)が付かない', E.run("SURVEY.apply.blocks.filter(b => b.type === 'q').map(b => b.text).every(x => !/^[A-Z_0-9]+\\.\\s/.test(x))"));
+  const seen = {}; let dup = false; E.run("SURVEY.apply.blocks.filter(b => b.type === 'q').map(b => b.text)").forEach(x => { if (seen[x]) dup = true; seen[x] = 1; });
+  t('申込フォーム内で、設問の文言が重複しない(番号なしでも区別できる)', !dup);
+}
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

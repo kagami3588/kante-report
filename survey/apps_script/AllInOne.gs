@@ -411,22 +411,22 @@ SURVEY.apply = {
     }),
     P_('お子様向けのご説明(小学生にも分かる言いかた)', { conditional: true, desc: CHILD_EXPLAIN }),
     P_('保護者用', { desc: '保護者の方のご情報です。個人情報は、アンケートの回答とは別に保管します。' }),
-    T1_('AP1', '名前(フルネーム)', '保護者の氏名(個人情報。回答DBとは別に保管)', true),
-    SEL_('AP6', '性別', GENDERS, true, '保護者の性別(個人情報)'),
+    T1_('AP1', '保護者さまの名前(フルネーム)', '保護者の氏名(個人情報。回答DBとは別に保管)', true),
+    SEL_('AP6', '保護者さまの性別', GENDERS, true, '保護者の性別(個人情報)'),
     BD_('AP7', '生年月日(例:20000218)', '保護者の生年月日(個人情報。算命学の鑑定に使用)'),
     EM_('AP2', 'メールアドレス(アンケートのご案内を送ります)', 'ご案内・受付確認の送信先(個人情報)'),
-    EM_('AP3', 'メールアドレス(確認のため、もう一度入力してください)', '入力ミスの確認'),
+    EM_('AP3', '保護者さまのメールアドレス(確認のため、もう一度入力してください)', '入力ミスの確認'),
     T1_('AP8', 'LINE検索ID', 'LINEでの連絡用(個人情報)', true),
     T1_('AP9', 'Instagramのアカウント(任意)', 'Instagramのアカウント(任意。個人情報)', false),
     CHK_('AP10', '林 竜輔の公式LINEを追加しましたか?', '公式LINEの追加確認'),
     Q_({ id: 'AP11', text: '紹介者氏名(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)', kind: 'katakana', axis: AXIS.ID, system: true, required: true, purpose: '紹介者(個人情報)' }),
     Q_({ id: 'AP5', text: '自由記入欄(質問がありましたら、内容をご記入ください)', kind: 'text', axis: AXIS.ID, system: true, purpose: '保護者からの連絡事項・質問(任意)' }),
     P_('お子様用', { desc: 'お子様のご情報です。保護者の方が、お子様と一緒にご入力ください。お子様のメールアドレスには、お子様用のアンケートのリンクをお送りします。' }),
-    T1_('CH1', '名前(フルネーム)', 'お子様の氏名(個人情報。回答DBとは別に保管)', true),
-    SEL_('CH2', '性別', GENDERS, true, 'お子様の性別(個人情報)'),
+    T1_('CH1', 'お子様の名前(フルネーム)', 'お子様の氏名(個人情報。回答DBとは別に保管)', true),
+    SEL_('CH2', 'お子様の性別', GENDERS, true, 'お子様の性別(個人情報)'),
     BD_('CH3', '生年月日(例:20100315)', 'お子様の生年月日(個人情報。算命学の鑑定に使用)'),
     EM_('CH4', 'メールアドレス(お子様用のアンケートのご案内を送ります)', 'お子様用のご案内・受付確認の送信先(個人情報)'),
-    EM_('CH5', 'メールアドレス(確認のため、もう一度入力してください)', '入力ミスの確認'),
+    EM_('CH5', 'お子様のメールアドレス(確認のため、もう一度入力してください)', '入力ミスの確認'),
     Q_({ id: 'CH6', text: '自由記入欄(お子様からの質問などがありましたら、内容をご記入ください)', kind: 'text', axis: AXIS.ID, system: true, purpose: 'お子様からの連絡事項・質問(任意)' }),
     P_('追加の鑑定をご希望の方(任意)', { desc: 'ご家族などで、追加の鑑定をご希望の方がいらっしゃる場合は、ご入力ください。ご希望がなければ、このまま次へ進めます。(この項目は、研究への参加とは関係ありません。)' }),
     Q_({ id: 'EX1', text: '追加の鑑定をしてほしい人の名前', kind: 'text1', axis: AXIS.ID, system: true, required: false, purpose: '追加の鑑定の対象者(任意。個人情報)' }),
@@ -607,6 +607,16 @@ function parseQid_(title) {
 }
 
 function qTitle_(q) { return q.id + '. ' + q.text; }
+
+/** 申込フォームは、回答者に設問番号を見せない(題名は文言のみ)。回答を受け取るときに、文言から「ID. 文言」の形へ戻す */
+function normalizeApplyNamed_(def, namedValues) {
+  var out = {};
+  Object.keys(namedValues || {}).forEach(function (k) { out[k] = namedValues[k]; });
+  def.blocks.forEach(function (b) {
+    if (b.type === 'q' && out[qTitle_(b)] === undefined && namedValues && namedValues[b.text] !== undefined) out[qTitle_(b)] = namedValues[b.text];
+  });
+  return out;
+}
 
 function questionsOf_(formKey) {
   return SURVEY.forms[formKey].blocks.filter(function (b) { return b.type === 'q'; });
@@ -1181,7 +1191,7 @@ function buildFormFromDef_(def, ss, confirmMessage) {
     }
     firstBlock = false;
     var it;
-    var title = qTitle_(b);
+    var title = def.category ? b.text : qTitle_(b);
     if (b.kind === 'id') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern(SURVEY.idPattern).setHelpText('F0001 の形式です。専用リンクから開くと自動で入力されます。').build());
@@ -1405,7 +1415,7 @@ function onApplySubmit(e) {
     if (!category) return;
     var tsIso = nowStr_();
     var existing = readRoster_(reg).map(function (r) { return { id: r.id, email: r.email, childName: r.childName, name: r.name, company: r.company, category: r.category }; });
-    var res = processApplication_(e.namedValues, existing, tsIso, category);
+    var res = processApplication_(normalizeApplyNamed_(SURVEY[{ career: 'apply', general: 'applyG', corp: 'applyB' }[category]], e.namedValues), existing, tsIso, category);
     var label = CATEGORY_LABEL[category];
     if (res.ok) {
       finishApplication_(reg, category, res, tsIso);

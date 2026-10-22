@@ -259,39 +259,41 @@ const byId = (id) => apQs.find(q => q.id === id);
 t('保護者用の項目: 名前・性別・生年月日・メール・LINE検索ID・Instagram(任意)・公式LINE追加(チェック)・紹介者(カタカナ)・自由記入欄', ['AP1', 'AP6', 'AP7', 'AP2', 'AP8', 'AP9', 'AP10', 'AP11', 'AP5'].every(id => !!byId(id)) && byId('AP9').required === false && byId('AP10').kind === 'check' && byId('AP10').required === true && byId('AP11').kind === 'katakana');
 t('保護者用の文言(フルネーム・生年月日の例20000218・LINE検索ID・公式LINE)', /名前\(フルネーム\)/.test(byId('AP1').text) && /20000218/.test(byId('AP7').text) && byId('AP8').text === 'LINE検索ID' && /林 竜輔の公式LINEを追加しましたか/.test(byId('AP10').text) && /Instagram/.test(byId('AP9').text) && /任意/.test(byId('AP9').text));
 t('お子様用の項目: 名前・性別・生年月日・メール・自由記入欄', ['CH1', 'CH2', 'CH3', 'CH4', 'CH6'].every(id => !!byId(id)) && /20100315/.test(byId('CH3').text));
-t('性別は個人情報の入力欄(保護者・お子様)にある', byId('AP6').text === '性別' && byId('CH2').text === '性別' && JSON.stringify(byId('AP6').choices) === JSON.stringify(['男性', '女性']));
+t('性別は個人情報の入力欄(保護者・お子様)にある', byId('AP6').text === '保護者さまの性別' && byId('CH2').text === 'お子様の性別' && JSON.stringify(byId('AP6').choices) === JSON.stringify(['男性', '女性']));
 t('追加の鑑定: 名前(任意)・レポートのみ5,000円/オンライン鑑定希望10,000円(任意)', byId('EX1').required === false && byId('EX2').required === false && JSON.stringify(byId('EX2').choices) === JSON.stringify(['レポートのみ 5,000円', 'オンライン鑑定希望 10,000円']));
 const order = apQs.map(q => q.id);
 t('入力欄の順序: 保護者用→お子様用→追加の鑑定→同意', order.indexOf('AP1') < order.indexOf('CH1') && order.indexOf('CH1') < order.indexOf('EX1') && order.indexOf('EX1') < order.indexOf('CONSENT'));
 t('セクション見出しが「保護者用」「お子様用」', ap.blocks.some(b => b.type === 'page' && b.title === '保護者用') && ap.blocks.some(b => b.type === 'page' && b.title === 'お子様用'));
 t('同意書・説明書のリンク用の設定(CONSENT_DOC_URL)がある。空欄ならリンクを表示しない', run('typeof CONSENT_DOC_URL') === 'string' && !/https?:\/\//.test(ap.blocks.find(b => b.title === '同意の確認').desc));
 
-{ // 申込フォームの構築(モック)
+const qt = (def, ...ids) => ids.map(id => run(`SURVEY.${def}.blocks.find(b => b.id === '${id}').text`));
+const isQ = (def, re) => (i) => run(`SURVEY.${def}.blocks.filter(b => b.type === 'q' && /${re}/.test(b.id)).map(b => b.text)`).indexOf(i.title) !== -1;
+{ // 申込フォームの構築(モック)。申込フォームの題名には設問番号を付けない
   ctx.__ss = { getId: () => 'reg' };
   vm.runInContext('buildFormFromDef_(SURVEY.apply, __ss, SURVEY.apply.confirm)', ctx);
   const f = created[created.length - 1];
   t('申込フォーム構築', f.items.length > 10);
-  const view = f.items.find(i => i.title.indexOf('AP_VIEW.') === 0);
+  const view = f.items.find(i => i.title === qt('apply', 'AP_VIEW')[0]);
   const skip = view.choices.find(c => c.value.indexOf('見ない') === 0), show = view.choices.find(c => c.value === '見る');
   t('「見る」→次(お子様向けページ)へ、「見ない」→その次の非条件ページへ移動', show.nav === 'CONTINUE' && skip.nav && skip.nav.type === 'PAGE');
   const vi = f.items.indexOf(view), si = f.items.indexOf(skip.nav);
   const childIdx = f.items.findIndex(i => i.title.indexOf('お子様向けのご説明(小学生') === 0);
   t('お子様向けページは、ゲートとスキップ先の間にある', childIdx > vi && childIdx < si);
   t('スキップ先は「保護者用」ページ', f.items[si].title === '保護者用');
-  const emailItems = f.items.filter(i => /^(AP[23]|CH[45])\./.test(i.title));
+  const emailItems = f.items.filter(isQ('apply', '^(AP[23]|CH[45])$'));
   t('メールアドレス欄(保護者2・お子様2)にメール形式の検証', emailItems.length === 4 && emailItems.every(i => i.validation && i.validation.email));
-  const bd = f.items.filter(i => /^(AP7|CH3)\./.test(i.title));
+  const bd = f.items.filter(isQ('apply', '^(AP7|CH3)$'));
   t('生年月日欄は8桁の数字の検証', bd.length === 2 && bd.every(i => i.validation && i.validation.pattern === '^[0-9]{8}$'));
-  const kt = f.items.find(i => /^AP11\./.test(i.title));
+  const kt = f.items.find(isQ('apply', '^AP11$'));
   t('紹介者欄はカタカナの検証(\\u の表記は使わず、文字そのもので書く)', !!kt && !!kt.validation && /ァ-ヺ/.test(kt.validation.pattern) && !/\\u/.test(kt.validation.pattern));
-  t('4つの同意が必須のチェックボックス', f.items.filter(i => /^CONSENT/.test(i.title)).length === 4 && f.items.filter(i => /^CONSENT/.test(i.title)).every(i => i.required));
-  const line = f.items.find(i => /^AP10\./.test(i.title));
+  t('4つの同意が必須のチェックボックス', f.items.filter(isQ('apply', '^CONSENT')).length === 4 && f.items.filter(isQ('apply', '^CONSENT')).every(i => i.required));
+  const line = f.items.find(isQ('apply', '^AP10$'));
   t('公式LINEの追加確認は必須のチェックボックス', line.type === 'CHECK' && line.required && line.choices[0].value === '追加しました');
-  const insta = f.items.find(i => /^AP9\./.test(i.title));
+  const insta = f.items.find(isQ('apply', '^AP9$'));
   t('Instagramは任意', insta.required === false);
-  const ex = f.items.filter(i => /^EX[12]\./.test(i.title));
+  const ex = f.items.filter(isQ('apply', '^EX[12]$'));
   t('追加の鑑定は任意', ex.length === 2 && ex.every(i => !i.required));
-  const nameReq = f.items.filter(i => /^(AP1|AP6|AP8|AP11|CH1|CH2)\./.test(i.title));
+  const nameReq = f.items.filter(isQ('apply', '^(AP1|AP6|AP8|AP11|CH1|CH2)$'));
   t('保護者名・性別・LINE ID・紹介者・お子様名・お子様の性別は必須', nameReq.length === 6 && nameReq.every(i => i.required));
 }
 
@@ -435,11 +437,11 @@ t('一般・法人の説明に費用・謝礼・補助金の記載がない', ![
   for (const k of ['applyG', 'applyB']) {
     vm.runInContext(`buildFormFromDef_(SURVEY.${k}, __ss, SURVEY.${k}.confirm)`, ctx);
     const f = created[created.length - 1];
-    t(k + ' フォーム構築・同意が必須のチェックボックス', f.items.length > 10 && f.items.filter(i => /^CONSENT/.test(i.title)).every(i => i.required && i.type === 'CHECK'));
+    t(k + ' フォーム構築・同意が必須のチェックボックス', f.items.length > 10 && f.items.filter(isQ(k, '^CONSENT')).every(i => i.required && i.type === 'CHECK'));
     t(k + ' メール欄にメール形式の検証・生年月日/カタカナ/電話/人数の検証', f.items.filter(i => i.validation && i.validation.email).length === 2 && f.items.filter(i => i.validation).length >= 4);
   }
   const fb = created[created.length - 1];
-  const tg = fb.items.find(i => /^CO11\./.test(i.title)), hc = fb.items.find(i => /^CO10\./.test(i.title)), ph = fb.items.find(i => /^CO6\./.test(i.title));
+  const tg = fb.items.find(isQ('applyB', '^CO11$')), hc = fb.items.find(isQ('applyB', '^CO10$')), ph = fb.items.find(isQ('applyB', '^CO6$'));
   t('法人: 鑑定を受ける方の欄は必須の段落、プランは選択式、電話は数字とハイフン', tg.type === 'PARA' && tg.required && hc.type === 'MC' && ph.validation.pattern === '^[0-9\\-]{9,13}$');
 }
 const NVG = (o) => { const base = { GE1: '佐藤 一郎', GE2: '男性', GE3: '19800101', GE4: 'ichiro@example.com', GE5: 'ichiro@example.com', GE6: 'ichiro_line', GE7: '', GE8: '追加しました', GE9: 'ナシ', GE10: '', GE11: '', CONSENT_PI: '同意します' }; const m = Object.assign(base, o); const out = {}; apG.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
