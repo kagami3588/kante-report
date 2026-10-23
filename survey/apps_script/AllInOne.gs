@@ -260,15 +260,15 @@ SURVEY.forms.PT0 = {
     LK_('PZ1', '子どもが将来について考えるとき、子ども自身の希望や気持ちを大切にしたいと思う。', AXIS.CAREER, '子どもの希望の尊重(意向)'),
     LK_('PZ2', '子どもが私とは違う選択をした場合でも、その選択を尊重したいと思う。', AXIS.CAREER, '異なる選択の尊重(意向)'),
     P_('E. お子さんについて', { desc: 'お子さんについて、思うことを、項目ごとに教えてください。「はい」を選ぶと、自由に記入できます。「わからない」の場合は、記入は不要です。' }),
-    SG_('PX1', 'お子さんが大切にしていることについて、ご記入いただけますか?', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(大切にしていること)。記述するか、わからないか', {}),
+    SG_('PX1', 'お子さんが大切にしていることについて、教えてください。', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(大切にしていること)。記述するか、わからないか', {}),
     TX_('PX1t', 'お子さんが大切にしていることを、自由にご記入ください。', '保護者から見た子どもの人物像(大切にしていること・自由記述。任意)', { hiddenWhen: { id: 'PX1', value: 'わからない' }, inline: true, axis: AXIS.FREE, note: 'お子さんのお名前や学校名など、個人が特定される情報は書かないでください。' }),
-    SG_('PX2', 'お子さんの特徴について、ご記入いただけますか?', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(特徴)。記述するか、わからないか', {}),
+    SG_('PX2', 'お子さんの特徴について、教えてください。', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(特徴)。記述するか、わからないか', {}),
     TX_('PX2t', 'お子さんの特徴を、自由にご記入ください。', '保護者から見た子どもの人物像(特徴・自由記述。任意)', { hiddenWhen: { id: 'PX2', value: 'わからない' }, inline: true, axis: AXIS.FREE, note: 'お子さんのお名前や学校名など、個人が特定される情報は書かないでください。' }),
-    SG_('PX3', 'お子さんの強みについて、ご記入いただけますか?', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(強み)。記述するか、わからないか', {}),
+    SG_('PX3', 'お子さんの強みについて、教えてください。', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(強み)。記述するか、わからないか', {}),
     TX_('PX3t', 'お子さんの強みを、自由にご記入ください。', '保護者から見た子どもの人物像(強み・自由記述。任意)', { hiddenWhen: { id: 'PX3', value: 'わからない' }, inline: true, axis: AXIS.FREE, note: 'お子さんのお名前や学校名など、個人が特定される情報は書かないでください。' }),
-    SG_('PX4', 'お子さんの将来の夢について、ご記入いただけますか?', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(将来の夢)。記述するか、わからないか', {}),
+    SG_('PX4', 'お子さんの将来の夢について、教えてください。', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(将来の夢)。記述するか、わからないか', {}),
     TX_('PX4t', 'お子さんの将来の夢を、自由にご記入ください。', '保護者から見た子どもの人物像(将来の夢・自由記述。任意)', { hiddenWhen: { id: 'PX4', value: 'わからない' }, inline: true, axis: AXIS.FREE, note: 'お子さんのお名前や学校名など、個人が特定される情報は書かないでください。' }),
-    SG_('PX5', 'お子さんの好きなところについて、ご記入いただけますか?', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(好きなところ)。記述するか、わからないか', {}),
+    SG_('PX5', 'お子さんの好きなところについて、教えてください。', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(好きなところ)。記述するか、わからないか', {}),
     TX_('PX5t', 'お子さんの好きなところを、自由にご記入ください。', '保護者から見た子どもの人物像(好きなところ・自由記述。任意)', { hiddenWhen: { id: 'PX5', value: 'わからない' }, inline: true, axis: AXIS.FREE, note: 'お子さんのお名前や学校名など、個人が特定される情報は書かないでください。' })
   ]
 };
@@ -2305,7 +2305,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-23-j';
+var SITE_VERSION = '2026-10-23-k';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2573,25 +2573,25 @@ function surveyOptions_(families, answered) {
       var due = surveyDue_(f, role, answered);
       var label = role === 'parent' ? '申込者(' + givenName_(f.name) + ' 様)' : (role === 'child' ? 'お子様(' + givenName_(f.childName) + ' さん)' : 'パートナーの方(' + givenName_(f.partnerName) + ' 様)');
       var opt = { id: f.id, role: role, label: label, state: due.state, time: due.time || '', form: due.key || '' };
-      // 回答済みのあとの修正は、申込者ご本人の回答だけ(お子様・パートナーの回答は、あとから開かない)
-      if (role === 'parent' && due.state === 'done') { var last = surveyLatestAnswered_(f, role, answered); if (last) { opt.canEdit = true; opt.editForm = last.key; opt.editTime = last.time; } }
+      // 回答済みの方は、いまの時期の間、回答を修正できる(次の時期の案内を送ると、表示も修正もできなくなる)
+      if (due.state === 'done') { opt.canEdit = true; opt.editForm = due.key; opt.editTime = due.time; }
       out.push(opt);
     });
   });
   return out;
 }
 
-/** その家庭・役割で、いま答えるアンケート。案内を送ったもののうち、いちばん早い、未回答のもの。answered は {'F0001|CT0': true} */
+/**
+ * その家庭・役割の、いまの時期(案内を送った、いちばん新しい時期)のアンケートの状態。
+ * 'due'=答えられる / 'done'=回答済み(この時期の間は、修正できる) / 'wait'=まだ案内がない。
+ * 次の時期の案内を送ると、前の時期のアンケートは、表示も修正もできなくなる
+ */
 function surveyDue_(fam, role, answered) {
-  var sentAny = false;
-  for (var i = 0; i < LINK_TIMES.length; i++) {
-    var t = LINK_TIMES[i];
-    if (!fam.sent || !fam.sent[t]) continue;
-    sentAny = true;
-    var key = surveyFormKey_(role, t);
-    if (!answered[fam.id + '|' + key]) return { state: 'due', key: key, time: t };
-  }
-  return { state: sentAny ? 'done' : 'wait' };
+  var cur = null;
+  for (var i = 0; i < LINK_TIMES.length; i++) if (fam.sent && fam.sent[LINK_TIMES[i]]) cur = LINK_TIMES[i];
+  if (!cur) return { state: 'wait' };
+  var key = surveyFormKey_(role, cur);
+  return answered[fam.id + '|' + key] ? { state: 'done', key: key, time: cur } : { state: 'due', key: key, time: cur };
 }
 
 /** 画面に渡す設問の定義。区分の記号(A.など)は外す。調査用IDは画面には出さない(サーバーで付ける) */
@@ -2648,15 +2648,6 @@ function surveyMissing_(key, answers) {
   return miss;
 }
 
-/** 申込者が、最後に回答した(案内済みの)アンケート。なければ null */
-function surveyLatestAnswered_(fam, role, answered) {
-  for (var i = LINK_TIMES.length - 1; i >= 0; i--) {
-    var t = LINK_TIMES[i];
-    if (fam.sent && fam.sent[t] && answered[fam.id + '|' + surveyFormKey_(role, t)]) return { key: surveyFormKey_(role, t), time: t };
-  }
-  return null;
-}
-
 /** 回答済みのアンケートの、前回の回答(設問ID → 値。複数選択は配列)。申込者の修正用 */
 function surveyPrior_(db, id, key) {
   var vals = db.getSheetByName(SHEETS.long).getDataRange().getValues();
@@ -2705,7 +2696,7 @@ function surveyLogin(email) {
   var reg = regSS_(), db = dbSS_();
   var fams = surveyFamiliesFor_(readRoster_(reg), email);
   var options = surveyOptions_(fams, surveyAnswered_(db));
-  if (!options.some(function (o) { return o.state === 'due'; })) {
+  if (!options.some(function (o) { return o.state === 'due' || o.canEdit; })) {
     if (options.some(function (o) { return o.state === 'done'; })) return { ok: false, done: true, message: 'ご回答ありがとうございます。いま答えていただくアンケートは、ありません。次のアンケートの準備ができたら、メールでご案内します。' };
     return generic;
   }
@@ -2728,13 +2719,12 @@ function surveyStart(token, id, role, edit) {
   if (role === 'partner' && fams[0].partnerJoin !== 'はい') return { ok: false, message: '回答者が見つかりません。' };
   var ansd = surveyAnswered_(db);
   if (edit) {
-    // 回答の修正: 申込者ご本人の回答だけ。お子様・パートナーの回答は、あとから開けない(回答を見られないようにするため)
-    if (role !== 'parent') return { ok: false, message: 'お子様・パートナーの方の回答は、回答後に開いたり、修正したりできません。' };
-    var last = surveyLatestAnswered_(fams[0], role, ansd);
-    if (!last || surveyDue_(fams[0], role, ansd).state !== 'done') return { ok: false, message: '修正できる回答が、ありません。' };
-    sess.cur = { id: fams[0].id, role: role, key: last.key, edit: true };
+    // 回答の修正: いまの時期のアンケートに、回答済みの方だけ。次の時期の案内を送ったあとは、前の時期の回答は、開けない
+    var cd = surveyDue_(fams[0], role, ansd);
+    if (cd.state !== 'done') return { ok: false, message: '修正できる回答が、ありません(次のアンケートの時期に進んだ場合は、前の回答は、表示も修正もできません)。' };
+    sess.cur = { id: fams[0].id, role: role, key: cd.key, edit: true };
     cache.put('sv_tok_' + token, JSON.stringify(sess), 21600);
-    return { ok: true, edit: true, who: givenName_(fams[0].name), prior: surveyPrior_(db, fams[0].id, last.key), def: surveyClientDef_(last.key, { child: fams[0].childName, parent: fams[0].name }) };
+    return { ok: true, edit: true, who: givenName_(role === 'child' ? fams[0].childName : (role === 'partner' ? fams[0].partnerName : fams[0].name)), prior: surveyPrior_(db, fams[0].id, cd.key), def: surveyClientDef_(cd.key, { child: fams[0].childName, parent: fams[0].name }) };
   }
   var due = surveyDue_(fams[0], role, ansd);
   if (due.state !== 'due') return { ok: false, done: true, message: 'この方のアンケートは、いま、答えられるものがありません。' };
@@ -2788,6 +2778,7 @@ function surveySubmit(token, answers) {
     var fam = roster.filter(function (f) { return f.id === sess.cur.id; })[0] || { id: sess.cur.id, sent: {} };
     var due = surveyDue_(fam, sess.cur.role, surveyAnswered_(db));
     if (sess.cur.edit) {
+      if (due.state !== 'done' || due.key !== sess.cur.key) { delete sess.cur; cache.put('sv_tok_' + token, JSON.stringify(sess), 21600); return { ok: false, message: '次のアンケートの時期に進んだため、この回答は、修正できません。', done: true }; }
       var missingE = surveyMissing_(sess.cur.key, answers);
       if (missingE) return { ok: false, message: 'まだ答えていない質問があります。すべての質問に、ご回答をお願いします。(' + missingE.slice(0, 40) + ')' };
       dropSubmissionRows_(db, sess.cur.id, sess.cur.key);
@@ -2864,7 +2855,7 @@ function surveyClient_() {
     if (thanks) { c.appendChild(el('div', 'ok', '✓')); c.appendChild(el('h2', '', thanks)); }
     else c.appendChild(el('h2', '', '回答する方を選んでください'));
     var left = options.filter(function (o) { return o.state === 'due'; });
-    c.appendChild(el('div', 'desc', left.length ? '申込者と、お子様の、アンケートがあります。お子様のアンケートは、お子様ご本人に、お答えいただいてください(申込者の方は、お子様の回答を、見たり、聞き出したりしないでください)。' : 'すべてのアンケートに、ご回答いただきました。ありがとうございました。次のアンケートの準備ができたら、メールでご案内します。このページは、閉じて大丈夫です。'));
+    c.appendChild(el('div', 'desc', left.length ? '申込者と、お子様の、アンケートがあります。お子様のアンケートは、お子様ご本人に、お答えいただいてください(申込者の方は、お子様の回答を、見たり、聞き出したりしないでください)。' : 'すべてのアンケートに、ご回答いただきました。ありがとうございました。回答は、このまま修正もできます。次のアンケートの案内が届くと、前の回答は、表示も修正もできなくなります。'));
     options.forEach(function (o) {
       var row = el('div', 'who');
       row.appendChild(el('div', 'whoname', o.label));

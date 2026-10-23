@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-j/.test(pa.html) && /2026-10-23-j/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-k/.test(pa.html) && /2026-10-23-k/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -297,7 +297,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('サイト送信: 申込者の回答も記録され、すべて回答済みになる', srp.ok && srp.options.every(o => o.state === 'done') && E.subs.values.some(x => x[2] === 'F0001' && x[4] === 'PT0'));
   t('サイト開始: 回答済みの方は、もう一度選べない', !E.run('surveyStart')(r.token, 'F0001', 'child').ok && !E.run('surveyStart')(r.token, 'F0009', 'child').ok && !E.run('surveyStart')(r.token, 'F0001', 'x').ok);
   r = login('hanako@example.com');
-  t('サイト入室: すべて回答したあとは「回答ありがとう・いまのアンケートはなし」', !r.ok && r.done === true && /ありません/.test(r.message));
+  t('サイト入室: すべて回答したあとも、入室できる。全員「回答済み」で、全員が「修正できる」(いまの時期の間)', r.ok && r.options.every(o => o.state === 'done' && o.canEdit === true));
   E.roster.values[1][E.rc('T1')] = '2026-11-10T10:00:00';
   r = login('hanako@example.com');
   t('サイト入室: 次の案内(T1)を送ると、続けて、申込者用T1(PT1)・お子様用T1(CT1)が選べる(進捗に合わせて変わる)', r.ok && r.options[0].form === 'PT1' && r.options[1].form === 'CT1');
@@ -606,7 +606,17 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const longPW1 = E.long.values.filter(x => x[1] === 'F0001' && x[3] === 'PT0' && x[5] === 'PW1');
   t('編集: 修正を送信すると、前回の回答が置き換わる(回答の件数は増えない。新しい内容が1件だけ残る)', er.ok && er.edited === true && before === 1 && rows.length === 1 && longPW1.length === 1 && longPW1[0][6] === '修正した理由' && E.long.values.filter(x => x[1] === 'F0001' && x[3] === 'PT0' && x[5] === 'PX2t')[0][9] === '非表示(分岐)');
   t('編集: 修正後も、「回答済み」のまま(続けて、もう一度修正もできる)。お子様の回答には影響しない', er.options.find(o => o.role === 'parent').state === 'done' && E.run('surveyStart')(er.options ? r.token : r.token, 'F0001', 'parent', true).ok);
-  t('編集: お子様・パートナーの方の回答は、回答後に開けない・修正できない(回答を見られないように)', !E.run('surveyStart')(r.token, 'F0001', 'child', true).ok && !E.run('surveyStart')(r.token, 'F0001', 'partner', true).ok && /開いたり、修正したり/.test(E.run('surveyStart')(r.token, 'F0001', 'child', true).message));
+  const sch = E.run('surveyStart')(r.token, 'F0001', 'child'); E.run('surveySubmit')(r.token, fullAns(sch.def));
+  const spt = E.run('surveyStart')(r.token, 'F0001', 'partner'); E.run('surveySubmit')(r.token, fullAns(spt.def));
+  const lg = E.run('surveyLogin')('hanako@example.com');
+  t('編集: 全員(申込者・お子様・パートナーの方)が、回答後に、自分の回答を修正できる', lg.ok && ['parent', 'child', 'partner'].every(role => { const o = lg.options.find(x => x.role === role); return o.state === 'done' && o.canEdit; }));
+  const edc = E.run('surveyStart')(lg.token, 'F0001', 'child', true);
+  t('編集: お子様の回答も、前回の回答が入った状態で開き、修正して送信できる(置き換わる)', edc.ok && edc.def.key === 'CT0' && edc.prior.S1 === '4：とてもそう思う' && E.run('surveySubmit')(lg.token, Object.assign(fullAns(edc.def), { S1: '1：全くそう思わない' })).ok && E.long.values.filter(x => x[1] === 'F0001' && x[3] === 'CT0' && x[5] === 'S1').length === 1 && E.long.values.find(x => x[1] === 'F0001' && x[3] === 'CT0' && x[5] === 'S1')[7] === 1);
+  // 次の時期に進んだら、前の回答は、表示も修正もできない
+  E.roster.values[1][E.rc('T1')] = '2026-11-10T10:00:00';
+  const lg2 = E.run('surveyLogin')('hanako@example.com');
+  t('編集: 次の時期(T1)の案内を送ると、前の時期(T0)の回答は、修正できない・開けない。新しい時期(T1)のアンケートが「答えられる」になる', lg2.ok && lg2.options.every(o => o.state === 'due' && !o.canEdit && o.time === 'T1') && !E.run('surveyStart')(lg2.token, 'F0001', 'parent', true).ok && !E.run('surveyStart')(lg2.token, 'F0001', 'child', true).ok && /次のアンケートの時期/.test(E.run('surveyStart')(lg2.token, 'F0001', 'parent', true).message));
+  t('編集: 修正の途中で次の時期に進んでいた場合、送信は受け付けない(前の回答は変わらない)', (() => { const E3 = makeEnv(''); E3.addFamily({}); E3.roster.values[1][E3.rc('T0')] = '2026-11-01T10:00:00'; const l3 = E3.run('surveyLogin')('hanako@example.com'); const s3 = E3.run('surveyStart')(l3.token, 'F0001', 'parent'); E3.run('surveySubmit')(l3.token, fullAns(s3.def)); const e3 = E3.run('surveyStart')(l3.token, 'F0001', 'parent', true); const n = E3.long.values.length; E3.roster.values[1][E3.rc('T1')] = '2026-11-10T10:00:00'; const res = E3.run('surveySubmit')(l3.token, fullAns(e3.def)); return !res.ok && res.done === true && E3.long.values.length === n; })());
   const E2 = makeEnv(''); E2.addFamily({}); E2.roster.values[1][E2.rc('T0')] = '2026-11-01T10:00:00';
   const r2 = E2.run('surveyLogin')('hanako@example.com');
   t('編集: まだ回答していない申込者は、修正を始められない', !E2.run('surveyStart')(r2.token, 'F0001', 'parent', true).ok);
