@@ -648,5 +648,10 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const E2 = makeEnv('');
   t('お名前: パートナーの名前も、スペースが必要', !E2.run('submitApplication')('career', Object.assign({}, base, { AP2: 'sp2@example.com', AP3: 'sp2@example.com', PN0: 'パートナーも参加する', PN1: '林菜月', PN2: '女性', PN3: '19980406' }), '').ok);
 }
+{ // お子様用: 親のお名前とお子様のお名前
+  const E = makeEnv('');
+  const d = E.run('surveyClientDef_')('CT0', { child: '林 巫心', parent: '林 竜輔' });
+  t('お子様用: 「竜輔さんは、巫心さんが何を大切にしているのか理解してくれていると思う。」と表示される', d.blocks.some(b => b.text === '竜輔さんは、巫心さんが何を大切にしているのか理解してくれていると思う。') && d.blocks.some(b => b.text === '竜輔さんが何を大切にしているのか理解している。'));
+}
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
