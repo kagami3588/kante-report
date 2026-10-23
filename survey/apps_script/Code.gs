@@ -395,8 +395,6 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   if (!a.CH1) problems.push('お子様の名前が未入力');
   if (GENDERS.indexOf(a.CH2) === -1) problems.push('お子様の性別が未選択');
   if (!isBirthDate_(a.CH3)) problems.push('お子様の生年月日が不正(8桁の数字。例:20100315)');
-  if (!isEmail_(a.CH4)) problems.push('お子様のメールアドレスの形式が不正');
-  else if (normEmail_(a.CH4) !== normEmail_(a.CH5)) problems.push('お子様のメールアドレスが確認欄と一致しない');
   var ex = parseExtraPersons_(a.EX0, a.EX1);
   ex.problems.forEach(function (x) { problems.push('追加の鑑定: ' + x); });
   if (!a.CONSENT_ALL) problems.push('同意未確認');
@@ -406,9 +404,9 @@ function processCareerApplication_(namedValues, existing, tsIso) {
     return { ok: false, reason: problems.join(' / '), pendingRow: [tsIso, CATEGORY_LABEL.career, a.AP1, a.AP2, a.CH1, problems.join(' / '), a.AP5] };
   }
   var id = nextId_((existing || []).map(function (e) { return e.id; }), 'F');
-  var row = [id, tsIso, a.AP1, a.AP6, a.AP7, a.AP2, a.AP8, a.AP9, a.AP10, a.AP11, a.CH1, a.CH2, a.CH3, a.CH4, '', '参加中', '', '', '', ex.persons.map(function (x) { return x.name; }).join('、'), ex.persons.map(function (x) { return x.name + ': ' + x.plan; }).join(' / '), a.AP5, a.CH6, '', 'career', '', '', '', '', '', '', '', '', ''];
+  var row = [id, tsIso, a.AP1, a.AP6, a.AP7, a.AP2, a.AP8, a.AP9, a.AP10, a.AP11, a.CH1, a.CH2, a.CH3, '', '', '参加中', '', '', '', ex.persons.map(function (x) { return x.name; }).join('、'), ex.persons.map(function (x) { return x.name + ': ' + x.plan; }).join(' / '), a.AP5, a.CH6, '', 'career', '', '', '', '', '', '', '', '', ''];
   row[RC.targets] = ex.persons.map(function (x) { return [x.name, x.gender, x.birth, x.plan].join('/'); }).join('\n');
-  return { ok: true, category: 'career', id: id, name: a.AP1, email: a.AP2, childName: a.CH1, childEmail: a.CH4, extra: ex.persons.length ? { fee: ex.fee, persons: ex.persons } : null, row: row };
+  return { ok: true, category: 'career', id: id, name: a.AP1, email: a.AP2, childName: a.CH1, childEmail: '', extra: ex.persons.length ? { fee: ex.fee, persons: ex.persons } : null, row: row };
 }
 
 function readAnswers_(formDef, namedValues) {
@@ -507,7 +505,7 @@ function isParticipating_(status) { var s = String(status || '').trim(); return 
  */
 function linksDue_(rows, time, today, selectedSet) {
   return rows.filter(function (r) {
-    if (!r.id || r.id === CONFIG.TEST_ID || (r.category && r.category !== 'career') || !isEmail_(r.email) || !isEmail_(r.childEmail) || !isParticipating_(r.status)) return false;
+    if (!r.id || r.id === CONFIG.TEST_ID || (r.category && r.category !== 'career') || !isEmail_(r.email) || !isParticipating_(r.status)) return false;
     if (r.sent && r.sent[time]) return false;
     if (selectedSet) return !!selectedSet[r.row];
     if (!r.sessionDate) return false;
@@ -518,24 +516,20 @@ function linksDue_(rows, time, today, selectedSet) {
   });
 }
 
-var TIME_LABEL = { T0: '鑑定前', T1: '鑑定直後', T2: '鑑定から約3か月後' };
+var TIME_LABEL = { T0: '受講前', T1: '受講後', T2: '受講から約3か月後' };
 
 // ---------- メールの文面(台帳の「メール文面」シートで編集できる) ----------
 var TEMPLATE_VARS_HELP = '使える差し込み: {{宛名}} {{保護者名}} {{お子様名}} {{鑑定日}} {{アンケート名}} {{アンケートURL}} {{入力案内}} {{期限}} {{所要時間}} {{アンケート状況}} {{未回答の注意}} {{署名}} {{連絡先}}';
 
-var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}のアンケート(保護者用)をご案内します。{{期限}}ご回答ください。(所要時間の目安:{{所要時間}})\n{{未回答の注意}}\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・お子様用のアンケートは、お子様ご本人のメールアドレスにお送りしています。お子様の回答は、見たり、聞き出したりしないでください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n・リンクは、他の方に転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。\n\n{{署名}}';
-var TEMPLATE_BASE_CHILD = '{{宛名}}\n\n{{アンケート名}}のアンケートのご案内です。{{期限}}答えてください。(所要時間の目安:{{所要時間}})\n{{未回答の注意}}\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・正解はありません。思ったとおりに答えてください。\n・お父さん・お母さんとは、別の場所(または別の端末)で、ひとりで答えてください。答えは、お父さん・お母さんには見せません。\n・すべての質問に、答えてください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。やめても、困ることはありません。\n・リンクは、他の人に送らないでください。\n\n気になることがあれば、このメールに返信してください。\n\n{{署名}}';
+var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}のアンケートをご案内します。保護者さま用と、お子様用があります。{{期限}}ご回答ください。(所要時間の目安:{{所要時間}})\n{{未回答の注意}}\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・お子様用のアンケートは、お子様ご本人に、お答えいただいてください。お子様の回答は、見たり、聞き出したりしないでください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n・リンクは、他の方に転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。\n\n{{署名}}';
 
 var DEFAULT_TEMPLATES = (function () {
   var out = [];
-  [['T0', '鑑定前'], ['T1', '鑑定直後'], ['T2', '鑑定から約3か月後']].forEach(function (t) {
-    out.push({ key: t[0] + '_parent', to: '保護者', subject: '【アンケートのご案内】{{アンケート名}}のアンケート', body: TEMPLATE_BASE_PARENT, note: t[1] + 'のアンケートの案内(自動配信・送信ボタン共通)' });
-    out.push({ key: t[0] + '_child', to: 'お子様', subject: '【アンケートのご案内】{{アンケート名}}のアンケート', body: TEMPLATE_BASE_CHILD, note: t[1] + 'のアンケートの案内(自動配信・送信ボタン共通)' });
+  [['T0', '受講前'], ['T1', '受講後'], ['T2', '受講から約3か月後']].forEach(function (t) {
+    out.push({ key: t[0] + '_parent', to: '保護者(お子様のアンケートも、このメールのページで回答)', subject: '【アンケートのご案内】{{アンケート名}}のアンケート', body: TEMPLATE_BASE_PARENT, note: t[1] + 'のアンケートの案内(自動配信・送信ボタン共通)' });
   });
-  out.push({ key: 'remind7_parent', to: '保護者', subject: '【鑑定日のご案内】{{鑑定日}}の鑑定について', body: '{{宛名}}\n\nいつもありがとうございます。鑑定日が近づいてまいりましたので、ご案内します。\n\n■ 鑑定日\n{{鑑定日}}\n\n日程の変更などがある場合は、このメールにご返信ください。\n鑑定の前に、アンケート(鑑定前)のご案内を、メールでお送りします。\n\n{{署名}}', note: '鑑定日の1週間前のリマインド' });
-  out.push({ key: 'remind7_child', to: 'お子様', subject: '【鑑定日のご案内】{{鑑定日}}の鑑定について', body: '{{宛名}}\n\n鑑定の日が近づいてきました。\n\n■ 鑑定の日\n{{鑑定日}}\n\n鑑定の前に、アンケート(鑑定前)のご案内を、メールでお送りします。\n分からないことがあれば、このメールに返信してください。\n\n{{署名}}', note: '鑑定日の1週間前のリマインド' });
-  out.push({ key: 'remind1_parent', to: '保護者', subject: '【明日は鑑定日です】{{鑑定日}}', body: '{{宛名}}\n\n明日({{鑑定日}})は、鑑定の日です。\n\n{{アンケート状況}}\n\n当日は、どうぞよろしくお願いいたします。ご不明な点は、このメールにご返信ください。\n\n{{署名}}', note: '鑑定日の前日のリマインド' });
-  out.push({ key: 'remind1_child', to: 'お子様', subject: '【明日は鑑定の日です】{{鑑定日}}', body: '{{宛名}}\n\n明日({{鑑定日}})は、鑑定の日です。\n\n{{アンケート状況}}\n\n分からないことがあれば、このメールに返信してください。\n\n{{署名}}', note: '鑑定日の前日のリマインド' });
+  out.push({ key: 'remind7_parent', to: '保護者', subject: '【受講日のご案内】{{鑑定日}}の受講について', body: '{{宛名}}\n\nいつもありがとうございます。受講日が近づいてまいりましたので、ご案内します。\n\n■ 受講日\n{{鑑定日}}\n\n日程の変更などがある場合は、このメールにご返信ください。\n受講の前に、アンケート(受講前)のご案内を、メールでお送りします。保護者さまとお子様、それぞれのアンケートがあります。\n\n{{署名}}', note: '受講日の1週間前のリマインド' });
+  out.push({ key: 'remind1_parent', to: '保護者', subject: '【明日は受講日です】{{鑑定日}}', body: '{{宛名}}\n\n明日({{鑑定日}})は、受講の日です。\n\n{{アンケート状況}}\n\n当日は、どうぞよろしくお願いいたします。ご不明な点は、このメールにご返信ください。\n\n{{署名}}', note: '受講日の前日のリマインド' });
   return out;
 })();
 
@@ -562,8 +556,8 @@ function getTemplates_(reg) {
 
 function templateVars_(time, role, p, url) {
   var parent = role === 'parent';
-  var addr = parent ? p.email : p.childEmail;
-  var late = { T0: p.sessionDate ? '鑑定日(' + p.sessionDate + ')の前日までに' : '鑑定の前日までに', T1: '鑑定の当日から3日以内に', T2: 'ご都合のよいときに(鑑定から約3か月後の前後2週間ほどの間に)' };
+  var addr = p.email;
+  var late = { T0: p.sessionDate ? '鑑定日(' + p.sessionDate + ')の前日までに' : '鑑定の前日までに', T1: '鑑定の当日から3日以内に', T2: 'ご都合のよいときに(受講から約3か月後の前後2週間ほどの間に)' };
   var mins = parent ? { T0: '約6〜8分', T1: '約6分', T2: '約7分' } : { T0: '約8〜10分', T1: '約10分', T2: '約9〜10分' };
   return {
     '宛名': parent ? (p.name || '') + ' 様' : (p.childName || '') + ' さん',
@@ -572,7 +566,7 @@ function templateVars_(time, role, p, url) {
     'アンケート名': time ? TIME_LABEL[time] : '',
     '期限': time ? late[time] : '', '所要時間': time ? mins[time] : '',
     'アンケートURL': url || '',
-    '入力案内': url ? '(ページを開いたら、このメールを受け取ったメールアドレス(' + (addr || '') + ')を入力してください。いま答えるアンケートが表示されます)' : '',
+    '入力案内': url ? '(ページを開いたら、このメールを受け取ったメールアドレス(' + (addr || '') + ')を入力してください。回答する方(保護者さま・お子様)を選んで、いま答えるアンケートに進めます)' : '',
     'アンケート状況': p.surveyNote || '',
     '未回答の注意': time === 'T0' ? (parent ? '※未回答の方に関しては、算命学の鑑定結果には反映されません。' : '※こたえていない人は、算命学の鑑定の結果には入りません。') : '',
     '署名': CONFIG.SENDER_NAME + '\n' + CONFIG.CONTACT_MAIL, '連絡先': CONFIG.CONTACT_MAIL
@@ -583,23 +577,20 @@ function templateVars_(time, role, p, url) {
 function buildLinkEmails_(time, p, urls, templates) {
   var T = templates || getTemplates_(null);
   var isSurvey = LINK_TIMES.indexOf(time) !== -1;
-  function one(role, url) {
-    var t = T[time + '_' + role];
-    var v = templateVars_(isSurvey ? time : '', role, p, url);
-    return { subject: renderTemplate_(t.subject, v), body: renderTemplate_(t.body, v).replace(/\n{3,}/g, '\n\n') };
-  }
-  return { parent: one('parent', urls && urls.parent), child: one('child', urls && urls.child) };
+  var t = T[time + '_parent'];
+  var v = templateVars_(isSurvey ? time : '', 'parent', p, urls && urls.parent);
+  return { parent: { subject: renderTemplate_(t.subject, v), body: renderTemplate_(t.body, v).replace(/\n{3,}/g, '\n\n') } };
 }
 
-/** 受付確認メール。お子様用はお子様のメールへ、保護者用は保護者のメールへ。回答内容は載せない */
+/** 受付確認メール(保護者のメールへ。お子様の回答でも同じ)。回答内容は載せない */
 function buildReceiptEmail_(formKey, p) {
   var isChild = SURVEY.forms[formKey].role === 'child';
   var tl = TIME_LABEL[SURVEY.forms[formKey].time];
   var foot = '\n\n' + CONFIG.SENDER_NAME + '\n' + CONFIG.CONTACT_MAIL;
   if (isChild) {
     return {
-      subject: '【アンケートを受け付けました】' + tl,
-      body: p.childName + ' さん\n\n' + tl + 'のアンケートへの回答を、受け付けました。ありがとうございました。\n(答えの内容は、このメールには書いていません。)\n\n気になることがあれば、このメールに返信してください。' + foot
+      subject: '【アンケートを受け付けました】お子様用(' + tl + ')',
+      body: p.name + ' 様\n\nお子様(' + p.childName + ' さん)用(' + tl + ')のアンケートへの回答を、受け付けました。ありがとうございました。\n(お子様の回答の内容は、このメールには書いていません。)\n\nご不明な点や、気になることがあれば、このメールにご返信ください。' + foot
     };
   }
   return {
@@ -622,7 +613,7 @@ function buildApplyReceiptEmail_(p, category) {
   var plan = (category === 'corp') ? (p.plan || null) : null;
   var extra = category === 'career' ? (p.extra || null) : null;
   var steps = ['日程の調整は、運営から改めてご連絡します。'];
-  if (category === 'career') steps.push('アンケートのご案内は、日程が決まったあとに、保護者様とお子様のそれぞれのメールアドレスにお送りします。');
+  if (category === 'career') steps.push('アンケートのご案内は、日程が決まったあとに、保護者様のメールアドレスにお送りします。お子様のアンケートも、同じページで、お子様ご本人が回答できます。');
   steps.push('このメールに心当たりがない場合は、お手数ですが、ご返信ください。');
 
   var text = who + '\n\nお申込みありがとうございます。お申込みを受け付けました。\n\n' +
@@ -650,7 +641,7 @@ function buildApplyReceiptEmail_(p, category) {
     '<div style="' + box + 'text-align:center;"><div style="margin-bottom:10px;">林 竜輔の公式LINEを、まだ追加していない方は、こちらから追加してください。</div>' +
     '<a href="' + escHtml_(LINE_URL) + '" style="display:inline-block;background:#06c755;color:#ffffff;text-decoration:none;font-weight:700;padding:11px 26px;border-radius:24px;">公式LINEを追加する</a></div>' +
     '<p style="font-size:13px;color:#6b7785;margin:18px 0 0;">ご不明な点があれば、このメールにご返信ください。<br>' + escHtml_(CONFIG.SENDER_NAME) + '(' + escHtml_(CONFIG.CONTACT_MAIL) + ')</p></div>';
-  return { subject: '【お申込みを受け付けました】算命学の鑑定(' + { career: '親子プラン', general: '個人プラン', corp: '法人プラン' }[category] + ')', body: text, html: html };
+  return { subject: '【お申込みを受け付けました】対話プログラム(' + { career: '親子プラン', general: '個人プラン', corp: '法人プラン' }[category] + ')', body: text, html: html };
 }
 
 // ======================================================================
@@ -863,9 +854,9 @@ function initRegSheets_(reg) {
     ['アンケートサイトのURL(公開用)', '', 'ウェブアプリ(公開用・アクセス「全員」)のURLの末尾に ?page=survey を付けたもの。アンケートのご案内メールに載ります。未入力のままだと、案内メールは送られません(自動配信も、アンケートの案内は止まります)'],
     ['メールの自動配信', '有効', '「有効」のとき、毎朝9時ごろ、鑑定日に合わせて、下の日数でメールが自動で届きます。止めるときは「無効」に変えてください'],
     ['鑑定日の何日前に、リマインド', 7, '鑑定日のリマインド(保護者・お子様)。数字で入力'],
-    ['鑑定日の何日前に、鑑定前アンケートの案内', 3, '鑑定前アンケート(T0)の案内。数字で入力'],
+    ['鑑定日の何日前に、受講前アンケートの案内', 3, '受講前アンケート(T0)の案内。数字で入力'],
     ['鑑定日の何日前に、前日リマインド', 1, '前日のリマインド(通常は1)。数字で入力'],
-    ['鑑定日の何日後に、鑑定後アンケートの案内', 0, '鑑定後アンケート(T1)の案内。0なら鑑定日の朝に届きます(鑑定のあとに送りたいときは、管理画面の「セッション終了」ボタンも使えます)'],
+    ['鑑定日の何日後に、受講後アンケートの案内', 0, '受講後アンケート(T1)の案内。0なら鑑定日の朝に届きます(鑑定のあとに送りたいときは、管理画面の「セッション終了」ボタンも使えます)'],
     ['鑑定日の何日後に、3か月後アンケートの案内', 90, '3か月後アンケート(T2)の案内。数字で入力']
   ]);
   var tpl = mkSheet_(reg, SHEETS.templates, ['キー', '送り先', '件名', '本文', 'メモ(使える差し込み: ' + TEMPLATE_VARS_HELP.replace('使える差し込み: ', '') + ')']);
@@ -972,7 +963,7 @@ function sendT0Selected() { sendLinks_('T0', 'selected'); }
 function sendT1Selected() { sendLinks_('T1', 'selected'); }
 function sendT2Selected() { sendLinks_('T2', 'selected'); }
 
-/** 対象の家庭に、保護者宛・お子様宛のリンクをメールで送り、送信日時を名簿に記録する(メニューとサイトの共通処理) */
+/** 対象の家庭の保護者に、アンケートのページ(お子様の分も、同じページ)をメールで送り、送信日時を名簿に記録する(メニューとサイトの共通処理) */
 function sendLinksToFamilies_(reg, time, due) {
   var site = requireSurveySiteUrl_(reg);
   var templates = getTemplates_(reg);
@@ -982,15 +973,14 @@ function sendLinksToFamilies_(reg, time, due) {
   var ok = 0, ng = 0;
   due.forEach(function (d) {
     var stamp = nowStr_();
-    var okParent = false, okChild = false;
+    var sent = false;
     try {
-      var mails = buildLinkEmails_(time, d, { child: site, parent: site }, templates);
-      try { sendMail_(d.email, mails.parent.subject, mails.parent.body); okParent = true; log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '送信済み']); } catch (e1) { log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '【失敗】' + e1]); }
-      try { sendMail_(d.childEmail, mails.child.subject, mails.child.body); okChild = true; log.appendRow([stamp, d.id, time + ' お子様宛', d.childEmail, '送信済み']); } catch (e2) { log.appendRow([stamp, d.id, time + ' お子様宛', d.childEmail, '【失敗】' + e2]); }
+      var mails = buildLinkEmails_(time, d, { parent: site }, templates);
+      try { sendMail_(d.email, mails.parent.subject, mails.parent.body); sent = true; log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '送信済み']); } catch (e1) { log.appendRow([stamp, d.id, time + ' 保護者宛', d.email, '【失敗】' + e1]); }
     } catch (err) {
       log.appendRow([stamp, d.id, time, '', '【リンク作成に失敗】' + err]);
     }
-    if (okParent && okChild) { sh.getRange(d.row, col).setValue(stamp); ok++; } else { ng++; }
+    if (sent) { sh.getRange(d.row, col).setValue(stamp); ok++; } else { ng++; }
   });
   return { ok: ok, ng: ng };
 }
@@ -1012,8 +1002,8 @@ function sendLinks_(time, mode) {
   }
   var quota = MailApp.getRemainingDailyQuota();
   if (quota < due.length) { ui.alert('今日の送信上限に足りません', '残りの送信可能数: ' + quota + '通 / 必要: ' + due.length + '通。明日以降に実行してください。', ui.ButtonSet.OK); return; }
-  var list = due.slice(0, 20).map(function (d) { return d.id + ' ' + d.name + ' <' + d.email + '> / お子様:' + d.childName + ' <' + d.childEmail + '>' + (d.sessionDate ? ' 鑑定日:' + d.sessionDate : ''); }).join('\n');
-  var ans = ui.alert('送信の確認', due.length + '家庭に、' + TIME_LABEL[time] + 'のアンケートのリンク(子ども用・保護者用)を、メールで送ります。\n\n' + list + (due.length > 20 ? '\n…ほか' + (due.length - 20) + '家庭' : '') + '\n\n送ってよろしいですか?', ui.ButtonSet.YES_NO);
+  var list = due.slice(0, 20).map(function (d) { return d.id + ' ' + d.name + ' <' + d.email + '> / お子様:' + d.childName + (d.sessionDate ? ' 鑑定日:' + d.sessionDate : ''); }).join('\n');
+  var ans = ui.alert('送信の確認', due.length + '家庭に、' + TIME_LABEL[time] + 'のアンケートのページ(保護者さま用・お子様用)の案内を、保護者のメールアドレスに送ります。\n\n' + list + (due.length > 20 ? '\n…ほか' + (due.length - 20) + '家庭' : '') + '\n\n送ってよろしいですか?', ui.ButtonSet.YES_NO);
   if (ans !== ui.Button.YES) return;
 
   var res = sendLinksToFamilies_(reg, time, due);
@@ -1069,8 +1059,8 @@ function deleteFamilyData() {
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('アンケート運用')
-    .addItem('T0(鑑定前)のリンクを送る — 鑑定日が入力済みの家庭', 'sendT0All')
-    .addItem('T1(鑑定直後)のリンクを送る — 鑑定日を過ぎた家庭', 'sendT1All')
+    .addItem('T0(受講前)のリンクを送る — 鑑定日が入力済みの家庭', 'sendT0All')
+    .addItem('T1(受講後)のリンクを送る — 鑑定日を過ぎた家庭', 'sendT1All')
     .addItem('T2(約3か月後)のリンクを送る — 鑑定の90日後以降の家庭', 'sendT2All')
     .addSeparator()
     .addItem('選択した家庭に T0 を送る', 'sendT0Selected')
@@ -1128,9 +1118,9 @@ function recordSubmission_(db, reg, key, namedValues) {
 
   if (res.reasons.length) notifySafety_(reg, db.getUrl(), res, key, tsIso);
 
-  // 受付確認メール(回答内容は載せない)。登録済みの家庭の、最初の送信のみ。お子様用はお子様のメール、保護者用は保護者のメールへ
+  // 受付確認メール(回答内容は載せない)。登録済みの家庭の、最初の送信のみ。保護者のメールへ(お子様の回答でも)
   var fam = byId[res.rid];
-  var toAddr = fam ? (SURVEY.forms[key].role === 'child' ? fam.childEmail : fam.email) : '';
+  var toAddr = fam ? fam.email : '';
   if (!res.isTest && res.adopted && fam && isEmail_(toAddr) && res.flags.indexOf('ID形式不正') === -1) {
     var mail = buildReceiptEmail_(key, { name: fam.name, childName: fam.childName });
     var result = '送信済み';
@@ -1375,27 +1365,27 @@ function apiSendLinks(time, ids) {
   var due = linksDue_(readRoster_(reg), time, todayStr_(), selected);
   if (!due.length) return { sent: 0, ng: 0, message: '送る対象の家庭はありません(送信済み・辞退・メール未入力・鑑定日の条件を満たしていません)', data: dashboardData_(reg) };
   var quota = MailApp.getRemainingDailyQuota();
-  if (quota < due.length * 2) throw new Error('今日の送信上限に足りません(残り' + quota + '通 / 必要:' + due.length * 2 + '通)');
+  if (quota < due.length) throw new Error('今日の送信上限に足りません(残り' + quota + '通 / 必要:' + due.length + '通)');
   var res = sendLinksToFamilies_(reg, time, due);
   return { sent: res.ok, ng: res.ng, message: TIME_LABEL[time] + 'のリンクを、' + res.ok + '家庭に送りました' + (res.ng ? '(失敗:' + res.ng + '家庭。「送信ログ」を確認してください)' : ''), data: dashboardData_(reg) };
 }
 
-/** 管理画面の「セッション終了」: 終了日時を記録し、鑑定直後のアンケート(T1)を、保護者・お子様に送る。進路相談の家庭のみ */
+/** 管理画面の「セッション終了」: 終了日時を記録し、受講後のアンケート(T1)を、保護者・お子様に送る。進路相談の家庭のみ */
 function apiEndSession(id) {
   var reg = apiGuard_();
   var fam = findFamily_(reg, id);
   if (fam.category !== 'career') throw new Error('セッション終了のアンケートは、進路相談の家庭のみです');
   if (!isParticipating_(fam.status)) throw new Error('この家庭は、参加中ではありません(辞退・完了・削除済み)');
-  if (!isEmail_(fam.email) || !isEmail_(fam.childEmail)) throw new Error('保護者・お子様のメールアドレスが、名簿に入っていません');
+  if (!isEmail_(fam.email)) throw new Error('保護者のメールアドレスが、名簿に入っていません');
   var sh = reg.getSheetByName(SHEETS.roster);
   if (!fam.ended) sh.getRange(fam.row, RC.ended + 1).setValue(nowStr_());
   var msg;
   if (fam.sent && fam.sent.T1) {
-    msg = id + ' のセッション終了を記録しました(鑑定直後のアンケートは、すでに送信済みです)';
+    msg = id + ' のセッション終了を記録しました(受講後のアンケートは、すでに送信済みです)';
   } else {
-    if (MailApp.getRemainingDailyQuota() < 2) throw new Error('今日の送信上限に足りません');
+    if (MailApp.getRemainingDailyQuota() < 1) throw new Error('今日の送信上限に足りません');
     var res = sendLinksToFamilies_(reg, 'T1', [fam]);
-    msg = res.ok ? id + ' のセッション終了を記録し、鑑定直後のアンケートを、保護者とお子様に送りました' : id + ' のセッション終了を記録しましたが、アンケートの送信に失敗しました(「送信ログ」を確認してください)';
+    msg = res.ok ? id + ' のセッション終了を記録し、受講後のアンケートを、保護者とお子様に送りました' : id + ' のセッション終了を記録しましたが、アンケートの送信に失敗しました(「送信ログ」を確認してください)';
   }
   return { message: msg, data: dashboardData_(reg) };
 }
@@ -1502,11 +1492,11 @@ function doGet(e) {
   var reg = regSS_();
   var ok = isAllowedViewer_(Session.getActiveUser().getEmail(), Session.getEffectiveUser().getEmail(), [opMail_(reg)]);
   if (page === 'survey') {
-    return HtmlService.createHtmlOutput(surveyPage_()).setTitle('算命学の鑑定 アンケート').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    return HtmlService.createHtmlOutput(surveyPage_()).setTitle('対話プログラム アンケート').addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
   var cat = (e && e.parameter && e.parameter.cat) || '';
   if (page === 'apply' || cat || !ok) {
-    return HtmlService.createHtmlOutput(applyPage_(cat)).setTitle('算命学の鑑定 お申込み' + (SITE_CATEGORIES.filter(function (x) { return x.key === cat; })[0] ? '(' + SITE_CATEGORIES.filter(function (x) { return x.key === cat; })[0].label + ')' : '')).addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    return HtmlService.createHtmlOutput(applyPage_(cat)).setTitle('対話プログラム お申込み' + (SITE_CATEGORIES.filter(function (x) { return x.key === cat; })[0] ? '(' + SITE_CATEGORIES.filter(function (x) { return x.key === cat; })[0].label + ')' : '')).addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
   return HtmlService.createHtmlOutput(dashboardPage_(dashboardData_(reg))).setTitle('申込・進捗ダッシュボード').addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -1594,7 +1584,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-22-h';
+var SITE_VERSION = '2026-10-23-a';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -1741,9 +1731,9 @@ function extraPersons_(el, getCount, cfg) {
 function extraCountC_(label) { var m = /^([0-9]+)名$/.exec(String(label || '')); return m ? +m[1] : 0; }
 
 var APPLY_HTML = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
-'<title>算命学の鑑定 お申込み | KAGAMI</title><style>' +
+'<title>対話プログラム お申込み | KAGAMI</title><style>' +
 SITE_CSS_ + '</style></head><body>' +
-'<header><div class="brand">KAGAMI</div><h1 id="h1">算命学の鑑定 お申込み</h1><div id="plan" class="planbadge" style="display:none"></div><p>必要事項を入力して、送信してください。送信後に、お振込先をご案内します。</p></header>' +
+'<header><div class="brand">KAGAMI</div><h1 id="h1">対話プログラム お申込み</h1><div id="plan" class="planbadge" style="display:none"></div><p>必要事項を入力して、送信してください。送信後に、お振込先をご案内します。</p></header>' +
 '<main><div id="app"></div></main><footer id="foot"></footer>' +
 '<script>var SITE = __DATA__;__EXT__' +
 'var el=function(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e;};' +
@@ -1842,15 +1832,23 @@ function requireSurveySiteUrl_(reg) {
 
 function surveyFormKey_(role, time) { return (role === 'child' ? 'CT' : 'PT') + time.charAt(1); }
 
-/** メールアドレスに一致する、進路相談の家庭(辞退・削除済みを除く)と、その役割(お子様/保護者) */
+/** 保護者のメールアドレスに一致する、進路相談の家庭(辞退・削除済みを除く)。同じアドレスで、お子様の回答もできる */
 function surveyFamiliesFor_(roster, email) {
   var e = String(email || '').trim().toLowerCase();
   if (!e) return [];
+  return roster.filter(function (f) {
+    return f.category === 'career' && f.status !== '辞退' && f.status !== '削除済み' && String(f.email || '').trim().toLowerCase() === e;
+  });
+}
+
+/** 家庭ごとの、回答者(保護者・お子様)の選択肢と状態。state: 'due'(いま答えられる) 'done'(回答済み) 'wait'(まだ案内がない) */
+function surveyOptions_(families, answered) {
   var out = [];
-  roster.forEach(function (f) {
-    if (f.category !== 'career' || f.status === '辞退' || f.status === '削除済み') return;
-    if (String(f.email || '').trim().toLowerCase() === e) out.push({ fam: f, role: 'parent' });
-    else if (String(f.childEmail || '').trim().toLowerCase() === e) out.push({ fam: f, role: 'child' });
+  families.forEach(function (f) {
+    ['parent', 'child'].forEach(function (role) {
+      var due = surveyDue_(f, role, answered);
+      out.push({ id: f.id, role: role, label: role === 'parent' ? '保護者さま(' + (f.name || '') + ' 様)' : 'お子様(' + (f.childName || '') + ' さん)', state: due.state, time: due.time || '', form: due.key || '' });
+    });
   });
   return out;
 }
@@ -1927,30 +1925,42 @@ function surveyAnswered_(db) {
   return prior;
 }
 
-/** メールアドレスでの入室(誰でも呼べる)。いま答えるアンケートがあれば、その設問と、送信用の合い鍵(6時間有効)を返す */
+/** メールアドレス(保護者のもの)での入室(誰でも呼べる)。回答者(保護者・お子様)の選択肢と、送信用の合い鍵(6時間有効)を返す */
 function surveyLogin(email) {
-  var generic = { ok: false, message: 'このメールアドレスでは、いま答えられるアンケートが見つかりません。申込のときに登録したメールアドレスを、ご確認ください。ご案内のメールが届いていない場合は、' + CONTACT_MAIL + ' までご連絡ください。' };
+  var generic = { ok: false, message: 'このメールアドレスでは、いま答えられるアンケートが見つかりません。申込のときに登録した、保護者さまのメールアドレスを、ご確認ください。ご案内のメールが届いていない場合は、' + CONTACT_MAIL + ' までご連絡ください。' };
   email = String(email || '').trim().toLowerCase().slice(0, 200);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: 'メールアドレスの形式が正しくありません。' };
   var cache = CacheService.getScriptCache();
   if (rateLimited_(cache, 'sv_login_all_' + Math.floor(Date.now() / 600000), 300, 700)) return { ok: false, message: 'ただいま、混み合っています。しばらくしてから、もう一度お試しください。' };
   if (rateLimited_(cache, 'sv_login_' + email, 10, 3600)) return { ok: false, message: '短い時間に、何度も試されました。しばらくしてから、もう一度お試しください。' };
   var reg = regSS_(), db = dbSS_();
-  var found = surveyFamiliesFor_(readRoster_(reg), email);
-  var answered = surveyAnswered_(db);
-  var pick = null, status = 'none';
-  found.forEach(function (x) {
-    var due = surveyDue_(x.fam, x.role, answered);
-    if (due.state === 'due' && !pick) pick = { fam: x.fam, role: x.role, due: due };
-    if (due.state === 'done' && status === 'none') status = 'done';
-  });
-  if (!pick) {
-    if (status === 'done') return { ok: false, done: true, message: 'ご回答ありがとうございます。いま答えていただくアンケートは、ありません。次のアンケートの準備ができたら、メールでご案内します。' };
+  var fams = surveyFamiliesFor_(readRoster_(reg), email);
+  var options = surveyOptions_(fams, surveyAnswered_(db));
+  if (!options.some(function (o) { return o.state === 'due'; })) {
+    if (options.some(function (o) { return o.state === 'done'; })) return { ok: false, done: true, message: 'ご回答ありがとうございます。いま答えていただくアンケートは、ありません。次のアンケートの準備ができたら、メールでご案内します。' };
     return generic;
   }
   var token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-  cache.put('sv_tok_' + token, JSON.stringify({ id: pick.fam.id, role: pick.role, key: pick.due.key, email: email }), 21600);
-  return { ok: true, token: token, who: pick.role === 'child' ? (pick.fam.childName || '') : (pick.fam.name || ''), def: surveyClientDef_(pick.due.key) };
+  cache.put('sv_tok_' + token, JSON.stringify({ email: email }), 21600);
+  return { ok: true, token: token, options: options };
+}
+
+/** 回答者(保護者・お子様)を選んで、そのアンケートを始める(合い鍵が必要)。同じメールアドレスの中で、切り替えられる */
+function surveyStart(token, id, role) {
+  token = String(token || '');
+  var cache = CacheService.getScriptCache();
+  var raw = /^[0-9a-f]{64}$/.test(token) ? cache.get('sv_tok_' + token) : null;
+  if (!raw) return { ok: false, expired: true, message: '時間がたったため、最初からやり直してください。メールアドレスの入力画面にもどります。' };
+  var sess = JSON.parse(raw);
+  if (role !== 'parent' && role !== 'child') return { ok: false, message: '回答者を選んでください。' };
+  var reg = regSS_(), db = dbSS_();
+  var fams = surveyFamiliesFor_(readRoster_(reg), sess.email).filter(function (f) { return f.id === String(id); });
+  if (!fams.length) return { ok: false, message: '回答者が見つかりません。' };
+  var due = surveyDue_(fams[0], role, surveyAnswered_(db));
+  if (due.state !== 'due') return { ok: false, done: true, message: 'この方のアンケートは、いま、答えられるものがありません。' };
+  sess.cur = { id: fams[0].id, role: role, key: due.key };
+  cache.put('sv_tok_' + token, JSON.stringify(sess), 21600);
+  return { ok: true, who: role === 'child' ? (fams[0].childName || '') : (fams[0].name || ''), def: surveyClientDef_(due.key) };
 }
 
 function maskEmail_(e) {
@@ -1976,30 +1986,35 @@ function diagnoseSurvey() {
       else if (due.state === 'done') why.push('案内済みのアンケートには、すべて回答済み');
       else why.push('入室できる状態です(いまのアンケート: ' + due.key.replace(/^P/, '保護者用 ').replace(/^C/, 'お子様用 ') + ')');
     }
-    lines.push(f.id + ' / 区分:' + (f.category || '空') + ' / 参加状況:' + f.status + ' / 保護者:' + maskEmail_(f.email) + ' / お子様:' + maskEmail_(f.childEmail) +
+    lines.push(f.id + ' / 区分:' + (f.category || '空') + ' / 参加状況:' + f.status + ' / 保護者:' + maskEmail_(f.email) +
       ' / 案内の送信 T0:' + (f.sent && f.sent.T0 ? '済' : '未') + ' T1:' + (f.sent && f.sent.T1 ? '済' : '未') + ' T2:' + (f.sent && f.sent.T2 ? '済' : '未') + ' → ' + why.join(' / '));
   });
   Logger.log(lines.join('\n'));
 }
 
-/** アンケートの送信(誰でも呼べるが、入室で渡した合い鍵が必要)。フォームと同じ処理で、回答DBに記録する */
+/** アンケートの送信(誰でも呼べるが、入室で渡した合い鍵と、回答者の選択が必要)。フォームと同じ処理で、回答DBに記録する。送信後は、回答者の選択肢を、最新にして返す */
 function surveySubmit(token, answers) {
   token = String(token || '');
   var cache = CacheService.getScriptCache();
   var raw = /^[0-9a-f]{64}$/.test(token) ? cache.get('sv_tok_' + token) : null;
   if (!raw) return { ok: false, message: '時間がたったため、最初からやり直してください。メールアドレスの入力画面にもどります。', expired: true };
   var sess = JSON.parse(raw);
+  if (!sess.cur) return { ok: false, message: '回答者を選んでから、始めてください。' };
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
     var reg = regSS_(), db = dbSS_();
-    var due = surveyDue_(readRoster_(reg).filter(function (f) { return f.id === sess.id; })[0] || { id: sess.id, sent: {} }, sess.role, surveyAnswered_(db));
-    if (due.state !== 'due' || due.key !== sess.key) { cache.remove('sv_tok_' + token); return { ok: false, message: 'このアンケートには、すでにご回答いただいています。ありがとうございました。', done: true }; }
-    var missing = surveyMissing_(sess.key, answers);
+    var roster = readRoster_(reg);
+    var fam = roster.filter(function (f) { return f.id === sess.cur.id; })[0] || { id: sess.cur.id, sent: {} };
+    var due = surveyDue_(fam, sess.cur.role, surveyAnswered_(db));
+    if (due.state !== 'due' || due.key !== sess.cur.key) { delete sess.cur; cache.put('sv_tok_' + token, JSON.stringify(sess), 21600); return { ok: false, message: 'このアンケートには、すでにご回答いただいています。ありがとうございました。', done: true }; }
+    var missing = surveyMissing_(sess.cur.key, answers);
     if (missing) return { ok: false, message: 'まだ答えていない質問があります。すべての質問に、ご回答をお願いします。(' + missing.slice(0, 40) + ')' };
-    recordSubmission_(db, reg, sess.key, sanitizeSurveyAnswers_(sess.key, sess.id, answers));
-    cache.remove('sv_tok_' + token);
-    return { ok: true };
+    recordSubmission_(db, reg, sess.cur.key, sanitizeSurveyAnswers_(sess.cur.key, sess.cur.id, answers));
+    delete sess.cur;
+    cache.put('sv_tok_' + token, JSON.stringify(sess), 21600);
+    var options = surveyOptions_(surveyFamiliesFor_(readRoster_(reg), sess.email), surveyAnswered_(db));
+    return { ok: true, options: options };
   } finally {
     lock.releaseLock();
   }
@@ -2030,7 +2045,7 @@ function surveyClient_() {
     app.innerHTML = '';
     var c = el('div', 'card');
     c.appendChild(el('h2', '', 'アンケートのページ'));
-    c.appendChild(el('div', 'desc', 'お申込みのときに登録した、メールアドレスを入力してください。いま答えていただくアンケートが表示されます。'));
+    c.appendChild(el('div', 'desc', 'お申込みのときに登録した、保護者さまのメールアドレスを入力してください。保護者さまと、お子様の、いま答えていただくアンケートが選べます。'));
     var q = el('div', 'q');
     q.appendChild(el('label', 't', 'メールアドレス'));
     var inp = document.createElement('input'); inp.type = 'email'; inp.autocomplete = 'email'; q.appendChild(inp);
@@ -2044,7 +2059,7 @@ function surveyClient_() {
       google.script.run.withSuccessHandler(function (r) {
         btn.disabled = false; btn.textContent = 'はじめる';
         if (!r || !r.ok) { msg.style.display = 'block'; msg.textContent = (r && r.message) || 'うまくいきませんでした。'; return; }
-        start(r);
+        state.token = r.token; chooser(r.options, '');
       }).withFailureHandler(function () {
         btn.disabled = false; btn.textContent = 'はじめる'; msg.style.display = 'block'; msg.textContent = '通信できませんでした。もう一度お試しください。';
       }).surveyLogin(inp.value);
@@ -2053,9 +2068,35 @@ function surveyClient_() {
     inp.onkeydown = function (e) { if (e.key === 'Enter') go(); };
   }
 
-  function start(r) {
-    state.token = r.token; state.def = r.def; state.ans = {}; state.pages = buildPages(r.def); state.idx = 0;
-    intro(r.who);
+  /** 回答者(保護者・お子様)の選択。同じメールアドレスのまま、切り替えられる */
+  function chooser(options, thanks) {
+    app.innerHTML = '';
+    var c = el('div', 'card');
+    if (thanks) { c.appendChild(el('div', 'ok', '✓')); c.appendChild(el('h2', '', thanks)); }
+    else c.appendChild(el('h2', '', '回答する方を選んでください'));
+    var left = options.filter(function (o) { return o.state === 'due'; });
+    c.appendChild(el('div', 'desc', left.length ? '保護者さまと、お子様の、アンケートがあります。お子様のアンケートは、お子様ご本人に、お答えいただいてください(保護者の方は、お子様の回答を、見たり、聞き出したりしないでください)。' : 'すべてのアンケートに、ご回答いただきました。ありがとうございました。次のアンケートの準備ができたら、メールでご案内します。このページは、閉じて大丈夫です。'));
+    options.forEach(function (o) {
+      var row = el('div', 'who');
+      row.appendChild(el('div', 'whoname', o.label));
+      if (o.state === 'due') {
+        var b = el('button', 'btn', (o.time === 'T0' ? '受講前' : o.time === 'T1' ? '受講後' : '受講から約3か月後') + 'のアンケートに回答する'); b.type = 'button';
+        b.onclick = function () { begin(o, b); };
+        row.appendChild(b);
+      } else row.appendChild(el('div', 'whostate', o.state === 'done' ? '回答済み' : 'まだ、ご案内がありません'));
+      c.appendChild(row);
+    });
+    app.appendChild(c); window.scrollTo(0, 0);
+  }
+
+  function begin(o, btn) {
+    btn.disabled = true;
+    google.script.run.withSuccessHandler(function (r) {
+      btn.disabled = false;
+      if (r && r.ok) { state.def = r.def; state.ans = {}; state.pages = buildPages(r.def); state.idx = 0; intro(r.who); return; }
+      if (r && r.expired) { alert(r.message); return login(); }
+      alert((r && r.message) || '始められませんでした。');
+    }).withFailureHandler(function () { btn.disabled = false; alert('通信できませんでした。もう一度お試しください。'); }).surveyStart(state.token, o.id, o.role);
   }
 
   function intro(who) {
@@ -2150,7 +2191,7 @@ function surveyClient_() {
     var out = {};
     qs().forEach(function (q) { if (!hidden(q) && state.ans[q.id] !== undefined) out[q.id] = state.ans[q.id]; });
     google.script.run.withSuccessHandler(function (r) {
-      if (r && r.ok) return done();
+      if (r && r.ok) return chooser(r.options || [], 'ご回答ありがとうございました');
       if (r && (r.expired || r.done)) { alert(r.message); return login(); }
       btn.disabled = false; btn.textContent = '送信する'; alert((r && r.message) || '送信できませんでした。もう一度お試しください。');
     }).withFailureHandler(function () {
@@ -2171,11 +2212,11 @@ function surveyClient_() {
 }
 
 var SURVEY_SITE_HTML = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
-'<title>算命学の鑑定 アンケート | KAGAMI</title><style>' + SITE_CSS_ +
+'<title>対話プログラム アンケート | KAGAMI</title><style>' + SITE_CSS_ +
 '.prog{display:flex;align-items:center;gap:10px;margin:8px 0 14px;color:var(--mute);font-size:13px}.bar{flex:1;height:8px;border-radius:999px;background:var(--line);overflow:hidden}.fill{height:100%;background:var(--accent);transition:width .3s}' +
-'.nav{display:flex;gap:10px}.nav .btn{flex:1}.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}' +
+'.who{border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:12px}.whoname{font-weight:600;margin-bottom:6px}.whostate{color:var(--mute);font-size:14px}.nav{display:flex;gap:10px}.nav .btn{flex:1}.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}' +
 '</style></head><body>' +
-'<header><div class="brand">KAGAMI</div><h1>算命学の鑑定 アンケート</h1><p>ご協力ありがとうございます。</p></header>' +
+'<header><div class="brand">KAGAMI</div><h1>対話プログラム アンケート</h1><p>ご協力ありがとうございます。</p></header>' +
 '<main><div id="app"></div></main><footer id="foot"></footer>' +
 '<script>var SURVEY_SITE = {contact:"' + CONTACT_MAIL + '",responsible:"' + RESPONSIBLE + '",version:"' + SITE_VERSION + '"};(' + surveyClient_.toString() + ')();' +
 'document.getElementById("foot").textContent="運営: KAGAMI / 責任者: "+SURVEY_SITE.responsible+" / お問い合わせ: "+SURVEY_SITE.contact+" / 版: "+SURVEY_SITE.version;</script></body></html>';
@@ -2209,7 +2250,7 @@ function autoPlan_(roster, sch, today, done) {
   if (!sch.enabled) return out;
   roster.forEach(function (f) {
     if (!f.id || f.id === CONFIG.TEST_ID || (f.category && f.category !== 'career') || !isParticipating_(f.status) || !f.sessionDate) return;
-    if (!isEmail_(f.email) || !isEmail_(f.childEmail)) return;
+    if (!isEmail_(f.email)) return;
     var before = dayDiff_(f.sessionDate, today);   // 鑑定日まで、あと何日(過ぎていれば負)
     var after = -before;
     if (!done[f.id + '|remind7'] && before <= sch.remind7 && before > sch.remind1) out.push({ id: f.id, kind: 'remind7' });
@@ -2234,9 +2275,9 @@ function autoScheduleText_(f, sch, done) {
   if (!f.sessionDate) return '鑑定日を入力すると、自動配信の予定が出ます';
   var items = [
     ['リマインド', addDays_(f.sessionDate, -sch.remind7), !!done[f.id + '|remind7']],
-    ['鑑定前アンケート', addDays_(f.sessionDate, -sch.t0), !!(f.sent && f.sent.T0)],
+    ['受講前アンケート', addDays_(f.sessionDate, -sch.t0), !!(f.sent && f.sent.T0)],
     ['前日リマインド', addDays_(f.sessionDate, -sch.remind1), !!done[f.id + '|remind1']],
-    ['鑑定後アンケート', addDays_(f.sessionDate, sch.t1), !!(f.sent && f.sent.T1)],
+    ['受講後アンケート', addDays_(f.sessionDate, sch.t1), !!(f.sent && f.sent.T1)],
     ['3か月後アンケート', addDays_(f.sessionDate, sch.t2), !!(f.sent && f.sent.T2)]
   ];
   return items.map(function (x) { return x[1] + ' ' + x[0] + (x[2] ? '(済)' : ''); }).join(' / ');
@@ -2256,15 +2297,12 @@ function remindDone_(reg) {
 /** 鑑定日のリマインド(remind7 / remind1)を送り、送信ログに記録する */
 function sendNotice_(reg, kind, fam, templates, surveyNote) {
   var log = reg.getSheetByName(SHEETS.sendlog), stamp = nowStr_();
-  var p = { name: fam.name, email: fam.email, childName: fam.childName, childEmail: fam.childEmail, sessionDate: fam.sessionDate, surveyNote: surveyNote };
+  var p = { name: fam.name, email: fam.email, childName: fam.childName, sessionDate: fam.sessionDate, surveyNote: surveyNote };
   var mails = buildLinkEmails_(kind, p, null, templates);
-  var ok = 0;
-  [['保護者宛', fam.email, mails.parent], ['お子様宛', fam.childEmail, mails.child]].forEach(function (x) {
-    var res = '送信済み';
-    try { sendMail_(x[1], x[2].subject, x[2].body); ok++; } catch (err) { res = '【失敗】' + err; }
-    log.appendRow([stamp, fam.id, '自動:' + kind + ' ' + x[0], x[1], res]);
-  });
-  return ok === 2;
+  var res = '送信済み', ok = true;
+  try { sendMail_(fam.email, mails.parent.subject, mails.parent.body); } catch (err) { res = '【失敗】' + err; ok = false; }
+  log.appendRow([stamp, fam.id, '自動:' + kind + ' 保護者宛', fam.email, res]);
+  return ok;
 }
 
 /** 毎朝の自動配信。送った内容を、運営メールに知らせる。設定B7(サイトのURL)が未入力ならアンケートの案内は送らない */
@@ -2279,10 +2317,10 @@ function runAutomation_(reg, db) {
   try { requireSurveySiteUrl_(reg); } catch (e) { surveyOk = false; errors.push(String(e.message || e)); }
   plan.forEach(function (t) {
     var fam = byId[t.id];
-    if (MailApp.getRemainingDailyQuota() < 2) { errors.push('今日の送信上限に足りないため、' + t.id + ' の ' + t.kind + ' は送りませんでした(明日の朝に再実行されます)'); return; }
+    if (MailApp.getRemainingDailyQuota() < 1) { errors.push('今日の送信上限に足りないため、' + t.id + ' の ' + t.kind + ' は送りませんでした(明日の朝に再実行されます)'); return; }
     if (t.kind === 'remind7' || t.kind === 'remind1') {
       var note = '';
-      if (t.kind === 'remind1') note = (answered[fam.id + '|CT0'] && answered[fam.id + '|PT0']) ? '鑑定前のアンケートへのご回答、ありがとうございました。' : '鑑定前のアンケートが、まだお済みでない場合は、メールのご案内から、ご回答ください。※未回答の方に関しては、算命学の鑑定結果には反映されません。';
+      if (t.kind === 'remind1') note = (answered[fam.id + '|CT0'] && answered[fam.id + '|PT0']) ? '受講前のアンケートへのご回答、ありがとうございました。' : '受講前のアンケートが、まだお済みでない場合は、メールのご案内から、ご回答ください。※未回答の方に関しては、算命学の鑑定結果には反映されません。';
       if (sendNotice_(reg, t.kind, fam, templates, note)) { sent++; lines.push(t.id + ' ' + (t.kind === 'remind7' ? '鑑定日のリマインド' : '前日リマインド') + ' を送りました'); }
       else errors.push(t.id + ' の ' + t.kind + ' の送信に失敗しました(「送信ログ」を確認)');
     } else {

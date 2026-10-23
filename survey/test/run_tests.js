@@ -258,7 +258,7 @@ t('「保管期間は【要記入】」が残っていない', !/【要記入】
 const byId = (id) => apQs.find(q => q.id === id);
 t('保護者用の項目: 名前・性別・生年月日・メール・LINE検索ID・Instagram(任意)・公式LINE追加(チェック)・紹介者(カタカナ)・自由記入欄', ['AP1', 'AP6', 'AP7', 'AP2', 'AP8', 'AP9', 'AP10', 'AP11', 'AP5'].every(id => !!byId(id)) && byId('AP9').required === false && byId('AP10').kind === 'check' && byId('AP10').required === true && byId('AP11').kind === 'katakana');
 t('保護者用の文言(フルネーム・生年月日の例20000218・LINE検索ID・公式LINE)', /名前\(フルネーム\)/.test(byId('AP1').text) && /20000218/.test(byId('AP7').text) && byId('AP8').text === 'LINE検索ID' && /林 竜輔の公式LINEを追加しましたか/.test(byId('AP10').text) && /Instagram/.test(byId('AP9').text) && /任意/.test(byId('AP9').text));
-t('お子様用の項目: 名前・性別・生年月日・メール・自由記入欄', ['CH1', 'CH2', 'CH3', 'CH4', 'CH6'].every(id => !!byId(id)) && /20100315/.test(byId('CH3').text));
+t('お子様用の項目: 名前・性別・生年月日・自由記入欄(お子様のメールアドレスは聞かない。保護者のアドレスに統一)', ['CH1', 'CH2', 'CH3', 'CH6'].every(id => !!byId(id)) && !byId('CH4') && !byId('CH5') && /20100315/.test(byId('CH3').text));
 t('性別は個人情報の入力欄(保護者・お子様)にある', byId('AP6').text === '保護者さまの性別' && byId('CH2').text === 'お子様の性別' && JSON.stringify(byId('AP6').choices) === JSON.stringify(['男性', '女性']));
 t('追加の鑑定: 人数(任意)と、お一人ずつの名前・性別・生年月日・内容(任意)。内容は、お子様=レポートのみ+5,000円/オンライン+10,000円、大人の方=レポート作成料+5,000円/オンライン鑑定料+20,000円', byId('EX0').required === false && byId('EX1').required === false && JSON.stringify(run('EXTRA_PLANS')) === JSON.stringify(['お子様・レポートのみ(+5,000円)', 'お子様・オンライン鑑定希望(+10,000円)', '大人の方・レポート作成料(+5,000円)', '大人の方・オンライン鑑定料(+20,000円)']) && JSON.stringify(byId('EX0').choices) === JSON.stringify(['追加なし','1名','2名','3名','4名','5名','6名','7名','8名','9名','10名']));
 const order = apQs.map(q => q.id);
@@ -273,8 +273,8 @@ const isQ = (def, re) => (i) => run(`SURVEY.${def}.blocks.filter(b => b.type ===
   vm.runInContext('buildFormFromDef_(SURVEY.apply, __ss, SURVEY.apply.confirm)', ctx);
   const f = created[created.length - 1];
   t('申込フォーム構築', f.items.length > 10);
-  const emailItems = f.items.filter(isQ('apply', '^(AP[23]|CH[45])$'));
-  t('メールアドレス欄(保護者2・お子様2)にメール形式の検証', emailItems.length === 4 && emailItems.every(i => i.validation && i.validation.email));
+  const emailItems = f.items.filter(isQ('apply', '^AP[23]$'));
+  t('メールアドレス欄(保護者の入力と確認の2つ)にメール形式の検証', emailItems.length === 2 && emailItems.every(i => i.validation && i.validation.email));
   const bd = f.items.filter(isQ('apply', '^(AP7|CH3)$'));
   t('生年月日欄は8桁の数字の検証', bd.length === 2 && bd.every(i => i.validation && i.validation.pattern === '^[0-9]{8}$'));
   const kt = f.items.find(isQ('apply', '^AP11$'));
@@ -291,11 +291,11 @@ const isQ = (def, re) => (i) => run(`SURVEY.${def}.blocks.filter(b => b.type ===
 }
 
 // 12. 申込の処理
-const NVA = (o) => { const base = { AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'hanako@example.com', AP3: 'hanako@example.com', AP8: 'hanako_line', AP9: '', AP10: '追加しました', AP11: 'ナシ', AP5: '', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH4: 'taro@example.com', CH5: 'taro@example.com', CH6: '', EX1: '', EX2: '', AP_VIEW: '', CONSENT: '同意します', CONSENT_CHILD: '同意します', CONSENT_ALL: '全てに同意しました', CONSENT_ANON: '同意します' }; const m = Object.assign(base, o); const out = {}; ap.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
+const NVA = (o) => { const base = { AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'hanako@example.com', AP3: 'hanako@example.com', AP8: 'hanako_line', AP9: '', AP10: '追加しました', AP11: 'ナシ', AP5: '', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH6: '', EX1: '', EX2: '', AP_VIEW: '', CONSENT: '同意します', CONSENT_CHILD: '同意します', CONSENT_ALL: '全てに同意しました', CONSENT_ANON: '同意します' }; const m = Object.assign(base, o); const out = {}; ap.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
 const pa = vm.runInContext('processApplication_', ctx);
 let pr = pa(NVA({}), [], '2026-11-01T10:00:00');
 t('申込OK → F0001を発行し、名簿の行(34列)を作る', pr.ok && pr.id === 'F0001' && pr.row.length === 34 && pr.row[0] === 'F0001' && pr.row[15] === '参加中' && pr.row[run('RC.category')] === 'career');
-t('名簿の列の位置(RC)と行の内容が一致', pr.row[run('RC.pname')] === '山田 花子' && pr.row[run('RC.pgender')] === '女性' && pr.row[run('RC.pbirth')] === '19850612' && pr.row[run('RC.pemail')] === 'hanako@example.com' && pr.row[run('RC.line')] === 'hanako_line' && pr.row[run('RC.officialLine')] === '追加しました' && pr.row[run('RC.referrer')] === 'ナシ' && pr.row[run('RC.cname')] === '山田 太郎' && pr.row[run('RC.cgender')] === '男性' && pr.row[run('RC.cbirth')] === '20100315' && pr.row[run('RC.cemail')] === 'taro@example.com' && pr.row[run('RC.session')] === '' && pr.row[run('RC.status')] === '参加中');
+t('名簿の列の位置(RC)と行の内容が一致', pr.row[run('RC.pname')] === '山田 花子' && pr.row[run('RC.pgender')] === '女性' && pr.row[run('RC.pbirth')] === '19850612' && pr.row[run('RC.pemail')] === 'hanako@example.com' && pr.row[run('RC.line')] === 'hanako_line' && pr.row[run('RC.officialLine')] === '追加しました' && pr.row[run('RC.referrer')] === 'ナシ' && pr.row[run('RC.cname')] === '山田 太郎' && pr.row[run('RC.cgender')] === '男性' && pr.row[run('RC.cbirth')] === '20100315' && pr.row[run('RC.cemail')] === '' && pr.row[run('RC.session')] === '' && pr.row[run('RC.status')] === '参加中');
 t('名簿の見出し数 = 行の列数', run('HEAD.roster.length') === 34 && run('RC.memo') === 23 && run('RC.request') === 31 && run('RC.plan') === 32 && run('RC.ended') === 33);
 pr = pa(NVA({ EX0: '1名', EX1: '山田 次郎/男性/19800101/大人の方・レポート作成料(+5,000円)' }), [], 't');
 t('追加の鑑定の名前・希望・料金が名簿に入る(名前、名前: 内容、原文)', pr.ok && pr.row[run('RC.exName')] === '山田 次郎' && pr.row[run('RC.exPlan')] === '山田 次郎: 大人の方・レポート作成料(+5,000円)' && pr.row[run('RC.targets')] === '山田 次郎/男性/19800101/大人の方・レポート作成料(+5,000円)' && pr.extra.fee === 5000);
@@ -305,8 +305,8 @@ pr = pa(NVA({}), [{ id: 'F0001', email: 'x@example.com', childName: 'a' }, { id:
 t('次のIDは最大値+1(F0008)。テストID(F9999)は数えない', pr.ok && pr.id === 'F0008');
 pr = pa(NVA({ AP3: 'hanako@exampl.com' }), [], 't');
 t('保護者メールが確認欄と不一致 → IDを発行せず要確認', !pr.ok && /保護者のメールアドレスが確認欄と一致しない/.test(pr.reason) && pr.pendingRow.length === 7 && pr.pendingRow[1] === '進路相談用');
-pr = pa(NVA({ CH5: 'tar@example.com' }), [], 't');
-t('お子様メールが確認欄と不一致 → 要確認', !pr.ok && /お子様のメールアドレスが確認欄と一致しない/.test(pr.reason));
+pr = pa(NVA({ AP3: 'other@example.com' }), [], 't');
+t('保護者メールが確認欄と不一致 → 要確認', !pr.ok && /確認欄と一致しない/.test(pr.reason));
 pr = pa(NVA({ AP2: 'abc', AP3: 'abc' }), [], 't');
 t('メール形式不正 → 要確認', !pr.ok && /形式が不正/.test(pr.reason));
 pr = pa(NVA({ AP7: '2000-02-18' }), [], 't');
@@ -329,7 +329,7 @@ pr = pa(NVA({ CONSENT_ALL: '' }), [], 't');
 t('必須の同意が欠けている → 要確認', !pr.ok && /同意未確認/.test(pr.reason));
 pr = pa(NVA({}), [{ id: 'F0001', email: 'HANAKO@example.com ', childName: '山田　太郎 ' }], 't');
 t('同じ保護者メールとお子様名(大文字小文字・空白を無視)→ 重複申込', !pr.ok && /重複申込/.test(pr.reason));
-pr = pa(NVA({ CH1: '山田 花子', CH4: 'hana@example.com', CH5: 'hana@example.com' }), [{ id: 'F0001', email: 'hanako@example.com', childName: '山田 太郎' }], 't');
+pr = pa(NVA({ CH1: '山田 花子', AP2: 'hana@example.com', AP3: 'hana@example.com' }), [{ id: 'F0001', email: 'hanako@example.com', childName: '山田 太郎' }], 't');
 t('同じ保護者メールでも、お子様が別人(兄弟姉妹)なら別の家庭として登録', pr.ok && pr.id === 'F0002');
 pr = pa(NVA({ AP1: '' }), [], 't');
 t('保護者名が空 → 要確認', !pr.ok);
@@ -344,13 +344,13 @@ t('T0: 送信済み → 対象外(二重送信しない)', lr([base({ sent: { T0
 t('T1: 鑑定日の前 → 対象外、当日以降 → 対象', lr([base({})], 'T1', '2026-11-09').length === 0 && lr([base({})], 'T1', '2026-11-10').length === 1);
 t('T2: 鑑定の89日後 → 対象外、90日後 → 対象', lr([base({})], 'T2', '2027-02-07').length === 0 && lr([base({})], 'T2', '2027-02-08').length === 1);
 t('辞退・削除済みの家庭は対象外', lr([base({ status: '辞退' })], 'T0', '2026-11-01').length === 0 && lr([base({ status: '削除済み' })], 'T0', '2026-11-01').length === 0);
-t('保護者またはお子様のメールが無い・不正 → 対象外', lr([base({ email: '' })], 'T0', '2026-11-01').length === 0 && lr([base({ childEmail: '' })], 'T0', '2026-11-01').length === 0 && lr([base({ email: 'abc' })], 'T0', '2026-11-01').length === 0);
+t('保護者のメールが無い・不正 → 対象外(お子様のメールは不要)', lr([base({ email: '' })], 'T0', '2026-11-01').length === 0 && lr([base({ childEmail: '' })], 'T0', '2026-11-01').length === 1 && lr([base({ email: 'abc' })], 'T0', '2026-11-01').length === 0);
 t('テストIDは対象外', lr([base({ id: 'F9999' })], 'T0', '2026-11-01').length === 0);
 t('選択した家庭は、日付の条件なしで対象(未送信・参加中・メールありのみ)', lr([base({ sessionDate: '' }), base({ row: 3, id: 'F0002' })], 'T0', '2026-11-01', { 2: true }).length === 1);
 const em = vm.runInContext('buildLinkEmails_', ctx)('T0', { name: '山田 花子', childName: '山田 太郎', sessionDate: '2026-11-10' }, { child: 'https://forms.example/c', parent: 'https://forms.example/p' });
 t('保護者宛: 保護者用リンクのみ(お子様用リンクを含まない)、お子様の回答を見ないお願い', /山田 花子 様/.test(em.parent.body) && /forms\.example\/p/.test(em.parent.body) && !/forms\.example\/c/.test(em.parent.body) && /見たり、聞き出したりしないでください/.test(em.parent.body) && /2026-11-10/.test(em.parent.body));
-t('お子様宛: お子様用リンクのみ(保護者用リンクを含まない)、別の場所で、ひとりで答える案内', /山田 太郎 さん/.test(em.child.body) && /forms\.example\/c/.test(em.child.body) && !/forms\.example\/p/.test(em.child.body) && /別の場所/.test(em.child.body) && /ひとりで/.test(em.child.body));
-t('リンクメールに費用・謝礼の記載がない', !/費用|謝礼|円/.test(em.parent.body + em.child.body));
+t('案内メール(保護者宛1通)に、お子様のアンケートも同じページで答える旨と、お子様ご本人に答えてもらうお願いがある', /お子様用/.test(em.parent.body) && /お子様ご本人に/.test(em.parent.body) && /見たり、聞き出したりしないでください/.test(em.parent.body) && !em.child);
+t('リンクメールに費用・謝礼の記載がない', !/費用|謝礼|円/.test(em.parent.body));
 const rcC = vm.runInContext('buildReceiptEmail_', ctx)('CT1', { name: '山田 花子', childName: '山田 太郎' });
 const rcP = vm.runInContext('buildReceiptEmail_', ctx)('PT1', { name: '山田 花子', childName: '山田 太郎' });
 t('受付確認メール: お子様用はお子様宛の文面、保護者用は保護者宛の文面。回答内容を含まない', /山田 太郎 さん/.test(rcC.body) && /山田 花子 様/.test(rcP.body) && /内容は、このメールには書いていません/.test(rcC.body) && /内容は、このメールには記載していません/.test(rcP.body) && !/D\d/.test(rcC.body + rcP.body));

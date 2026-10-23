@@ -52,7 +52,7 @@ function makeEnv(activeEmail) {
   function addFamily(o) {
     const row = new Array(34).fill('');
     Object.entries({ id: 'F0001', ts: '2026-11-01T10:00:00', pname: '山田 花子', pgender: '女性', pbirth: '19850612', pemail: 'hanako@example.com', line: 'hana', officialLine: '追加しました', referrer: 'ナシ',
-      cname: '山田 太郎', cgender: '男性', cbirth: '20100315', cemail: 'taro@example.com', status: '参加中', category: 'career' }).forEach(([k, v]) => { row[rc(k)] = (o && o[k] !== undefined) ? o[k] : v; });
+      cname: '山田 太郎', cgender: '男性', cbirth: '20100315', cemail: '', status: '参加中', category: 'career' }).forEach(([k, v]) => { row[rc(k)] = (o && o[k] !== undefined) ? o[k] : v; });
     Object.keys(o || {}).forEach(k => { row[rc(k)] = o[k]; });
     roster.values.push(row);
   }
@@ -104,20 +104,20 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const E = makeEnv('me@example.com'); E.addFamily({}); E.addFamily({ id: 'F0002', pname: '田中', pemail: 'tanaka@example.com', cemail: 'c2@example.com', cname: '次郎' }); E.addFamily({ id: 'G0001', category: 'general', cemail: '' });
   E.run('apiSetSessionDate')('F0001', '2026-11-10');
   let r = E.run('apiSendLinks')('T0', null);
-  t('API送信: 鑑定日が入力済みの家庭(F0001)だけに、保護者宛1通・お子様宛1通', r.sent === 1 && E.sent.length === 2 && E.sent[0].to === 'hanako@example.com' && E.sent[1].to === 'taro@example.com');
-  t('API送信: 案内メールに、アンケートサイトのURLと、入力するメールアドレスが載る(Googleフォームのリンクは載らない)', /site\.example\/exec\?page=survey/.test(E.sent[0].body) && /hanako@example\.com/.test(E.sent[0].body) && !/forms\.example|docs\.google\.com\/forms/.test(E.sent[0].body) && /site\.example\/exec\?page=survey/.test(E.sent[1].body) && /taro@example\.com/.test(E.sent[1].body) && !/hanako@example\.com/.test(E.sent[1].body));
+  t('API送信: 鑑定日が入力済みの家庭(F0001)の保護者に、1通だけ届く(お子様のメールアドレスは使わない)', r.sent === 1 && E.sent.length === 1 && E.sent[0].to === 'hanako@example.com');
+  t('API送信: 案内メールに、アンケートサイトのURLと、入力するメールアドレス、お子様のアンケートも同じページで答える旨が載る(Googleフォームのリンクは載らない)', /site\.example\/exec\?page=survey/.test(E.sent[0].body) && /hanako@example\.com/.test(E.sent[0].body) && /お子様用/.test(E.sent[0].body) && !/forms\.example|docs\.google\.com\/forms/.test(E.sent[0].body));
   const E0 = makeEnv('me@example.com'); E0.addFamily({}); E0.run('apiSetSessionDate')('F0001', '2026-11-10'); E0.reg.getSheetByName('設定').values[6][1] = '';
   t('API送信: 設定B7(アンケートサイトのURL)が空欄なら、メールを送らずに止め、理由を知らせる(送信済みにもならない)', /B7/.test(throws(() => E0.run('apiSendLinks')('T0', null)) || '') && E0.sent.length === 0 && E0.roster.values[1][E0.rc('T0')] === '');
   E0.reg.getSheetByName('設定').values[6][1] = 'https://site.example/exec';
   t('API送信: B7に ?page=survey がない場合も止める', /形式/.test(throws(() => E0.run('apiSendLinks')('T0', null)) || '') && E0.sent.length === 0);
   t('API送信: 送信日時(T0)が名簿に記録される', String(E.roster.values[1][E.rc('T0')]).length > 10 && E.roster.values[2][E.rc('T0')] === '');
-  t('API送信: 送信ログに保護者宛・お子様宛が記録される', E.sendlog.values.length === 3);
+  t('API送信: 送信ログに保護者宛が記録される', E.sendlog.values.length === 2);
   r = E.run('apiSendLinks')('T0', null);
-  t('API送信: 2回目は送信済みのため送らない(二重送信なし)', r.sent === 0 && E.sent.length === 2);
+  t('API送信: 2回目は送信済みのため送らない(二重送信なし)', r.sent === 0 && E.sent.length === 1);
   r = E.run('apiSendLinks')('T0', ['F0002']);
-  t('API送信: 選んだ家庭には、鑑定日が未入力でも送れる', r.sent === 1 && E.sent.length === 4);
+  t('API送信: 選んだ家庭には、鑑定日が未入力でも送れる', r.sent === 1 && E.sent.length === 2);
   r = E.run('apiSendLinks')('T0', ['G0001']);
-  t('API送信: 一般・法人の家庭には送らない', r.sent === 0 && E.sent.length === 4);
+  t('API送信: 一般・法人の家庭には送らない', r.sent === 0 && E.sent.length === 2);
   t('API送信: 時点が不正ならエラー', !!throws(() => E.run('apiSendLinks')('T9', null)));
   E.run('apiSetStatus')('F0002', '辞退');
   E.roster.values[2][E.rc('T0')] = '';
@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-22-h/.test(pa.html) && /2026-10-22-h/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-a/.test(pa.html) && /2026-10-23-a/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -264,41 +264,47 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('申込フォーム内で、設問の文言が重複しない(番号なしでも区別できる)', !dup);
 }
 
-{ // アンケートの回答サイト(メールアドレスで入室)
+{ // アンケートの回答サイト(保護者のメールアドレスで入室。同じアドレスで、回答者を切り替える)
   const E = makeEnv('');
-  E.addFamily({}); // F0001: 保護者 hanako@example.com / お子様 taro@example.com
+  E.addFamily({}); // F0001: 保護者 hanako@example.com / お子様のメールアドレスは聞かない
   const login = (m) => E.run('surveyLogin')(m);
-  let r = login('taro@example.com');
+  let r = login('hanako@example.com');
   t('サイト入室: 案内を送る前は、アンケートが出ない(登録済みでも、同じ案内文)', !r.ok && /見つかりません/.test(r.message));
   t('サイト入室: メールの形式が不正ならエラー・未登録も同じ案内文(登録の有無を教えない)', !login('xxx').ok && /見つかりません/.test(login('nobody@example.com').message));
   E.roster.values[1][E.rc('T0')] = '2026-11-01T10:00:00';
-  r = login('Taro@Example.com');
-  t('サイト入室: お子様のメールアドレス(大文字小文字は区別しない)で、お子様用T0(CT0)が出る', r.ok && r.def.key === 'CT0' && r.who === '山田 太郎' && /^[0-9a-f]{64}$/.test(r.token));
-  const ids = r.def.blocks.filter(b => b.type === 'q').map(b => b.id);
-  t('サイト入室: 調査用IDは画面に出ない。設問・ページの題名に番号(D1.・A.)が付かない', ids.indexOf('RID') === -1 && r.def.blocks.every(b => !/^[A-Z][A-Za-z0-9_\-]*\.\s/.test(b.title || b.text)));
-  const rp = login('hanako@example.com');
-  t('サイト入室: 保護者のメールアドレスなら、保護者用T0(PT0)が出る', rp.ok && rp.def.key === 'PT0');
-  // 送信
+  r = login('Hanako@Example.com');
+  t('サイト入室: 保護者のメールアドレス(大文字小文字は区別しない)で入り、回答者(保護者・お子様)が選べる', r.ok && /^[0-9a-f]{64}$/.test(r.token) && r.options.length === 2 && r.options[0].role === 'parent' && r.options[1].role === 'child' && r.options.every(o => o.state === 'due' && o.form.charAt(1) === 'T0'.charAt(1) || o.state === 'due') && r.options[0].form === 'PT0' && r.options[1].form === 'CT0' && /山田 太郎/.test(r.options[1].label));
   const fullAns = (def) => { const a = {}; def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { a[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.kind === 'age' ? '13' : q.choices[0]; }); return a; };
-  const ans = Object.assign(fullAns(r.def), { EVIL: 'x' });
+  const stNoSel = E.run('surveySubmit')(r.token, {});
+  t('サイト送信: 回答者を選ぶ前の送信は、受け付けない', !stNoSel.ok && /回答者を選んで/.test(stNoSel.message));
+  t('サイト入室: 子ども用のメールアドレス(登録していない)では入れない', !login('taro@example.com').ok);
+  const sc = E.run('surveyStart')(r.token, 'F0001', 'child');
+  t('サイト開始: お子様を選ぶと、お子様用T0(CT0)が出る。調査用IDは画面に出ず、題名に番号が付かない', sc.ok && sc.def.key === 'CT0' && sc.who === '山田 太郎' && sc.def.blocks.filter(b => b.type === 'q').every(b => b.id !== 'RID') && sc.def.blocks.every(b => !/^[A-Z][A-Za-z0-9_\-]*\.\s/.test(b.title || b.text)));
+  const ans = Object.assign(fullAns(sc.def), { EVIL: 'x' });
   const missing = E.run('surveySubmit')(r.token, {});
   t('サイト送信: 未回答の必須の設問があると、記録せずに、案内を返す', !missing.ok && /まだ答えていない質問/.test(missing.message) && E.subs.values.length === 1);
   const before = E.subs.values.length;
   const sr = E.run('surveySubmit')(r.token, ans);
   const row = E.subs.values[E.subs.values.length - 1];
-  t('サイト送信: 回答DBに記録(調査用ID=F0001、フォーム=CT0)・長い形式の回答も入る', sr.ok && E.subs.values.length === before + 1 && row[2] === 'F0001' && row[4] === 'CT0' && E.long.values.length > 1 && E.long.values.some(x => x[1] === 'F0001' && x[5] === 'S1' && x[7] === 4));
-  t('サイト送信: お子様に受付確認メールが届く(回答内容は載らない)', E.sent.some(m => m.to === 'taro@example.com' && /受け付け/.test(m.subject + m.body)) && !E.sent.some(m => /少しそう思う/.test(m.body)));
+  t('サイト送信: お子様のアンケートが、回答DBに記録される(調査用ID=F0001、フォーム=CT0)。長い形式の回答も入る', sr.ok && E.subs.values.length === before + 1 && row[2] === 'F0001' && row[4] === 'CT0' && E.long.values.length > 1 && E.long.values.some(x => x[1] === 'F0001' && x[5] === 'S1' && x[7] === 4));
+  t('サイト送信: 送信後の選択肢は、お子様=回答済み、保護者=回答できる(同じアドレスで、続けて切り替えられる)', sr.options.find(o => o.role === 'child').state === 'done' && sr.options.find(o => o.role === 'parent').state === 'due');
+  t('サイト送信: 受付確認のメールは、保護者のアドレスに届く(お子様の回答でも)。回答内容は載らない', E.sent.some(m => m.to === 'hanako@example.com' && /お子様用/.test(m.subject) && /受け付け/.test(m.subject + m.body)) && !E.sent.some(m => /少しそう思う/.test(m.body)));
   const again = E.run('surveySubmit')(r.token, ans);
-  t('サイト送信: 同じ合い鍵での2回目は受け付けない(二重送信なし)', !again.ok && E.subs.values.length === before + 1);
-  r = login('taro@example.com');
-  t('サイト入室: 回答したあとは「回答ありがとう・いまのアンケートはなし」', !r.ok && r.done === true && /ありません/.test(r.message));
+  t('サイト送信: 回答済みのあと、同じ合い鍵での再送信は受け付けない(二重送信なし)', !again.ok && E.subs.values.length === before + 1);
+  const sp = E.run('surveyStart')(r.token, 'F0001', 'parent');
+  t('サイト開始: 続けて保護者を選ぶと、保護者用T0(PT0)が出る', sp.ok && sp.def.key === 'PT0' && sp.who === '山田 花子');
+  const srp = E.run('surveySubmit')(r.token, fullAns(sp.def));
+  t('サイト送信: 保護者の回答も記録され、すべて回答済みになる', srp.ok && srp.options.every(o => o.state === 'done') && E.subs.values.some(x => x[2] === 'F0001' && x[4] === 'PT0'));
+  t('サイト開始: 回答済みの方は、もう一度選べない', !E.run('surveyStart')(r.token, 'F0001', 'child').ok && !E.run('surveyStart')(r.token, 'F0009', 'child').ok && !E.run('surveyStart')(r.token, 'F0001', 'x').ok);
+  r = login('hanako@example.com');
+  t('サイト入室: すべて回答したあとは「回答ありがとう・いまのアンケートはなし」', !r.ok && r.done === true && /ありません/.test(r.message));
   E.roster.values[1][E.rc('T1')] = '2026-11-10T10:00:00';
-  r = login('taro@example.com');
-  t('サイト入室: 次の案内(T1)を送ると、続けて、お子様用T1(CT1)が出る(進捗に合わせて変わる)', r.ok && r.def.key === 'CT1');
-  t('サイト送信: 偽の合い鍵は拒否', !E.run('surveySubmit')('0'.repeat(64), ans).ok && !E.run('surveySubmit')('zz', ans).ok);
+  r = login('hanako@example.com');
+  t('サイト入室: 次の案内(T1)を送ると、続けて、保護者用T1(PT1)・お子様用T1(CT1)が選べる(進捗に合わせて変わる)', r.ok && r.options[0].form === 'PT1' && r.options[1].form === 'CT1');
+  t('サイト送信: 偽の合い鍵は拒否', !E.run('surveySubmit')('0'.repeat(64), ans).ok && !E.run('surveySubmit')('zz', ans).ok && !E.run('surveyStart')('zz', 'F0001', 'parent').ok);
   // 辞退・削除済み
   E.roster.values[1][E.rc('status')] = '辞退';
-  t('サイト入室: 辞退した家庭は入れない', !login('taro@example.com').ok);
+  t('サイト入室: 辞退した家庭は入れない', !login('hanako@example.com').ok);
   // 回数制限
   const E2 = makeEnv(''); let blocked = false;
   for (let i = 0; i < 14; i++) { const x = E2.run('surveyLogin')('probe@example.com'); if (/何度も/.test(x.message || '')) blocked = true; }
@@ -309,8 +315,8 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const nvp2 = E.run('sanitizeSurveyAnswers_')('PT0', 'F0001', { PA2: '12' });
   t('回答の整形: 年齢は数字のみ・選択肢にない値は空・複数選択は有効な選択肢だけ。「わからない」(排他)は単独になる', nvp[Object.keys(nvp).find(k => /^PA2\./.test(k))][0] === '' && nvp2[Object.keys(nvp2).find(k => /^PA2\./.test(k))][0] === '12' && nv['S1. 自分の性格や特徴について理解している。'][0] === '' && nv[Object.keys(nv).find(k => /^B2-2\./.test(k))][0] === 'わからない' && nv[Object.keys(nv).find(k => /^RID\./.test(k))][0] === 'F0001');
   // 案内メール(サイトURL)
-  const mails = E.run('buildLinkEmails_')('T0', { name: '山田 花子', email: 'hanako@example.com', childName: '太郎', childEmail: 'taro@example.com', sessionDate: '' }, { site: true, child: 'https://site.example/exec?page=survey', parent: 'https://site.example/exec?page=survey' });
-  t('案内メール(サイト版): ページのURLと、入力するメールアドレスを載せる', /page=survey/.test(mails.parent.body) && /hanako@example\.com/.test(mails.parent.body) && /taro@example\.com/.test(mails.child.body) && !/forms\.example/.test(mails.child.body));
+  const mails = E.run('buildLinkEmails_')('T0', { name: '山田 花子', email: 'hanako@example.com', childName: '太郎', sessionDate: '' }, { parent: 'https://site.example/exec?page=survey' });
+  t('案内メール(サイト版): ページのURLと、入力するメールアドレスを載せる', /page=survey/.test(mails.parent.body) && /hanako@example\.com/.test(mails.parent.body) && /回答する方\(保護者さま・お子様\)を選んで/.test(mails.parent.body) && !mails.child && !/forms\.example/.test(mails.parent.body));
   // 公開ページ
   const pg = E.run('doGet')({ parameter: { page: 'survey' } });
   t('公開ページ ?page=survey で、アンケートのページが出る', /アンケート/.test(pg.title) && /surveyLogin/.test(pg.html) && !/7332659/.test(pg.html));
@@ -328,7 +334,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const ids = { app: mk('app'), foot: mk('foot') };
   const doc = { createElement: mk, getElementById: (id) => ids[id] || (ids[id] = mk(id)) };
   const calls = []; let pending = null;
-  const run = { withSuccessHandler(f) { pending = { ok: f }; return run; }, withFailureHandler(f) { pending.ng = f; return run; }, surveyLogin(v) { calls.push(['login', v]); }, surveySubmit(tok, a) { calls.push(['submit', tok, a]); } };
+  const run = { withSuccessHandler(f) { pending = { ok: f }; return run; }, withFailureHandler(f) { pending.ng = f; return run; }, surveyLogin(v) { calls.push(['login', v]); }, surveyStart(tok, id, role) { calls.push(['start', tok, id, role]); }, surveySubmit(tok, a) { calls.push(['submit', tok, a]); } };
   const win = vm.createContext({ document: doc, window: { pageYOffset: 0, scrollTo() {} }, google: { script: { run } }, alert: (m) => calls.push(['alert', m]) });
   win.window.scrollTo = () => {}; win.scrollTo = () => {}; win.pageYOffset = 0;
   vm.runInContext(src, win);
@@ -336,12 +342,18 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const text = (n) => [n._text].concat(...n.children.map(text)).join('|');
   const btn = (label) => find(ids.app, n => n.tag === 'button' && n._text === label)[0];
   const input = find(ids.app, n => n.tag === 'input')[0];
-  input.value = 'taro@example.com'; btn('はじめる').onclick();
-  t('画面(アンケート): メールアドレスを入れて「はじめる」で surveyLogin が呼ばれる', calls[0][0] === 'login' && calls[0][1] === 'taro@example.com');
+  input.value = 'hanako@example.com'; btn('はじめる').onclick();
+  t('画面(アンケート): 保護者のメールアドレスを入れて「はじめる」で surveyLogin が呼ばれる', calls[0][0] === 'login' && calls[0][1] === 'hanako@example.com');
   pending.ok({ ok: false, message: '見つかりません' });
   t('画面(アンケート): 入れなかったときは、案内文が表示される', /見つかりません/.test(text(ids.app)));
-  btn('はじめる').onclick(); pending.ok({ ok: true, token: 'T'.repeat(64), who: '太郎', def });
-  t('画面(アンケート): 入室すると、アンケートの題名と説明・「はじめる」ボタンが出る', /算命学の鑑定についてのアンケート/.test(text(ids.app)) && !!btn('アンケートをはじめる'));
+  const opts = [{ id: 'F0001', role: 'parent', label: '保護者さま(山田 花子 様)', state: 'due', time: 'T2', form: 'PT2' }, { id: 'F0001', role: 'child', label: 'お子様(山田 太郎 さん)', state: 'due', time: 'T2', form: 'CT2' }];
+  btn('はじめる').onclick(); pending.ok({ ok: true, token: 'T'.repeat(64), options: opts });
+  const bs = find(ids.app, n => n.tag === 'button' && /に回答する$/.test(n._text));
+  t('画面(アンケート): 入室すると、保護者さま・お子様の、回答者の選択が出る(同じメールアドレスのまま切り替えられる)', bs.length === 2 && /保護者さま/.test(text(ids.app)) && /お子様\(山田 太郎/.test(text(ids.app)) && /お子様ご本人に/.test(text(ids.app)));
+  bs[1].onclick();
+  t('画面(アンケート): お子様を選ぶと surveyStart(合い鍵, ID, child) が呼ばれる', calls.some(c => c[0] === 'start' && c[1] === 'T'.repeat(64) && c[2] === 'F0001' && c[3] === 'child'));
+  pending.ok({ ok: true, who: '太郎', def });
+  t('画面(アンケート): 入室すると、アンケートの題名と説明・「はじめる」ボタンが出る', /対話プログラムについてのアンケート/.test(text(ids.app)) && !!btn('アンケートをはじめる'));
   btn('アンケートをはじめる').onclick();
   t('画面(アンケート): 最初のページと進捗バー・「つぎへ」が出る(「もどる」は出ない)', find(ids.app, n => n.className === 'prog').length === 1 && !!btn('つぎへ →') && !btn('← もどる'));
   // ゲート: CT2のうち行動の質問に「いいえ」→ 追加のページは出ない
@@ -365,18 +377,18 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   btn('送信する').onclick();
   const sub = calls.filter(c => c[0] === 'submit')[0];
   t('画面(アンケート): 送信で surveySubmit(合い鍵, 回答) が呼ばれ、非表示の設問の回答は含まれない', !!sub && sub[1] === 'T'.repeat(64) && sub[2][gateQ.id] === 'いいえ' && !Object.keys(sub[2]).some(k => { const q = def.blocks.find(b => b.id === k); return q && q.hiddenWhen && sub[2][q.hiddenWhen.id] === q.hiddenWhen.value; }));
-  pending.ok({ ok: true });
-  t('画面(アンケート): 送信が済むと、お礼の画面が出る', /ご回答ありがとうございました/.test(text(ids.app)));
+  pending.ok({ ok: true, options: [Object.assign({}, opts[0]), Object.assign({}, opts[1], { state: 'done' })] });
+  t('画面(アンケート): 送信が済むと、お礼と、回答者の選択(お子様=回答済み・保護者=回答できる)に戻る', /ご回答ありがとうございました/.test(text(ids.app)) && /回答済み/.test(text(ids.app)) && find(ids.app, n => n.tag === 'button' && /に回答する$/.test(n._text)).length === 1);
 }
 { // セッション終了ボタン
   const E = makeEnv('me@example.com'); E.addFamily({}); E.addFamily({ id: 'G0001', category: 'general', cemail: '' });
   const r = E.run('apiEndSession')('F0001');
-  t('セッション終了: 終了日時が名簿に記録され、鑑定直後(T1)のリンクが、保護者とお子様に1通ずつ届く', String(E.roster.values[1][E.rc('ended')]).length > 10 && String(E.roster.values[1][E.rc('T1')]).length > 10 && E.sent.length === 2 && E.sent.some(m => m.to === 'hanako@example.com') && E.sent.some(m => m.to === 'taro@example.com') && /鑑定直後/.test(E.sent[0].subject) && /送りました/.test(r.message));
+  t('セッション終了: 終了日時が名簿に記録され、受講後(T1)のアンケートの案内が、保護者に1通届く', String(E.roster.values[1][E.rc('ended')]).length > 10 && String(E.roster.values[1][E.rc('T1')]).length > 10 && E.sent.length === 1 && E.sent[0].to === 'hanako@example.com' && /受講後/.test(E.sent[0].subject) && /送りました/.test(r.message));
   const r2 = E.run('apiEndSession')('F0001');
-  t('セッション終了: 2回目は、T1を二重に送らない', E.sent.length === 2 && /すでに送信済み/.test(r2.message));
+  t('セッション終了: 2回目は、T1を二重に送らない', E.sent.length === 1 && /すでに送信済み/.test(r2.message));
   t('セッション終了: 進路相談以外・辞退した家庭・存在しないIDはエラー', !!throws(() => E.run('apiEndSession')('G0001')) && !!throws(() => E.run('apiEndSession')('F0099')));
   E.addFamily({ id: 'F0002', pemail: 'p2@example.com', cemail: 'c2@example.com', status: '辞退' });
-  t('セッション終了: 辞退した家庭は送らない', !!throws(() => E.run('apiEndSession')('F0002')) && E.sent.length === 2);
+  t('セッション終了: 辞退した家庭は送らない', !!throws(() => E.run('apiEndSession')('F0002')) && E.sent.length === 1);
   const E3 = makeEnv('other@example.com'); E3.addFamily({});
   t('セッション終了: 管理者以外は呼べない', /権限がありません/.test(throws(() => E3.run('apiEndSession')('F0001')) || ''));
   const d = E.run('apiData')();
@@ -396,16 +408,16 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const plan = (rows, today, done = {}, sch) => E.run('autoPlan_')(rows, sch || E.run('SCHEDULE_DEFAULT'), today, done).map(x => x.id + ':' + x.kind).join(',');
   const fam = (o) => Object.assign({ id: 'F0001', category: 'career', status: '参加中', email: 'p@example.com', childEmail: 'c@example.com', sessionDate: '2026-12-10', sent: { T0: '', T1: '', T2: '' } }, o || {});
   t('自動配信の計画: 鑑定の7日前 → リマインド', plan([fam()], '2026-12-03') === 'F0001:remind7');
-  t('自動配信の計画: 鑑定の3日前 → 鑑定前アンケート(T0)の案内(リマインドは送信済みの場合)', plan([fam()], '2026-12-07', { 'F0001|remind7': true }) === 'F0001:T0');
+  t('自動配信の計画: 鑑定の3日前 → 受講前アンケート(T0)の案内(リマインドは送信済みの場合)', plan([fam()], '2026-12-07', { 'F0001|remind7': true }) === 'F0001:T0');
   t('自動配信の計画: 鑑定の前日 → 前日リマインド', plan([fam({ sent: { T0: 'x', T1: '', T2: '' } })], '2026-12-09', { 'F0001|remind7': true }) === 'F0001:remind1');
-  t('自動配信の計画: 鑑定日 → 鑑定後アンケート(T1)の案内', plan([fam({ sent: { T0: 'x', T1: '', T2: '' } })], '2026-12-10', { 'F0001|remind7': true, 'F0001|remind1': true }) === 'F0001:T1');
+  t('自動配信の計画: 鑑定日 → 受講後アンケート(T1)の案内', plan([fam({ sent: { T0: 'x', T1: '', T2: '' } })], '2026-12-10', { 'F0001|remind7': true, 'F0001|remind1': true }) === 'F0001:T1');
   t('自動配信の計画: 鑑定の90日後 → 3か月後アンケート(T2)。89日後はまだ', plan([fam({ sent: { T0: 'x', T1: 'x', T2: '' } })], '2027-03-10', { 'F0001|remind7': true, 'F0001|remind1': true }) === 'F0001:T2' && plan([fam({ sent: { T0: 'x', T1: 'x', T2: '' } })], '2027-03-09', { 'F0001|remind7': true, 'F0001|remind1': true }) === '');
   t('自動配信の計画: 日数が空く日は何もしない(鑑定の5日前)', plan([fam()], '2026-12-05', { 'F0001|remind7': true }) === '');
-  t('自動配信の計画: 鑑定日の入力が遅れても(2日前)、鑑定前アンケートをすぐ送る。前日リマインドは、まだ', plan([fam()], '2026-12-08', { 'F0001|remind7': true }) === 'F0001:T0');
-  t('自動配信の計画: 送信済み・辞退・鑑定日なし・メールなし・一般/法人・テストIDは対象外', plan([fam({ sent: { T0: 'x', T1: '', T2: '' } }), fam({ id: 'F0002', status: '辞退' }), fam({ id: 'F0003', sessionDate: '' }), fam({ id: 'F0004', childEmail: '' }), fam({ id: 'G0001', category: 'general' }), fam({ id: 'F9999' })], '2026-12-07', { 'F0001|remind7': true }) === '');
+  t('自動配信の計画: 鑑定日の入力が遅れても(2日前)、受講前アンケートをすぐ送る。前日リマインドは、まだ', plan([fam()], '2026-12-08', { 'F0001|remind7': true }) === 'F0001:T0');
+  t('自動配信の計画: 送信済み・辞退・鑑定日なし・メールなし・一般/法人・テストIDは対象外', plan([fam({ sent: { T0: 'x', T1: '', T2: '' } }), fam({ id: 'F0002', status: '辞退' }), fam({ id: 'F0003', sessionDate: '' }), fam({ id: 'F0004', email: '' }), fam({ id: 'G0001', category: 'general' }), fam({ id: 'F9999' })], '2026-12-07', { 'F0001|remind7': true }) === '');
   t('自動配信の計画: 設定で「無効」なら何も送らない。日数は設定で変えられる', plan([fam()], '2026-12-07', {}, { enabled: false, remind7: 7, t0: 3, remind1: 1, t1: 0, t2: 90 }) === '' && plan([fam()], '2026-12-05', { 'F0001|remind7': true }, { enabled: true, remind7: 7, t0: 5, remind1: 1, t1: 0, t2: 90 }) === 'F0001:T0');
   t('設定シートから、日数・有効/無効を読む(空欄・不正値は既定)', JSON.stringify(E.run('getSchedule_')(E.reg)) === JSON.stringify({ enabled: true, remind7: 7, t0: 3, remind1: 1, t1: 0, t2: 90 }));
-  t('管理画面の予定: 鑑定日から、日付つきで出る', /2026-12-03 リマインド/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /2026-12-07 鑑定前アンケート/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /2027-03-10 3か月後アンケート/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /鑑定日を入力すると/.test(E.run('autoScheduleText_')(fam({ sessionDate: '' }), E.run('SCHEDULE_DEFAULT'), {})));
+  t('管理画面の予定: 鑑定日から、日付つきで出る', /2026-12-03 リマインド/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /2026-12-07 受講前アンケート/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /2027-03-10 3か月後アンケート/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /鑑定日を入力すると/.test(E.run('autoScheduleText_')(fam({ sessionDate: '' }), E.run('SCHEDULE_DEFAULT'), {})));
 }
 { // 自動配信の実行(メールと記録)
   const E = makeEnv('me@example.com'); E.addFamily({});
@@ -413,18 +425,18 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const setSession = (n) => { E.roster.values[1][E.rc('session')] = E.run('addDays_')(today, n); };
   setSession(3);
   let r = E.run('runAutomation_')(E.reg, E.db);
-  t('自動配信: 鑑定の3日前に、鑑定前アンケートの案内が、保護者とお子様に届き、送信日時が記録される(リマインドも同時に1回)', E.sent.filter(m => /アンケートのご案内/.test(m.subject)).length === 2 && String(E.roster.values[1][E.rc('T0')]).length > 10 && E.sent.some(m => /鑑定日のご案内/.test(m.subject) && m.to === 'hanako@example.com') && E.sent.some(m => m.to === 'op@example.com' && /自動配信の結果/.test(m.subject)));
+  t('自動配信: 鑑定の3日前に、受講前アンケートの案内が、保護者に1通届き、送信日時が記録される(リマインドも同時に1回)', E.sent.filter(m => /アンケートのご案内/.test(m.subject)).length === 1 && String(E.roster.values[1][E.rc('T0')]).length > 10 && E.sent.some(m => /受講日のご案内/.test(m.subject) && m.to === 'hanako@example.com') && E.sent.some(m => m.to === 'op@example.com' && /自動配信の結果/.test(m.subject)));
   const n = E.sent.length;
   E.run('runAutomation_')(E.reg, E.db);
   t('自動配信: 同じ日にもう一度実行しても、二重には送らない', E.sent.length === n);
   setSession(1);
   const before = E.sent.length;
   E.run('runAutomation_')(E.reg, E.db);
-  const rem = E.sent.slice(before).filter(m => /明日は鑑定/.test(m.subject));
-  t('自動配信: 鑑定の前日に、前日リマインド(保護者・お子様)。鑑定前アンケートが未回答なら、回答のお願いが入る', rem.length === 2 && /まだお済みでない/.test(rem[0].body));
+  const rem = E.sent.slice(before).filter(m => /明日は受講日/.test(m.subject));
+  t('自動配信: 鑑定の前日に、前日リマインド(保護者宛)。受講前アンケートが未回答なら、回答のお願いが入る', rem.length === 1 && /まだお済みでない/.test(rem[0].body));
   setSession(0);
   E.run('runAutomation_')(E.reg, E.db);
-  t('自動配信: 鑑定日に、鑑定後アンケート(T1)の案内が届く(送信日時が記録される)', String(E.roster.values[1][E.rc('T1')]).length > 10);
+  t('自動配信: 鑑定日に、受講後アンケート(T1)の案内が届く(送信日時が記録される)', String(E.roster.values[1][E.rc('T1')]).length > 10);
   E.roster.values[1][E.rc('session')] = E.run('addDays_')(today, -90);
   E.run('runAutomation_')(E.reg, E.db);
   t('自動配信: 鑑定の90日後に、3か月後アンケート(T2)の案内が届く', String(E.roster.values[1][E.rc('T2')]).length > 10);
@@ -432,7 +444,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const E2 = makeEnv('me@example.com'); E2.addFamily({}); E2.reg.getSheetByName('設定').values[6][1] = '';
   E2.roster.values[1][E2.rc('session')] = E2.run('addDays_')(E2.run('todayStr_')(), 3);
   const r2 = E2.run('runAutomation_')(E2.reg, E2.db);
-  t('自動配信: B7(サイトのURL)が未入力なら、アンケートの案内は送らず、運営に知らせる(リマインドは送る)', E2.roster.values[1][E2.rc('T0')] === '' && E2.sent.some(m => /鑑定日のご案内/.test(m.subject)) && E2.sent.some(m => m.to === 'op@example.com' && /B7/.test(m.body)));
+  t('自動配信: B7(サイトのURL)が未入力なら、アンケートの案内は送らず、運営に知らせる(リマインドは送る)', E2.roster.values[1][E2.rc('T0')] === '' && E2.sent.some(m => /受講日のご案内/.test(m.subject)) && E2.sent.some(m => m.to === 'op@example.com' && /B7/.test(m.body)));
   // 無効
   const E3 = makeEnv('me@example.com'); E3.addFamily({}); E3.reg.getSheetByName('設定').values[7][1] = '無効';
   E3.roster.values[1][E3.rc('session')] = E3.run('addDays_')(E3.run('todayStr_')(), 3);
@@ -443,12 +455,12 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
 { // メール文面の編集
   const E = makeEnv('me@example.com');
   const defaults = E.run('getTemplates_')(E.reg);
-  t('文面: 「メール文面」シートが無くても、既定の文面で動く(10種類)', Object.keys(defaults).length === 10 && /{{宛名}}/.test(defaults.T0_parent.body));
+  t('文面: 「メール文面」シートが無くても、既定の文面で動く(5種類。保護者宛のみ)', Object.keys(defaults).length === 5 && /{{宛名}}/.test(defaults.T0_parent.body));
   const sh = E.reg.add('メール文面', ['キー', '送り先', '件名', '本文', 'メモ']);
   sh.values.push(['T0_parent', '保護者', '【編集した件名】{{アンケート名}}', '{{宛名}}、編集した本文です。{{アンケートURL}} {{知らない差し込み}}', ''], ['remind1_child', 'お子様', '', '', '']);
-  const m = E.run('buildLinkEmails_')('T0', { name: '山田 花子', email: 'h@example.com', childName: '太郎', childEmail: 'c@example.com', sessionDate: '2026-12-10' }, { parent: 'https://site.example/x', child: 'https://site.example/x' }, E.run('getTemplates_')(E.reg));
-  t('文面: シートで編集した件名・本文が使われ、{{差し込み}}が置きかわる。知らない差し込みは、そのまま残る', m.parent.subject === '【編集した件名】鑑定前' && m.parent.body === '山田 花子 様、編集した本文です。https://site.example/x {{知らない差し込み}}');
-  t('文面: 空欄の項目は、既定の文面に戻る。他の文面は、変わらない', E.run('getTemplates_')(E.reg).remind1_child.body === defaults.remind1_child.body && /ひとりで/.test(m.child.body));
+  const m = E.run('buildLinkEmails_')('T0', { name: '山田 花子', email: 'h@example.com', childName: '太郎', sessionDate: '2026-12-10' }, { parent: 'https://site.example/x' }, E.run('getTemplates_')(E.reg));
+  t('文面: シートで編集した件名・本文が使われ、{{差し込み}}が置きかわる。知らない差し込みは、そのまま残る', m.parent.subject === '【編集した件名】受講前' && m.parent.body === '山田 花子 様、編集した本文です。https://site.example/x {{知らない差し込み}}');
+  t('文面: 空欄の項目は、既定の文面に戻る。他の文面は、変わらない', E.run('getTemplates_')(E.reg).remind1_parent.body === defaults.remind1_parent.body && /お子様ご本人に/.test(E.run('getTemplates_')(E.reg).T1_parent.body));
   t('文面: 既定の文面に、費用・謝礼・円の記載がない', !/費用|謝礼|円/.test(JSON.stringify(Object.values(defaults))));
 }
 { // メールの折り返し・未回答の一言
@@ -457,11 +469,11 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const m = E.sent[0];
   t('メール: HTML本文も付く(画面の幅に合わせて自然に折り返す)。改行は<br>、URLはリンク、記号は無害化される', /<br>/.test(m.htmlBody) && /<a href="https:\/\/site\.example\/exec\?page=survey">/.test(m.htmlBody) && !/<script>/.test(m.htmlBody) && /&lt;script&gt;/.test(m.htmlBody) && /line-height/.test(m.htmlBody) && /^こんにちは/.test(m.body));
   const p = { name: '山田 花子', email: 'h@example.com', childName: '太郎', childEmail: 'c@example.com', sessionDate: '2026-12-10' };
-  const urls = { parent: 'https://site.example/x?page=survey', child: 'https://site.example/x?page=survey' };
+  const urls = { parent: 'https://site.example/x?page=survey' };
   const t0 = E.run('buildLinkEmails_')('T0', p, urls), t1 = E.run('buildLinkEmails_')('T1', p, urls);
-  t('文面: 鑑定前アンケートの案内に、「未回答の方に関しては、算命学の鑑定結果には反映されません」の一言が入る(保護者・お子様)', /※未回答の方に関しては、算命学の鑑定結果には反映されません。/.test(t0.parent.body) && /こたえていない人は、算命学の鑑定の結果には入りません/.test(t0.child.body) && !/反映されません/.test(t1.parent.body));
-  t('文面: 一言が空の回(T1・T2)でも、空行が3つ以上続かない', !/\n{3,}/.test(t1.parent.body + t1.child.body));
-  const sentences = [t0.parent.body, t0.child.body].join('\n').split('\n').filter(l => l.trim() !== '');
+  t('文面: 受講前アンケートの案内に、「未回答の方に関しては、算命学の鑑定結果には反映されません」の一言が入る。受講後(T1)には入らない', /※未回答の方に関しては、算命学の鑑定結果には反映されません。/.test(t0.parent.body) && !/反映されません/.test(t1.parent.body));
+  t('文面: 一言が空の回(T1・T2)でも、空行が3つ以上続かない', !/\n{3,}/.test(t1.parent.body));
+  const sentences = [t0.parent.body].join('\n').split('\n').filter(l => l.trim() !== '');
   const brokenMid = sentences.filter(l => /[ぁ-んァ-ン一-龠]$/.test(l) && !/^(■|【)/.test(l) && !/(様|さん)$/.test(l) && l.length > 28);
   t('文面: 文章の途中で改行しない(長い一文は、1行のまま)', brokenMid.length === 0, brokenMid.join(' | '));
 }
