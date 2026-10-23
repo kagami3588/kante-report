@@ -194,9 +194,12 @@ r = vm.runInContext('processSubmission_', ctx)('PT2', nv('PT2', { RID: 'F0001', 
 t('PF6=4 → 確認依頼', r.reasons.length === 1);
 t('確認依頼の理由に回答内容(自由記述の本文)を含めない', !/少し不安でした/.test(JSON.stringify(vm.runInContext('processSubmission_', ctx)('CT1', nv('CT1', { RID: 'F0001', D17: '少し不安でした' }), 't', 'sid18', ctxOk).reasons)));
 
+t('CT0の最近3か月の行動(B1)に「その他」の選択肢があり、「その他」を選んだときだけ表示される自由記述(B1o)がある。「特にない」は、これまでどおり排他', run('choicesOf_(questionsOf_("CT0").find(q => q.id === "B1")).indexOf("その他") !== -1 && questionsOf_("CT0").find(q => q.id === "B1").exclusive === "特にない" && questionsOf_("CT0").some(q => q.id === "B1o" && q.kind === "text" && q.showIfChosen.value === "その他")'));
+(() => { const mk = (b1, extra) => vm.runInContext('processSubmission_', ctx)('CT0', nv('CT0', Object.assign({ RID: 'F0001', B1: b1 }, extra || {})), 't', 's' + Math.random(), ctxOk); const st = (r, id) => r.rows.find(x => x[5] === id)[9]; const rOther = mk('自分の興味があることについて調べた, その他', { B1o: '読書会に参加した' }); const rNone = mk('特にない'); const rOtherBlank = mk('その他');
+  t('B1o: 「その他」を選んで記入 → 回答。選ばない → 非表示(分岐)。「その他」だけ選んで空欄 → 未回答(任意)', st(rOther, 'B1o') === '回答' && /読書会/.test(rOther.rows.find(x => x[5] === 'B1o')[6]) && st(rNone, 'B1o') === '非表示(分岐)' && st(rOtherBlank, 'B1o') === '未回答'); })();
 // 7. コードブック
 const cb = run('buildCodebookRows_()');
-const expected = 28 + 17 + 17 + 25 + 9 + 9 + 22 + 9 + 9;
+const expected = 29 + 17 + 17 + 25 + 9 + 9 + 22 + 9 + 9;
 t('コードブックの行数 = 全設問数(' + expected + ')', cb.length - 1 === expected, String(cb.length - 1));
 t('コードブックに「回答したくない」なし', !/回答したくない/.test(JSON.stringify(cb)));
 const csv = run('toCsv_(buildCodebookRows_())');
@@ -206,7 +209,7 @@ t('A型の対応(R3↔PR1)', cb.find(x => x[0] === 'R3')[12].indexOf('PR1[A]') !
 
 // 8. 設問数
 const counts = run('SURVEY.formKeys.map(k => k + ":" + questionsOf_(k).filter(q=>!q.system).length).join(",")');
-t('設問数 CT0=28(年齢は申込で入力済み) CT1=17 CT2=17 PT0=25(お子さんについて10問・受講の理由と目的2問を追加) PT1=9 PT2=9', counts === 'CT0:28,CT1:17,CT2:17,PT0:25,PT1:9,PT2:9', counts);
+t('設問数 CT0=29(年齢は申込で入力済み。「その他」の自由記述を追加) CT1=17 CT2=17 PT0=25(お子さんについて10問・受講の理由と目的2問を追加) PT1=9 PT2=9', counts === 'CT0:29,CT1:17,CT2:17,PT0:25,PT1:9,PT2:9', counts);
 t('申込者用の受講前(PT0)に、受講の理由・目的(PW1)と、受講後の理想の状態(PW2)がある(自由記述・任意)。お子様用(CT0)・パートナー用(PP0)には、ない', ['PW1', 'PW2'].every(id => run(`questionsOf_("PT0").some(q => q.id === "${id}" && q.kind === "text")`) && run(`!questionsOf_("CT0").some(q => q.id === "${id}") && !questionsOf_("PP0").some(q => q.id === "${id}")`)) && !run('SURVEY.forms.PP0.blocks.some(b => b.type === "page" && /受講の理由と目的/.test(b.title))') && !run('SURVEY.forms.CT0.blocks.some(b => b.type === "page" && /受講の理由と目的/.test(b.title))'));
 
 // 9. リマインド

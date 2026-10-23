@@ -148,9 +148,10 @@ SURVEY.forms.CT0 = {
     P_('F. 最近3か月の行動', { desc: '' }),
     Q_({
       id: 'B1', text: '最近3か月の間に、次のような行動をしましたか。(あてはまるものをすべて選んでください)', kind: 'multi', axis: AXIS.ACT,
-      choices: ['自分の興味があることについて調べた', '親以外の人に、自分の興味や将来について話した', '職業体験やイベントなどに参加した', '新しいことを始めた', '特にない'],
+      choices: ['自分の興味があることについて調べた', '親以外の人に、自分の興味や将来について話した', '職業体験やイベントなどに参加した', '新しいことを始めた', 'その他', '特にない'],
       exclusive: '特にない', purpose: '受講前3か月の実際の行動(種類数)'
     }),
+    TX_('B1o', 'その他の行動の内容を、ご記入ください。', '「その他」の行動の内容(任意)', { showIfChosen: { id: 'B1', value: 'その他' }, axis: AXIS.FREE, note: '「その他」を選んだ方向けです。お名前や学校名など、個人が特定される情報は書かないでください。' }),
     P_('G. 将来について考えるきっかけ'),
     SG_('B2-1', '最近3か月の間に、将来について考えるきっかけになった出来事はありましたか。', 'YESNO', AXIS.CTX, 'きっかけとなった出来事の有無', { gate: { skip: 'いいえ' } }),
     P_('G-2. きっかけになった出来事', { conditional: true }),
@@ -715,6 +716,20 @@ function parseQid_(title) {
   return m ? m[1] : null;
 }
 
+/** 選ばれた(複数選択の)回答に、その値が含まれるか。answers は {設問ID: 文字列「a, b」または配列} */
+function chosenIncludes_(answers, id, value) {
+  var v = answers[id];
+  var list = Array.isArray(v) ? v : String(v === undefined || v === null ? '' : v).split(', ');
+  return list.indexOf(value) !== -1;
+}
+
+/** この設問は、分岐のため表示されないか(hiddenWhen=選んだ値のとき非表示 / showIfChosen=その値を選んだときだけ表示) */
+function isHiddenQ_(q, answers) {
+  if (q.hiddenWhen && String(answers[q.hiddenWhen.id] === undefined ? '' : answers[q.hiddenWhen.id]) === q.hiddenWhen.value) return true;
+  if (q.showIfChosen && !chosenIncludes_(answers, q.showIfChosen.id, q.showIfChosen.value)) return true;
+  return false;
+}
+
 function qTitle_(q) { return q.id + '. ' + q.text; }
 
 /** 設問の文の {{子}} {{親}} を、お名前(+さん)に置きかえる。vars = {child, parent}。名前が無いときは「お子様」「申込者の方」 */
@@ -857,10 +872,10 @@ function processSubmission_(formKey, namedValues, tsIso, sid, ctx) {
     var status;
     if (v !== '') {
       status = '回答';
-      if (q.hiddenWhen && answers[q.hiddenWhen.id] === q.hiddenWhen.value) {
+      if (isHiddenQ_(q, answers)) {
         flags.push('非表示設問に回答あり:' + q.id);
       }
-    } else if (q.hiddenWhen && answers[q.hiddenWhen.id] === q.hiddenWhen.value) {
+    } else if (isHiddenQ_(q, answers)) {
       status = '非表示(分岐)';
     } else {
       status = '未回答';
@@ -915,7 +930,7 @@ function remindersDue_(roster, adoptedKeys, today) {
 /** 設問定義の整合性チェック(エラー文字列の配列。空なら問題なし) */
 function validateSurveyDefinition_() {
   var errors = [];
-  var expectedCount = { CT0: 28, CT1: 17, CT2: 17, PT0: 25, PT1: 9, PT2: 9, PP0: 22, PP1: 9, PP2: 9 };
+  var expectedCount = { CT0: 29, CT1: 17, CT2: 17, PT0: 25, PT1: 9, PT2: 9, PP0: 22, PP1: 9, PP2: 9 };
   SURVEY.allKeys.forEach(function (key) {
     var def = SURVEY.forms[key];
     if (!def) { errors.push(key + ': 定義なし'); return; }
@@ -980,7 +995,7 @@ function buildCodebookRows_() {
       else if (b.kind === 'age') chText = '数値入力(5〜25、任意)';
       else if (b.kind === 'text') chText = '自由記述(任意)';
       var typeText = { single: '単一選択', multi: '複数選択', text: '自由記述', age: '数値' }[b.kind];
-      var cond = b.hiddenWhen ? (b.hiddenWhen.id + '=' + b.hiddenWhen.value + ' のときは非表示') : '';
+      var cond = b.hiddenWhen ? (b.hiddenWhen.id + '=' + b.hiddenWhen.value + ' のときは非表示') : (b.showIfChosen ? (b.showIfChosen.id + ' で「' + b.showIfChosen.value + '」を選んだときだけ表示') : '');
       var analysis;
       if (b.kind === 'text') analysis = '自由記述のテーマ分析(2名でコーディング)。数値回答の理由づけ';
       else if (b.kind === 'multi') analysis = '選択肢ごとの人数・割合(合計は100%を超える場合あり)';
@@ -2290,7 +2305,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-23-i';
+var SITE_VERSION = '2026-10-23-j';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2587,7 +2602,7 @@ function surveyClientDef_(key, vars) {
     key: key, role: d.role, title: d.title, intro: rn(d.intro),
     blocks: d.blocks.filter(function (b) { return !(b.type === 'q' && b.kind === 'id'); }).map(function (b) {
       if (b.type === 'page') return { type: 'page', title: rn(String(b.title)).replace(/^[A-Z](-[0-9]+)?\.\s*/, ''), desc: rn(b.desc || ''), conditional: !!b.conditional };
-      return { type: 'q', id: b.id, text: rn(b.text), kind: b.kind, required: isReq_(d, b), choices: choicesOf_(b), exclusive: b.exclusive || '', hiddenWhen: b.hiddenWhen || null, inline: !!b.inline, gate: b.gate || null, note: b.note || '' };
+      return { type: 'q', id: b.id, text: rn(b.text), kind: b.kind, required: isReq_(d, b), choices: choicesOf_(b), exclusive: b.exclusive || '', hiddenWhen: b.hiddenWhen || null, showIfChosen: b.showIfChosen || null, inline: !!b.inline, gate: b.gate || null, note: b.note || '' };
     })
   };
 }
@@ -2625,7 +2640,7 @@ function surveyMissing_(key, answers) {
   var d = SURVEY.forms[key], miss = null;
   questionsOf_(key).forEach(function (q) {
     if (miss || q.kind === 'id' || !isReq_(d, q)) return;
-    if (q.hiddenWhen && String(answers[q.hiddenWhen.id] === undefined ? '' : answers[q.hiddenWhen.id]) === q.hiddenWhen.value) return;
+    if (isHiddenQ_(q, answers)) return;
     var v = answers[q.id];
     var empty = q.kind === 'multi' ? !(Array.isArray(v) && v.length) : (v === undefined || v === null || String(v).trim() === '');
     if (empty) miss = q.text;
@@ -2802,7 +2817,7 @@ function surveyClient_() {
 
   function qs() { return state.def.blocks.filter(function (b) { return b.type === 'q'; }); }
   /** 設問が「非表示」になるか(前の設問の答えによる分岐) */
-  function hidden(q) { if (!q.hiddenWhen) return false; var v = state.ans[q.hiddenWhen.id]; if (q.inline && (v === undefined || v === '')) return true; return v === q.hiddenWhen.value; }
+  function hidden(q) { if (q.showIfChosen) { var ch = state.ans[q.showIfChosen.id]; return !(ch && ch.indexOf(q.showIfChosen.value) !== -1); } if (!q.hiddenWhen) return false; var v = state.ans[q.hiddenWhen.id]; if (q.inline && (v === undefined || v === '')) return true; return v === q.hiddenWhen.value; }
   /** 画面のページ(ページ区切りごとの設問のまとまり)。先頭に区切りがない設問は、最初のページ */
   function buildPages(def) {
     var pages = [], cur = null;
