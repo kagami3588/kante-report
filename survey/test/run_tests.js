@@ -291,17 +291,17 @@ const isQ = (def, re) => (i) => run(`SURVEY.${def}.blocks.filter(b => b.type ===
 }
 
 // 12. 申込の処理
-const NVA = (o) => { const base = { PN0: 'いいえ', AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'hanako@example.com', AP3: 'hanako@example.com', AP8: 'hanako_line', AP9: '', AP10: '追加しました', AP11: 'ナシ', AP5: '', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH6: '', EX1: '', EX2: '', AP_VIEW: '', CONSENT: '同意します', CONSENT_CHILD: '同意します', CONSENT_ALL: '全てに同意しました', CONSENT_ANON: '同意します' }; const m = Object.assign(base, o); const out = {}; ap.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
+const NVA = (o) => { const base = { PN0: 'パートナーは参加しない', AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'hanako@example.com', AP3: 'hanako@example.com', AP8: 'hanako_line', AP9: '', AP10: '追加しました', AP11: 'ナシ', AP5: '', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH6: '', EX1: '', EX2: '', AP_VIEW: '', CONSENT: '同意します', CONSENT_CHILD: '同意します', CONSENT_ALL: '全てに同意しました', CONSENT_ANON: '同意します' }; const m = Object.assign(base, o); const out = {}; ap.blocks.filter(b => b.type === 'q').forEach(q => { out[q.id + '. ' + q.text] = [m[q.id] === undefined ? '' : m[q.id]]; }); return out; };
 const pa = vm.runInContext('processApplication_', ctx);
 let pr = pa(NVA({}), [], '2026-11-01T10:00:00');
 t('申込OK → F0001を発行し、名簿の行(38列)を作る', pr.ok && pr.id === 'F0001' && pr.row.length === 38 && pr.row[0] === 'F0001' && pr.row[15] === '参加中' && pr.row[run('RC.category')] === 'career');
 t('名簿の列の位置(RC)と行の内容が一致', pr.row[run('RC.pname')] === '山田 花子' && pr.row[run('RC.pgender')] === '女性' && pr.row[run('RC.pbirth')] === '19850612' && pr.row[run('RC.pemail')] === 'hanako@example.com' && pr.row[run('RC.line')] === 'hanako_line' && pr.row[run('RC.officialLine')] === '追加しました' && pr.row[run('RC.referrer')] === 'ナシ' && pr.row[run('RC.cname')] === '山田 太郎' && pr.row[run('RC.cgender')] === '男性' && pr.row[run('RC.cbirth')] === '20100315' && pr.row[run('RC.cemail')] === '' && pr.row[run('RC.session')] === '' && pr.row[run('RC.status')] === '参加中');
 t('名簿の見出し数 = 行の列数', run('HEAD.roster.length') === 38 && run('RC.memo') === 23 && run('RC.request') === 31 && run('RC.plan') === 32 && run('RC.ended') === 33 && run('RC.pjoin') === 34 && run('RC.ppbirth') === 37);
-pr = pa(NVA({ PN0: 'はい', PN1: '山田 次郎', PN2: '男性', PN3: '19830101' }), [], 't');
+pr = pa(NVA({ PN0: 'パートナーも参加する', PN1: '山田 次郎', PN2: '男性', PN3: '19830101' }), [], 't');
 t('パートナーが参加する → 名前・性別・生年月日が名簿に入る', pr.ok && pr.row[run('RC.pjoin')] === 'はい' && pr.row[run('RC.ppname')] === '山田 次郎' && pr.row[run('RC.ppgender')] === '男性' && pr.row[run('RC.ppbirth')] === '19830101');
-pr = pa(NVA({ PN0: 'はい', PN1: '', PN2: '', PN3: '1983' }), [], 't');
+pr = pa(NVA({ PN0: 'パートナーも参加する', PN1: '', PN2: '', PN3: '1983' }), [], 't');
 t('パートナーが参加するのに、名前・性別・生年月日が不足・不正 → 要確認', !pr.ok && /パートナーの方のお名前/.test(pr.reason) && /パートナーの方の性別/.test(pr.reason) && /パートナーの方の生年月日/.test(pr.reason));
-pr = pa(NVA({ PN0: 'いいえ', PN1: '山田 次郎' }), [], 't');
+pr = pa(NVA({ PN0: 'パートナーは参加しない', PN1: '山田 次郎' }), [], 't');
 t('パートナーが参加しない → パートナーの情報は保存しない(参加=いいえ)', pr.ok && pr.row[run('RC.pjoin')] === 'いいえ' && pr.row[run('RC.ppname')] === '');
 pr = pa(NVA({ PN0: '' }), [], 't');
 t('パートナーの参加が未選択 → 要確認', !pr.ok && /パートナーの方の参加が未選択/.test(pr.reason));

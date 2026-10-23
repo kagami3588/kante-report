@@ -432,6 +432,7 @@ function corpAddLabel_(n) { return n === 0 ? '追加なし(代表のみ)' : n + 
 var CORP_ADD_CHOICES = (function () { var a = []; for (var i = 0; i <= CORP_FEE.maxAdd; i++) a.push(corpAddLabel_(i)); return a; })();
 
 var GENDERS = ['男性', '女性'];
+var PARTNER_YES = 'パートナーも参加する', PARTNER_NO = 'パートナーは参加しない';
 // 追加の鑑定(ご家族など)。人数を選び、お一人ずつ、お名前・性別・生年月日・ご希望の内容を入力する。お子様と大人の方で、追加料金が違う
 var EXTRA_FEES = {
   'お子様・レポートのみ(+5,000円)': 5000,
@@ -462,12 +463,12 @@ SURVEY.apply = {
     CHK_('AP10', '林 竜輔の公式LINEを追加しましたか?', '公式LINEの追加確認'),
     Q_({ id: 'AP11', text: '紹介者氏名(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)', kind: 'katakana', axis: AXIS.ID, system: true, required: true, purpose: '紹介者(個人情報)' }),
     Q_({ id: 'AP5', text: '保護者さまの自由記入欄(質問がありましたら、内容をご記入ください)', kind: 'text', axis: AXIS.ID, system: true, purpose: '保護者からの連絡事項・質問(任意)' }),
-    P_('パートナーの方について', { desc: 'パートナーの方も、本プロジェクトに参加すると、保護者さまと同じ内容のアンケートに、同じメールアドレスのページから回答できます。参加されない場合も、お申込みいただけます。' }),
-    Q_({ id: 'PN0', text: 'パートナーの方は、本プロジェクトに参加しますか?', kind: 'single', axis: AXIS.ID, system: true, required: true, choices: ['はい', 'いいえ'], gate: { skip: 'いいえ' }, purpose: 'パートナーの参加の有無' }),
+    P_('パートナーの方について', { desc: 'パートナーの方も参加すると、保護者さまと同じ内容のアンケートに、同じメールアドレスのページから回答できます。参加されない場合も、お申込みいただけます。' }),
+    Q_({ id: 'PN0', text: 'パートナーの方も、本プロジェクトに参加しますか?', kind: 'single', axis: AXIS.ID, system: true, required: true, choices: [PARTNER_YES, PARTNER_NO], gate: { skip: PARTNER_NO }, purpose: 'パートナーの参加の有無' }),
     P_('パートナーの方の情報', { conditional: true, desc: 'パートナーの方の、お名前・生年月日・性別を、ご入力ください。' }),
-    Q_({ id: 'PN1', text: 'パートナーの方のお名前(フルネーム)', kind: 'text1', axis: AXIS.ID, system: true, required: true, hiddenWhen: { id: 'PN0', value: 'いいえ' }, purpose: 'パートナーの氏名(個人情報)' }),
-    Q_({ id: 'PN3', text: 'パートナーの方の生年月日(例:19850612)', kind: 'birth', axis: AXIS.ID, system: true, required: true, hiddenWhen: { id: 'PN0', value: 'いいえ' }, purpose: 'パートナーの生年月日(個人情報)' }),
-    Q_({ id: 'PN2', text: 'パートナーの方の性別', kind: 'single', axis: AXIS.ID, system: true, required: true, choices: GENDERS, hiddenWhen: { id: 'PN0', value: 'いいえ' }, purpose: 'パートナーの性別(個人情報)' }),
+    Q_({ id: 'PN1', text: 'パートナーの方のお名前(フルネーム)', kind: 'text1', axis: AXIS.ID, system: true, required: true, hiddenWhen: { id: 'PN0', value: PARTNER_NO }, purpose: 'パートナーの氏名(個人情報)' }),
+    Q_({ id: 'PN3', text: 'パートナーの方の生年月日(例:19850612)', kind: 'birth', axis: AXIS.ID, system: true, required: true, hiddenWhen: { id: 'PN0', value: PARTNER_NO }, purpose: 'パートナーの生年月日(個人情報)' }),
+    Q_({ id: 'PN2', text: 'パートナーの方の性別', kind: 'single', axis: AXIS.ID, system: true, required: true, choices: GENDERS, hiddenWhen: { id: 'PN0', value: PARTNER_NO }, purpose: 'パートナーの性別(個人情報)' }),
     P_('お子様用', { desc: 'お子様のご情報です。保護者の方が、お子様と一緒にご入力ください。お子様のアンケートも、保護者さまのメールアドレスでご案内します(同じページで、お子様ご本人が回答できます)。' }),
     T1_('CH1', 'お子様の名前(フルネーム)', 'お子様の氏名(個人情報。回答DBとは別に保管)', true),
     SEL_('CH2', 'お子様の性別', GENDERS, true, 'お子様の性別(個人情報)'),
@@ -1028,8 +1029,8 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   if (!a.CH1) problems.push('お子様の名前が未入力');
   if (GENDERS.indexOf(a.CH2) === -1) problems.push('お子様の性別が未選択');
   if (!isBirthDate_(a.CH3)) problems.push('お子様の生年月日が不正(8桁の数字。例:20100315)');
-  if (a.PN0 !== 'はい' && a.PN0 !== 'いいえ') problems.push('パートナーの方の参加が未選択');
-  if (a.PN0 === 'はい') {
+  if (a.PN0 !== PARTNER_YES && a.PN0 !== PARTNER_NO) problems.push('パートナーの方の参加が未選択');
+  if (a.PN0 === PARTNER_YES) {
     if (!a.PN1) problems.push('パートナーの方のお名前が未入力');
     if (GENDERS.indexOf(a.PN2) === -1) problems.push('パートナーの方の性別が未選択');
     if (!isBirthDate_(a.PN3)) problems.push('パートナーの方の生年月日が不正(8桁の数字。例:19850612)');
@@ -1044,7 +1045,7 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   }
   var id = nextId_((existing || []).map(function (e) { return e.id; }), 'F');
   var row = [id, tsIso, a.AP1, a.AP6, a.AP7, a.AP2, a.AP8, a.AP9, a.AP10, a.AP11, a.CH1, a.CH2, a.CH3, '', '', '参加中', '', '', '', ex.persons.map(function (x) { return x.name; }).join('、'), ex.persons.map(function (x) { return x.name + ': ' + x.plan; }).join(' / '), a.AP5, a.CH6, '', 'career', '', '', '', '', '', '', '', '', ''];
-  row[RC.pjoin] = a.PN0 === 'はい' ? 'はい' : 'いいえ'; row[RC.ppname] = a.PN0 === 'はい' ? a.PN1 : ''; row[RC.ppgender] = a.PN0 === 'はい' ? a.PN2 : ''; row[RC.ppbirth] = a.PN0 === 'はい' ? a.PN3 : '';
+  row[RC.pjoin] = a.PN0 === PARTNER_YES ? 'はい' : 'いいえ'; row[RC.ppname] = a.PN0 === PARTNER_YES ? a.PN1 : ''; row[RC.ppgender] = a.PN0 === PARTNER_YES ? a.PN2 : ''; row[RC.ppbirth] = a.PN0 === PARTNER_YES ? a.PN3 : '';
   row[RC.targets] = ex.persons.map(function (x) { return [x.name, x.gender, x.birth, x.plan].join('/'); }).join('\n');
   return { ok: true, category: 'career', id: id, name: a.AP1, email: a.AP2, childName: a.CH1, childEmail: '', extra: ex.persons.length ? { fee: ex.fee, persons: ex.persons } : null, row: row };
 }
@@ -2231,7 +2232,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-23-b';
+var SITE_VERSION = '2026-10-23-c';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +

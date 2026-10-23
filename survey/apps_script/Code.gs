@@ -402,8 +402,8 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   if (!a.CH1) problems.push('お子様の名前が未入力');
   if (GENDERS.indexOf(a.CH2) === -1) problems.push('お子様の性別が未選択');
   if (!isBirthDate_(a.CH3)) problems.push('お子様の生年月日が不正(8桁の数字。例:20100315)');
-  if (a.PN0 !== 'はい' && a.PN0 !== 'いいえ') problems.push('パートナーの方の参加が未選択');
-  if (a.PN0 === 'はい') {
+  if (a.PN0 !== PARTNER_YES && a.PN0 !== PARTNER_NO) problems.push('パートナーの方の参加が未選択');
+  if (a.PN0 === PARTNER_YES) {
     if (!a.PN1) problems.push('パートナーの方のお名前が未入力');
     if (GENDERS.indexOf(a.PN2) === -1) problems.push('パートナーの方の性別が未選択');
     if (!isBirthDate_(a.PN3)) problems.push('パートナーの方の生年月日が不正(8桁の数字。例:19850612)');
@@ -418,7 +418,7 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   }
   var id = nextId_((existing || []).map(function (e) { return e.id; }), 'F');
   var row = [id, tsIso, a.AP1, a.AP6, a.AP7, a.AP2, a.AP8, a.AP9, a.AP10, a.AP11, a.CH1, a.CH2, a.CH3, '', '', '参加中', '', '', '', ex.persons.map(function (x) { return x.name; }).join('、'), ex.persons.map(function (x) { return x.name + ': ' + x.plan; }).join(' / '), a.AP5, a.CH6, '', 'career', '', '', '', '', '', '', '', '', ''];
-  row[RC.pjoin] = a.PN0 === 'はい' ? 'はい' : 'いいえ'; row[RC.ppname] = a.PN0 === 'はい' ? a.PN1 : ''; row[RC.ppgender] = a.PN0 === 'はい' ? a.PN2 : ''; row[RC.ppbirth] = a.PN0 === 'はい' ? a.PN3 : '';
+  row[RC.pjoin] = a.PN0 === PARTNER_YES ? 'はい' : 'いいえ'; row[RC.ppname] = a.PN0 === PARTNER_YES ? a.PN1 : ''; row[RC.ppgender] = a.PN0 === PARTNER_YES ? a.PN2 : ''; row[RC.ppbirth] = a.PN0 === PARTNER_YES ? a.PN3 : '';
   row[RC.targets] = ex.persons.map(function (x) { return [x.name, x.gender, x.birth, x.plan].join('/'); }).join('\n');
   return { ok: true, category: 'career', id: id, name: a.AP1, email: a.AP2, childName: a.CH1, childEmail: '', extra: ex.persons.length ? { fee: ex.fee, persons: ex.persons } : null, row: row };
 }
@@ -1605,7 +1605,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-23-b';
+var SITE_VERSION = '2026-10-23-c';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +

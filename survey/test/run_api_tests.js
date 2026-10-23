@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-b/.test(pa.html) && /2026-10-23-b/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-c/.test(pa.html) && /2026-10-23-c/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -478,7 +478,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('文面: 文章の途中で改行しない(長い一文は、1行のまま)', brokenMid.length === 0, brokenMid.join(' | '));
 }
 { // 追加の鑑定の料金(人数・お一人ずつ)
-  const base = { PN0: 'いいえ', AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'ex1@example.com', AP3: 'ex1@example.com', AP8: 'l', AP10: '追加しました', AP11: 'ナシ', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH4: 'ex2@example.com', CH5: 'ex2@example.com', CONSENT_ALL: '全てに同意しました' };
+  const base = { PN0: 'パートナーは参加しない', AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'ex1@example.com', AP3: 'ex1@example.com', AP8: 'l', AP10: '追加しました', AP11: 'ナシ', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH4: 'ex2@example.com', CH5: 'ex2@example.com', CONSENT_ALL: '全てに同意しました' };
   const go = (o) => { const E = makeEnv(''); return { E, r: E.run('submitApplication')('career', Object.assign({}, base, o), '') }; };
   const { r: r0 } = go({});
   t('追加の鑑定なし: 鑑定料30,000円のみ', r0.ok && r0.fee.length === 1 && /30,000円/.test(r0.fee[0]));
@@ -508,13 +508,13 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('パートナー: 参加しない家庭は、選択肢が2つだけ。パートナーとしては始められない', r2.options.length === 2 && !E2.run('surveyStart')(r2.token, 'F0001', 'partner').ok);
   // 申込サイト
   const E3 = makeEnv('');
-  const base = { PN0: 'はい', PN1: '山田 次郎', PN2: '男性', PN3: '19830101', AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'pn@example.com', AP3: 'pn@example.com', AP8: 'l', AP10: '追加しました', AP11: 'ナシ', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CONSENT_ALL: '全てに同意しました' };
+  const base = { PN0: 'パートナーも参加する', PN1: '山田 次郎', PN2: '男性', PN3: '19830101', AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'pn@example.com', AP3: 'pn@example.com', AP8: 'l', AP10: '追加しました', AP11: 'ナシ', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CONSENT_ALL: '全てに同意しました' };
   const a = E3.run('submitApplication')('career', base, '');
   t('パートナー: 申込サイトで「はい」+情報を送ると、名簿に入る', a.ok && E3.roster.values[1][E3.rc('pjoin')] === 'はい' && E3.roster.values[1][E3.rc('ppname')] === '山田 次郎');
   const E4 = makeEnv('');
   t('パートナー: 「はい」なのに情報がないと、受け付けない', !E4.run('submitApplication')('career', Object.assign({}, base, { PN1: '', AP2: 'pn2@example.com', AP3: 'pn2@example.com' }), '').ok);
   const pg = E3.run('doGet')({ parameter: { cat: 'career' } });
-  t('パートナー: 申込ページに、参加の質問と、条件付きのパートナー情報(はい の場合のみ)がある', /パートナーの方は、本プロジェクトに参加しますか/.test(pg.html) && /パートナーの方の情報/.test(pg.html) && /"conditional":true/.test(pg.html));
+  t('パートナー: 申込ページに、参加の質問と、条件付きのパートナー情報(はい の場合のみ)がある', /パートナーの方も、本プロジェクトに参加しますか/.test(pg.html) && /パートナーの方の情報/.test(pg.html) && /"conditional":true/.test(pg.html));
 }
 { // 設問にお名前(さん)を入れる
   const E = makeEnv('');
