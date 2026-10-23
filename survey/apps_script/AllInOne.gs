@@ -1222,7 +1222,7 @@ var TIME_LABEL = { T0: '受講前', T1: '受講後', T2: '受講から約3か月
 // ---------- メールの文面(台帳の「メール文面」シートで編集できる) ----------
 var TEMPLATE_VARS_HELP = '使える差し込み: {{宛名}} {{申込者名}} {{お子様名}} {{受講日}} {{アンケート名}} {{アンケートURL}} {{入力案内}} {{期限}} {{所要時間}} {{アンケート状況}} {{未回答の注意}} {{署名}} {{連絡先}}';
 
-var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}のアンケートをご案内します。申込者用と、お子様用があります(パートナーの方が参加される場合は、パートナーの方用もあります)。{{期限}}ご回答ください。(所要時間の目安:{{所要時間}})\n{{未回答の注意}}\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・お子様用のアンケートは、お子様ご本人に、お答えいただいてください。お子様の回答は、見たり、聞き出したりしないでください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n・リンクは、他の方に転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。\n\n{{署名}}';
+var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}のアンケートをご案内します。申込者用と、お子様用があります(パートナーの方が参加される場合は、パートナーの方用もあります)。{{期限}}ご回答をお願いいたします。(所要時間の目安:{{所要時間}})\n{{未回答の注意}}\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・お子様用のアンケートは、お子様ご本人に、お答えいただいてください。お子様の回答は、見たり、聞き出したりしないでください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n・リンクは、他の方に転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。\n\n{{署名}}';
 
 var DEFAULT_TEMPLATES = (function () {
   var out = [];
@@ -1566,7 +1566,7 @@ function refreshCodebook() {
 function initRegSheets_(reg) {
   mkSheet_(reg, SHEETS.roster, HEAD.roster);
   var settings = mkSheet_(reg, SHEETS.settings, ['項目', '値', '説明']);
-  settings.getRange(2, 1, 12, 3).setValues([
+  settings.getRange(2, 1, 13, 3).setValues([
     ['安全対応担当者メール', '', '回答に確認が必要な内容があった場合の通知先(1名)'],
     ['安全対応担当者メール(代理)', '', '担当者不在時の通知先'],
     ['このファイルについて', '', 'この台帳には個人情報(お名前・メールアドレス)が入っています。運営のみに共有してください。調査の分析には、別ファイルの「' + CONFIG.DB_NAME + '」を使います'],
@@ -1578,7 +1578,8 @@ function initRegSheets_(reg) {
     ['受講日の何日前に、受講前アンケートの案内', 3, '受講前アンケート(T0)の案内。数字で入力'],
     ['受講日の何日前に、前日リマインド', 1, '前日のリマインド(通常は1)。数字で入力'],
     ['受講日の何日後に、受講後アンケートの案内', 0, '受講後アンケート(T1)の案内。0なら受講日の朝に届きます(受講のあとに送りたいときは、管理画面の「セッション終了」ボタンも使えます)'],
-    ['受講日の何日後に、3か月後アンケートの案内', 90, '3か月後アンケート(T2)の案内。数字で入力']
+    ['受講日の何日後に、3か月後アンケートの案内', 90, '3か月後アンケート(T2)の案内。数字で入力'],
+    ['申込の直後に、受講前アンケートの案内', '有効', '「有効」のとき、親子プランの申込を受け付けた直後に、受講前アンケート(T0)の案内を、自動で送ります(アンケートサイトのURL(B7)が必要です)。申込と同時に送りたくないときは「無効」にしてください(その場合は、受講日の何日前かの設定どおりに、自動で届きます)']
   ]);
   var tpl = mkSheet_(reg, SHEETS.templates, ['キー', '送り先', '件名', '本文', 'メモ(使える差し込み: ' + TEMPLATE_VARS_HELP.replace('使える差し込み: ', '') + ')']);
   tpl.getRange(2, 1, DEFAULT_TEMPLATES.length, 5).setValues(DEFAULT_TEMPLATES.map(function (t) { return [t.key, t.to, t.subject, t.body, t.note]; }));
@@ -2305,7 +2306,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-23-k';
+var SITE_VERSION = '2026-10-23-l';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2509,8 +2510,26 @@ function finishApplication_(reg, category, res, tsIso) {
   reg.getSheetByName(SHEETS.sendlog).appendRow([tsIso, res.id, '申込受付(' + label + ')', res.email, result]);
   var op = opMail_(reg);
   var who = category === 'corp' ? res.company + ' / 担当:' + res.name + ' / ' + (res.plan ? res.plan.label : '') : (category === 'career' ? '申込者:' + res.name + ' / お子様:' + res.childName : res.name);
-  if (op) sendMail_(op, '[調査アンケート] 新しい申込がありました(' + label + ' / ' + res.id + ')', res.id + ' / ' + who + '\n日程調整のうえ、名簿の「受講日」を入力してください。\n' + reg.getUrl());
+  var t0note = category === 'career' ? autoSendT0OnApply_(reg, res.id) : '';
+  if (op) sendMail_(op, '[調査アンケート] 新しい申込がありました(' + label + ' / ' + res.id + ')', res.id + ' / ' + who + (t0note ? '\n' + t0note : '') + '\n日程調整のうえ、名簿の「受講日」を入力してください。\n' + reg.getUrl());
   return result;
+}
+
+/** 親子プランの申込の直後に、受講前アンケート(T0)の案内を、自動で送る。送ったときは、運営への通知に載せる文を返す。送れなかったときは、送信ログに理由を残す(申込自体は、そのまま受け付ける) */
+function autoSendT0OnApply_(reg, id) {
+  try {
+    var sch = getSchedule_(reg);
+    if (!sch.enabled || !sch.t0OnApply) return '';
+    var fam = readRoster_(reg).filter(function (f) { return f.id === id; })[0];
+    if (!fam || (fam.sent && fam.sent.T0)) return '';
+    if (MailApp.getRemainingDailyQuota() < 1) throw new Error('今日の送信上限に足りません');
+    requireSurveySiteUrl_(reg);
+    var r = sendLinksToFamilies_(reg, 'T0', [fam]);
+    return r.ok ? '受講前アンケート(T0)の案内を、申込者に自動で送りました。' : '受講前アンケート(T0)の案内の自動送信に失敗しました(「送信ログ」を確認してください)。';
+  } catch (e) {
+    reg.getSheetByName(SHEETS.sendlog).appendRow([nowStr_(), id, 'T0 自動送信(申込直後)', '', '【送信せず】' + (e && e.message ? e.message : e)]);
+    return '受講前アンケート(T0)の案内は、自動では送れませんでした(' + (e && e.message ? e.message : e) + ')。';
+  }
 }
 
 /** 専用サイトからの申込(誰でも呼べる)。入力を確認し、問題があれば修正点を返し、問題なければ登録して、お振込先を返す */
@@ -3015,7 +3034,7 @@ function surveyPage_() { return SURVEY_SITE_HTML; }
 // 受講日に合わせた、メールの自動配信(毎朝のトリガーで実行)
 // ======================================================================
 
-var SCHEDULE_DEFAULT = { enabled: true, remind7: 7, t0: 3, remind1: 1, t1: 0, t2: 90 };
+var SCHEDULE_DEFAULT = { enabled: true, remind7: 7, t0: 3, remind1: 1, t1: 0, t2: 90, t0OnApply: true };
 
 /** 設定シート(B8〜B13)から、配信の日数を読む。空欄・不正な値は、既定の日数 */
 function getSchedule_(reg) {
@@ -3026,6 +3045,8 @@ function getSchedule_(reg) {
   var sw = String(sh.getRange(8, 2).getValue()).trim();
   s.enabled = sw === '' ? true : sw === '有効';
   s.remind7 = num(9, s.remind7); s.t0 = num(10, s.t0); s.remind1 = num(11, s.remind1); s.t1 = num(12, s.t1); s.t2 = num(13, s.t2);
+  var ap = String(sh.getRange(14, 2).getValue()).trim();
+  s.t0OnApply = ap === '' ? true : ap === '有効';
   return s;
 }
 

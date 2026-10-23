@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-k/.test(pa.html) && /2026-10-23-k/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-l/.test(pa.html) && /2026-10-23-l/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -416,7 +416,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('自動配信の計画: 受講日の入力が遅れても(2日前)、受講前アンケートをすぐ送る。前日リマインドは、まだ', plan([fam()], '2026-12-08', { 'F0001|remind7': true }) === 'F0001:T0');
   t('自動配信の計画: 送信済み・辞退・受講日なし・メールなし・一般/法人・テストIDは対象外', plan([fam({ sent: { T0: 'x', T1: '', T2: '' } }), fam({ id: 'F0002', status: '辞退' }), fam({ id: 'F0003', sessionDate: '' }), fam({ id: 'F0004', email: '' }), fam({ id: 'G0001', category: 'general' }), fam({ id: 'F9999' })], '2026-12-07', { 'F0001|remind7': true }) === '');
   t('自動配信の計画: 設定で「無効」なら何も送らない。日数は設定で変えられる', plan([fam()], '2026-12-07', {}, { enabled: false, remind7: 7, t0: 3, remind1: 1, t1: 0, t2: 90 }) === '' && plan([fam()], '2026-12-05', { 'F0001|remind7': true }, { enabled: true, remind7: 7, t0: 5, remind1: 1, t1: 0, t2: 90 }) === 'F0001:T0');
-  t('設定シートから、日数・有効/無効を読む(空欄・不正値は既定)', JSON.stringify(E.run('getSchedule_')(E.reg)) === JSON.stringify({ enabled: true, remind7: 7, t0: 3, remind1: 1, t1: 0, t2: 90 }));
+  t('設定シートから、日数・有効/無効を読む(空欄・不正値は既定)', JSON.stringify(E.run('getSchedule_')(E.reg)) === JSON.stringify({ enabled: true, remind7: 7, t0: 3, remind1: 1, t1: 0, t2: 90, t0OnApply: true }));
   t('管理画面の予定: 受講日から、日付つきで出る', /2026-12-03 リマインド/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /2026-12-07 受講前アンケート/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /2027-03-10 3か月後アンケート/.test(E.run('autoScheduleText_')(fam(), E.run('SCHEDULE_DEFAULT'), {})) && /受講日を入力すると/.test(E.run('autoScheduleText_')(fam({ sessionDate: '' }), E.run('SCHEDULE_DEFAULT'), {})));
 }
 { // 自動配信の実行(メールと記録)
@@ -662,6 +662,29 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const E = makeEnv('');
   const d = E.run('surveyClientDef_')('CT0', { child: '林 巫心', parent: '林 竜輔' });
   t('お子様用: 「竜輔さんは、巫心さんが何を大切にしているのか理解してくれていると思う。」と表示される', d.blocks.some(b => b.text === '竜輔さんは、巫心さんが何を大切にしているのか理解してくれていると思う。') && d.blocks.some(b => b.text === '竜輔さんが何を大切にしているのか理解している。'));
+}
+{ // 申込の直後に、受講前アンケート(T0)を自動で送る
+  const base = { PN0: 'パートナーは参加しない', AP1: '林 竜輔', AP6: '男性', AP7: '20000218', AP2: 'auto@example.com', AP3: 'auto@example.com', AP8: 'l', AP10: '追加しました', AP11: 'ナシ', CH1: '林 巫心', CH2: '女性', CH3: '20120607', CONSENT_ALL: '全てに同意しました' };
+  const E = makeEnv('');
+  const r = E.run('submitApplication')('career', base, '');
+  const t0 = E.sent.find(m => m.to === 'auto@example.com' && /アンケートのご案内/.test(m.subject));
+  t('申込直後の自動送信: 親子プランの申込を受けると、受講前アンケート(T0)の案内が、申込者に自動で届く(受付確認メールとは別)', r.ok && !!t0 && E.sent.filter(m => m.to === 'auto@example.com').length === 2 && /受講前/.test(t0.subject) && /site\.example\/exec\?page=survey/.test(t0.body) && /auto@example\.com/.test(t0.body));
+  t('申込直後の自動送信: 案内文に「ご回答をお願いいたします」が入る。名簿のT0送信日時が記録され、すぐにアンケートのページに入れる', /ご回答をお願いいたします/.test(t0.body) && String(E.roster.values[1][E.rc('T0')]).length > 10 && E.run('surveyLogin')('auto@example.com').ok);
+  t('申込直後の自動送信: 運営への通知に「T0の案内を自動で送りました」と載る', E.sent.some(m => m.to === 'op@example.com' && /新しい申込/.test(m.subject) && /自動で送りました/.test(m.body)));
+  // B7 未入力
+  const E2 = makeEnv(''); E2.reg.getSheetByName('設定').values[6][1] = '';
+  const r2 = E2.run('submitApplication')('career', base, '');
+  t('申込直後の自動送信: アンケートサイトのURL(B7)が未入力でも、申込は受け付ける。案内は送らず、送信ログに理由を残し、運営に知らせる', r2.ok && E2.roster.values.length === 2 && E2.roster.values[1][E2.rc('T0')] === '' && !E2.sent.some(m => /アンケートのご案内/.test(m.subject)) && E2.sendlog.values.some(x => /T0 自動送信/.test(x[2]) && /B7/.test(x[4])) && E2.sent.some(m => m.to === 'op@example.com' && /自動では送れませんでした/.test(m.body)));
+  // 無効
+  const E3 = makeEnv(''); E3.reg.getSheetByName('設定').values.push(['申込の直後に、受講前アンケートの案内', '無効']);
+  E3.run('submitApplication')('career', base, '');
+  t('申込直後の自動送信: 設定が「無効」なら、送らない(受講日の何日前かの設定どおりに送る)', !E3.sent.some(m => /アンケートのご案内/.test(m.subject)) && E3.roster.values[1][E3.rc('T0')] === '');
+  // 一般・法人は対象外 / 二重送信なし
+  const E4 = makeEnv('');
+  E4.run('submitApplication')('general', { GE1: '佐藤 一郎', GE2: '男性', GE3: '19800101', GE4: 'g@example.com', GE5: 'g@example.com', GE6: 'l', GE8: '追加しました', GE9: 'ナシ', CONSENT_ALL: '全てに同意しました' }, '');
+  t('申込直後の自動送信: 個人・法人プランには、アンケートの案内を送らない', !E4.sent.some(m => /アンケートのご案内/.test(m.subject)));
+  E.run('runAutomation_')(E.reg, E.db);
+  t('申込直後の自動送信: 送信済みなので、毎朝の自動配信で、T0が二重に送られない', E.sent.filter(m => /受講前のアンケート/.test(m.subject) && m.to === 'auto@example.com').length === 1);
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
