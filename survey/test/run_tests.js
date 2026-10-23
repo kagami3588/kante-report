@@ -76,7 +76,7 @@ t('満足度の選択肢', JSON.stringify(run('SCALES.SAT4')) === JSON.stringify
 const all = run('SURVEY.formKeys.map(k => SURVEY.forms[k].intro + " " + SURVEY.forms[k].blocks.map(b => (b.text||"") + " " + (b.title||"") + " " + (choicesOf_(b)||[]).join(" ")).join(" ")).join(" ")');
 t('すべての設問・選択肢・説明文に「回答したくない」が無い', !/回答したくない/.test(all));
 t('学年を尋ねる文言が無い', !/学年/.test(all));
-t('CT0に年齢の設問(A1)、PT0に子どもの年齢(PA2)', run('questionsOf_("CT0").some(q=>q.id==="A1"&&q.kind==="age")') && run('questionsOf_("PT0").some(q=>q.id==="PA2"&&q.kind==="age")'));
+t('CT0に年齢の設問はない(申込で入力済み)。PT0には子どもの年齢(PA2)がある', run('!questionsOf_("CT0").some(q=>q.kind==="age")') && run('questionsOf_("PT0").some(q=>q.id==="PA2"&&q.kind==="age")'));
 
 // 4. CT1の最初の設問はD1(満足度)
 t('CT1の最初の設問がD1(満足度)', run('questionsOf_("CT1")[0].id') === 'D1');
@@ -131,13 +131,13 @@ function nv(formKey, map) {
   return o;
 }
 // B2-1=いいえ → B2-2, B2-2o 非表示。未回答はNAでなく「未回答」。
-let r = vm.runInContext('processSubmission_', ctx)('CT0', nv('CT0', { CONSENT: '同意します', RID: 'F0001', A1: '13', S1: '3：少しそう思う', 'B2-1': 'いいえ', B1: '特にない' }), '2026-11-01T10:00:00', 'sid1', ctxOk);
+let r = vm.runInContext('processSubmission_', ctx)('CT0', nv('CT0', { CONSENT: '同意します', RID: 'F0001', S1: '3：少しそう思う', 'B2-1': 'いいえ', B1: '特にない' }), '2026-11-01T10:00:00', 'sid1', ctxOk);
 const st = id => r.rows.find(x => x[5] === id)[9];
 const cd = id => r.rows.find(x => x[5] === id)[7];
 t('B2-1=いいえ → B2-2は非表示(分岐)', st('B2-2') === '非表示(分岐)' && st('B2-2o') === '非表示(分岐)');
 t('未回答S2は「未回答」、数値コードは空(0や1にしない)', st('S2') === '未回答' && cd('S2') === '');
 t('S1=3：少しそう思う → コード3', cd('S1') === 3);
-t('年齢A1=13 → コード13', cd('A1') === 13);
+t('保護者用PT0: お子さんについて「いいえ」→ 自由記述(PX1t)は非表示(分岐)。「はい」→ 自由記述が回答として記録される', (() => { const pr0 = vm.runInContext('processSubmission_', ctx)('PT0', nv('PT0', { RID: 'F0001', PX1: 'いいえ' }), 't', 's9', ctxOk); const pr1 = vm.runInContext('processSubmission_', ctx)('PT0', nv('PT0', { RID: 'F0001', PX1: 'はい', PX1t: '明るくて、絵を描くのが好きです' }), 't', 's10', ctxOk); return pr0.rows.find(x => x[5] === 'PX1t')[9] === '非表示(分岐)' && pr1.rows.find(x => x[5] === 'PX1t')[9] === '回答' && /絵を描く/.test(pr1.rows.find(x => x[5] === 'PX1t')[6]); })());
 t('RID/CONSENTは分析対象の行に含まれない', !r.rows.some(x => x[5] === 'RID' || x[5] === 'CONSENT'));
 t('正常な送信にフラグなし', r.flags.length === 0, r.flags.join(','));
 
@@ -196,7 +196,7 @@ t('確認依頼の理由に回答内容(自由記述の本文)を含めない', 
 
 // 7. コードブック
 const cb = run('buildCodebookRows_()');
-const expected = 29 + 17 + 17 + 13 + 9 + 9;
+const expected = 28 + 17 + 17 + 15 + 9 + 9;
 t('コードブックの行数 = 全設問数(' + expected + ')', cb.length - 1 === expected, String(cb.length - 1));
 t('コードブックに「回答したくない」なし', !/回答したくない/.test(JSON.stringify(cb)));
 const csv = run('toCsv_(buildCodebookRows_())');
@@ -206,7 +206,7 @@ t('A型の対応(R3↔PR1)', cb.find(x => x[0] === 'R3')[12].indexOf('PR1[A]') !
 
 // 8. 設問数
 const counts = run('SURVEY.formKeys.map(k => k + ":" + questionsOf_(k).filter(q=>!q.system).length).join(",")');
-t('設問数 CT0=29 CT1=17 CT2=17 PT0=13 PT1=9 PT2=9', counts === 'CT0:29,CT1:17,CT2:17,PT0:13,PT1:9,PT2:9', counts);
+t('設問数 CT0=28(年齢は申込で入力済み) CT1=17 CT2=17 PT0=15(お子さんについて2問を追加) PT1=9 PT2=9', counts === 'CT0:28,CT1:17,CT2:17,PT0:15,PT1:9,PT2:9', counts);
 
 // 9. リマインド
 const rem = (roster, adopted, today) => vm.runInContext('remindersDue_', ctx)(roster, adopted, today);

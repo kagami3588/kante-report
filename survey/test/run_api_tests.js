@@ -281,7 +281,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   // 送信
   const fullAns = (def) => { const a = {}; def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { a[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.kind === 'age' ? '13' : q.choices[0]; }); return a; };
   const ans = Object.assign(fullAns(r.def), { EVIL: 'x' });
-  const missing = E.run('surveySubmit')(r.token, { A1: '13' });
+  const missing = E.run('surveySubmit')(r.token, {});
   t('サイト送信: 未回答の必須の設問があると、記録せずに、案内を返す', !missing.ok && /まだ答えていない質問/.test(missing.message) && E.subs.values.length === 1);
   const before = E.subs.values.length;
   const sr = E.run('surveySubmit')(r.token, ans);
@@ -304,8 +304,10 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   for (let i = 0; i < 14; i++) { const x = E2.run('surveyLogin')('probe@example.com'); if (/何度も/.test(x.message || '')) blocked = true; }
   t('サイト入室: 同じメールアドレスの連続入力は、回数が制限される', blocked);
   // 回答の整形
-  const nv = E.run('sanitizeSurveyAnswers_')('CT0', 'F0001', { A1: 'abc', S1: '偽の選択肢', B2: 'x', 'B2-2': ['家族との会話', '偽', 'わからない'] });
-  t('回答の整形: 年齢は数字のみ・選択肢にない値は空・複数選択は有効な選択肢だけ。「わからない」(排他)は単独になる', nv['A1. あなたの年齢を教えてください。'][0] === '' && nv['S1. 自分の性格や特徴について理解している。'][0] === '' && nv[Object.keys(nv).find(k => /^RID\./.test(k))][0] === 'F0001');
+  const nv = E.run('sanitizeSurveyAnswers_')('CT0', 'F0001', { S1: '偽の選択肢', B2: 'x', 'B2-2': ['家族との会話', '偽', 'わからない'] });
+  const nvp = E.run('sanitizeSurveyAnswers_')('PT0', 'F0001', { PA2: 'abc' });
+  const nvp2 = E.run('sanitizeSurveyAnswers_')('PT0', 'F0001', { PA2: '12' });
+  t('回答の整形: 年齢は数字のみ・選択肢にない値は空・複数選択は有効な選択肢だけ。「わからない」(排他)は単独になる', nvp[Object.keys(nvp).find(k => /^PA2\./.test(k))][0] === '' && nvp2[Object.keys(nvp2).find(k => /^PA2\./.test(k))][0] === '12' && nv['S1. 自分の性格や特徴について理解している。'][0] === '' && nv[Object.keys(nv).find(k => /^B2-2\./.test(k))][0] === 'わからない' && nv[Object.keys(nv).find(k => /^RID\./.test(k))][0] === 'F0001');
   // 案内メール(サイトURL)
   const mails = E.run('buildLinkEmails_')('T0', { name: '山田 花子', email: 'hanako@example.com', childName: '太郎', childEmail: 'taro@example.com', sessionDate: '' }, { site: true, child: 'https://site.example/exec?page=survey', parent: 'https://site.example/exec?page=survey' });
   t('案内メール(サイト版): ページのURLと、入力するメールアドレスを載せる', /page=survey/.test(mails.parent.body) && /hanako@example\.com/.test(mails.parent.body) && /taro@example\.com/.test(mails.child.body) && !/forms\.example/.test(mails.child.body));

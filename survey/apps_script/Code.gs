@@ -239,7 +239,7 @@ function remindersDue_(roster, adoptedKeys, today) {
 /** 設問定義の整合性チェック(エラー文字列の配列。空なら問題なし) */
 function validateSurveyDefinition_() {
   var errors = [];
-  var expectedCount = { CT0: 29, CT1: 17, CT2: 17, PT0: 13, PT1: 9, PT2: 9 };
+  var expectedCount = { CT0: 28, CT1: 17, CT2: 17, PT0: 15, PT1: 9, PT2: 9 };
   SURVEY.formKeys.forEach(function (key) {
     var def = SURVEY.forms[key];
     if (!def) { errors.push(key + ': 定義なし'); return; }
@@ -2454,7 +2454,7 @@ function runDataTests() {
     });
     resp.submit();
   }
-  submit('CT0', { RID: CONFIG.TEST_ID, A1: '13', S1: '3：少しそう思う', 'B2-1': 'いいえ', B1: ['特にない', '新しいことを始めた'] });
+  submit('CT0', { RID: CONFIG.TEST_ID, S1: '3：少しそう思う', 'B2-1': 'いいえ', B1: ['特にない', '新しいことを始めた'] });
   submit('CT2', { RID: CONFIG.TEST_ID, F1: 'わからない', F4_1: 'はい', F5_1: '3：ある程度きっかけになった', F4_2: 'いいえ', F8: '3：少し続いている' });
   submit('PT1', { RID: CONFIG.TEST_ID, PD1: '4：とてもそう思う' });
   submit('PT1', { RID: CONFIG.TEST_ID, PD1: '2：あまりそう思わない' });
