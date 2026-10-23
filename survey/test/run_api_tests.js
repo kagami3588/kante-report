@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-f/.test(pa.html) && /2026-10-23-f/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-i/.test(pa.html) && /2026-10-23-i/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -583,6 +583,70 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('お名前(下の名): 設問・ページの題名に、苗字が出ない(「巫心さんの意思決定への支援」)', pg.indexOf('巫心さんの意思決定への支援') !== -1 && !/林/.test(JSON.stringify(d)));
   const pgApply = E.run('publicSiteData_')('career').cats[0].blocks.find(b => b.id === 'AP1');
   t('申込: お名前の欄に、「姓と名の間にスペース」の案内がある(申込者・お子様・パートナー)', /スペースを入れてください/.test(pgApply.help) && /スペースを入れてください/.test(E.run('publicSiteData_')('career').cats[0].blocks.find(b => b.id === 'CH1').help) && /スペースを入れてください/.test(E.run('publicSiteData_')('career').cats[0].blocks.find(b => b.id === 'PN1').help));
+}
+{ // 回答後の編集(申込者のみ)
+  const E = makeEnv('');
+  E.addFamily({ pjoin: 'はい', ppname: '山田 次郎', ppgender: '男性', ppbirth: '19830101' });
+  E.roster.values[1][E.rc('T0')] = '2026-11-01T10:00:00';
+  const login = () => E.run('surveyLogin')('hanako@example.com');
+  const fullAns = (def) => { const a = {}; def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { a[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.choices[0]; }); return a; };
+  let r = login();
+  const sp = E.run('surveyStart')(r.token, 'F0001', 'parent');
+  const ans = Object.assign(fullAns(sp.def), { PW1: '最初の理由', PX2: 'はい', PX2t: '明るい' });
+  const sr = E.run('surveySubmit')(r.token, ans);
+  const popt = sr.options.find(o => o.role === 'parent');
+  t('編集: 申込者は、回答済みのあとに「修正できる」(canEdit)。お子様・パートナーには、その表示がない', popt.state === 'done' && popt.canEdit === true && popt.editForm === 'PT0' && sr.options.filter(o => o.role !== 'parent').every(o => !o.canEdit));
+  const before = E.subs.values.filter(x => x[2] === 'F0001' && x[4] === 'PT0').length;
+  const ed = E.run('surveyStart')(r.token, 'F0001', 'parent', true);
+  t('編集: 修正を始めると、前回の回答が入った状態(prior)で開く(選択・自由記述・複数選択とも)', ed.ok && ed.edit === true && ed.prior.PW1 === '最初の理由' && ed.prior.PX2 === 'はい' && ed.prior.PX2t === '明るい' && ed.prior.S1 === undefined && ed.def.key === 'PT0');
+  const ans2 = Object.assign({}, ans, { PW1: '修正した理由', PX2: 'わからない' });
+  delete ans2.PX2t;
+  const er = E.run('surveySubmit')(r.token, ans2);
+  const rows = E.subs.values.filter(x => x[2] === 'F0001' && x[4] === 'PT0');
+  const longPW1 = E.long.values.filter(x => x[1] === 'F0001' && x[3] === 'PT0' && x[5] === 'PW1');
+  t('編集: 修正を送信すると、前回の回答が置き換わる(回答の件数は増えない。新しい内容が1件だけ残る)', er.ok && er.edited === true && before === 1 && rows.length === 1 && longPW1.length === 1 && longPW1[0][6] === '修正した理由' && E.long.values.filter(x => x[1] === 'F0001' && x[3] === 'PT0' && x[5] === 'PX2t')[0][9] === '非表示(分岐)');
+  t('編集: 修正後も、「回答済み」のまま(続けて、もう一度修正もできる)。お子様の回答には影響しない', er.options.find(o => o.role === 'parent').state === 'done' && E.run('surveyStart')(er.options ? r.token : r.token, 'F0001', 'parent', true).ok);
+  t('編集: お子様・パートナーの方の回答は、回答後に開けない・修正できない(回答を見られないように)', !E.run('surveyStart')(r.token, 'F0001', 'child', true).ok && !E.run('surveyStart')(r.token, 'F0001', 'partner', true).ok && /開いたり、修正したり/.test(E.run('surveyStart')(r.token, 'F0001', 'child', true).message));
+  const E2 = makeEnv(''); E2.addFamily({}); E2.roster.values[1][E2.rc('T0')] = '2026-11-01T10:00:00';
+  const r2 = E2.run('surveyLogin')('hanako@example.com');
+  t('編集: まだ回答していない申込者は、修正を始められない', !E2.run('surveyStart')(r2.token, 'F0001', 'parent', true).ok);
+  const bad = E.run('surveyStart')('zz', 'F0001', 'parent', true);
+  t('編集: 偽の合い鍵では開けない', !bad.ok);
+}
+{ // 画面: 回答済み → 修正
+  const E = makeEnv('');
+  const def = E.run('surveyClientDef_')('PT0', { child: '太郎', parent: '花子' });
+  const pg = E.run('surveyPage_')();
+  const src = pg.slice(pg.indexOf('<script>') + 8, pg.lastIndexOf('</script>'));
+  const mk = (tag) => { const e = { tag, children: [], style: {}, _text: '', className: '', disabled: false, value: '', checked: false, classList: { toggle() {}, add() {}, remove() {} }, querySelector() { return null; }, scrollIntoView() {}, appendChild(c) { this.children.push(c); return c; }, set innerHTML(v) { this.children = []; this._text = ''; }, get innerHTML() { return ''; }, set textContent(v) { this._text = String(v); }, get textContent() { return this._text; } }; return e; };
+  const ids = { app: mk('app'), foot: mk('foot') };
+  const doc = { createElement: mk, getElementById: (id) => ids[id] || (ids[id] = mk(id)) };
+  const calls = []; let pending = null;
+  const run = { withSuccessHandler(f) { pending = { ok: f }; return run; }, withFailureHandler(f) { pending.ng = f; return run; }, surveyLogin(v) { calls.push(['login', v]); }, surveyStart(tok, id, role, edit) { calls.push(['start', id, role, edit]); }, surveySubmit(tok, a) { calls.push(['submit', a]); } };
+  const win = vm.createContext({ document: doc, window: { pageYOffset: 0, scrollTo() {} }, google: { script: { run } }, alert() {} });
+  win.window.scrollTo = () => {}; win.scrollTo = () => {};
+  vm.runInContext(src, win);
+  const find = (n, f, out = []) => { if (f(n)) out.push(n); n.children.forEach(c => find(c, f, out)); return out; };
+  const text = (n) => [n._text].concat(...n.children.map(text)).join('|');
+  find(ids.app, n => n.tag === 'input')[0].value = 'a@b.c'; find(ids.app, n => n.tag === 'button' && n._text === 'はじめる')[0].onclick();
+  pending.ok({ ok: true, token: 'T'.repeat(64), options: [{ id: 'F0001', role: 'parent', label: '申込者(花子 様)', state: 'done', time: '', form: '', canEdit: true, editForm: 'PT0', editTime: 'T0' }, { id: 'F0001', role: 'child', label: 'お子様(太郎 さん)', state: 'due', time: 'T0', form: 'CT0' }] });
+  const eb = find(ids.app, n => n.tag === 'button' && n._text === '回答を修正する');
+  t('画面: 回答済みの申込者に「回答を修正する」ボタンが出る(お子様には出ない)', eb.length === 1 && /回答済み/.test(text(ids.app)));
+  eb[0].onclick();
+  t('画面: 押すと surveyStart(合い鍵, ID, parent, 修正=true) が呼ばれる', calls.some(c => c[0] === 'start' && c[1] === 'F0001' && c[2] === 'parent' && c[3] === true));
+  pending.ok({ ok: true, edit: true, who: '花子', prior: { PA1: '母親', PW1: '前回の理由' }, def });
+  const radios = find(ids.app, n => n.tag === 'input' && n.type === 'radio');
+  const sel = radios.filter(r => r.checked).map(r => r.value);
+  t('画面: 修正画面は、最初のページから開き、前回の選択が入っている(「母親」が選ばれている)', sel.indexOf('母親') !== -1 && !find(ids.app, n => n.tag === 'button' && n._text === 'アンケートをはじめる').length);
+}
+{ // お名前のスペース(必須)
+  const E = makeEnv('');
+  t('お名前: 姓と名の間のスペース(半角・全角)の有無を判定する', E.run('hasNameSpace_')('林 巫心') && E.run('hasNameSpace_')('林　巫心') && !E.run('hasNameSpace_')('林巫心') && !E.run('hasNameSpace_')(''));
+  const base = { PN0: 'パートナーは参加しない', AP1: '林 竜輔', AP6: '男性', AP7: '20000218', AP2: 'sp@example.com', AP3: 'sp@example.com', AP8: 'l', AP10: '追加しました', AP11: 'ナシ', CH1: '林 巫心', CH2: '女性', CH3: '20120607', CONSENT_ALL: '全てに同意しました' };
+  t('お名前: スペースがない申込者・お子様の名前は受け付けず、理由を知らせる', !E.run('submitApplication')('career', Object.assign({}, base, { AP1: '林竜輔' }), '').ok && /スペースを入れて/.test(E.run('submitApplication')('career', Object.assign({}, base, { CH1: '林巫心' }), '').errors.join()) && E.roster.values.length === 1);
+  t('お名前: スペースがあれば受け付ける', E.run('submitApplication')('career', base, '').ok);
+  const E2 = makeEnv('');
+  t('お名前: パートナーの名前も、スペースが必要', !E2.run('submitApplication')('career', Object.assign({}, base, { AP2: 'sp2@example.com', AP3: 'sp2@example.com', PN0: 'パートナーも参加する', PN1: '林菜月', PN2: '女性', PN3: '19980406' }), '').ok);
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

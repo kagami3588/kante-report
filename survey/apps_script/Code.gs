@@ -64,6 +64,9 @@ function qTitle_(q) { return q.id + '. ' + q.text; }
 
 /** 設問の文の {{子}} {{親}} を、お名前(+さん)に置きかえる。vars = {child, parent}。名前が無いときは「お子様」「申込者の方」 */
 /** フルネームから、名前(下の名)だけを取り出す。「林 巫心」→「巫心」。姓と名の間にスペース(半角・全角)がないときは、そのまま返す */
+/** お名前に、姓と名の間のスペース(半角・全角)があるか */
+function hasNameSpace_(s) { return /\S[\s\u3000]+\S/.test(String(s || '').trim()); }
+
 function givenName_(full) {
   var parts = String(full || '').trim().split(/[\s\u3000]+/).filter(function (x) { return x !== ''; });
   return parts.length >= 2 ? parts.slice(1).join(' ') : (parts[0] || '');
@@ -257,7 +260,7 @@ function remindersDue_(roster, adoptedKeys, today) {
 /** 設問定義の整合性チェック(エラー文字列の配列。空なら問題なし) */
 function validateSurveyDefinition_() {
   var errors = [];
-  var expectedCount = { CT0: 28, CT1: 17, CT2: 17, PT0: 17, PT1: 9, PT2: 9, PP0: 14, PP1: 9, PP2: 9 };
+  var expectedCount = { CT0: 28, CT1: 17, CT2: 17, PT0: 25, PT1: 9, PT2: 9, PP0: 22, PP1: 9, PP2: 9 };
   SURVEY.allKeys.forEach(function (key) {
     var def = SURVEY.forms[key];
     if (!def) { errors.push(key + ': 定義なし'); return; }
@@ -279,7 +282,7 @@ function validateSurveyDefinition_() {
       if (b.hiddenWhen) {
         var gate = def.blocks.filter(function (x) { return x.type === 'q' && x.id === b.hiddenWhen.id; })[0];
         if (!gate) errors.push(key + ' ' + b.id + ': hiddenWhenの参照先なし ' + b.hiddenWhen.id);
-        else if (!gate.gate) errors.push(key + ' ' + b.id + ': 参照先がgateではない ' + gate.id);
+        else if (!gate.gate && !b.inline) errors.push(key + ' ' + b.id + ': 参照先がgateではない ' + gate.id);
       }
       if (b.gate) {
         // gateの後に、conditionalページ→非conditionalページが続くこと
@@ -411,6 +414,9 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   if (!a.AP10) problems.push('公式LINEの追加が未確認');
   if (!isKatakana_(a.AP11)) problems.push('紹介者氏名がカタカナではない(いない場合は「ナシ」)');
   if (!a.CH1) problems.push('お子様の名前が未入力');
+  else if (!hasNameSpace_(a.CH1)) problems.push('お子様の名前は、姓と名の間にスペースを入れてください(例:林 巫心)');
+  if (a.AP1 && !hasNameSpace_(a.AP1)) problems.push('申込者の名前は、姓と名の間にスペースを入れてください(例:林 竜輔)');
+  if (a.PN0 === PARTNER_YES && a.PN1 && !hasNameSpace_(a.PN1)) problems.push('パートナーの方の名前は、姓と名の間にスペースを入れてください(例:林 菜月)');
   if (GENDERS.indexOf(a.CH2) === -1) problems.push('お子様の性別が未選択');
   if (!isBirthDate_(a.CH3)) problems.push('お子様の生年月日が不正(8桁の数字。例:20100315)');
   if (a.PN0 !== PARTNER_YES && a.PN0 !== PARTNER_NO) problems.push('パートナーの方の参加が未選択');
@@ -1629,7 +1635,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-23-f';
+var SITE_VERSION = '2026-10-23-i';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -1803,6 +1809,7 @@ SITE_CSS_ + '</style></head><body>' +
 ' var hp=el("div","hp");var hpi=document.createElement("input");hpi.type="text";hpi.tabIndex=-1;hpi.autocomplete="off";hp.appendChild(hpi);app.appendChild(hp);' +
 ' var btn=el("button","btn","同意して、送信する");btn.type="button";app.appendChild(btn);' +
 ' btn.onclick=function(){var ans={},bad=null;Object.keys(fields).forEach(function(id){var f=fields[id],hc=f.q.closest&&f.q.closest(".card"),v=f.get(),e=null;if(hc&&hc.style.display==="none"){ans[id]="";f.q.classList.remove("bad");return;}ans[id]=v;if(f.check){e=f.check();}else if(f.b.required&&!v)e=f.b.kind==="consent"||f.b.kind==="check"?"チェックをお願いします":"入力してください";else if(v&&checks[f.b.kind]&&!checks[f.b.kind](v))e=msg[f.b.kind];f.q.classList.toggle("bad",!!e);f.q.querySelector(".err").textContent=e||"";if(e&&!bad)bad=f.q;});' +
+'  ["AP1","CH1","PN1"].forEach(function(id){var f=fields[id];if(f&&ans[id]&&!/\\S[\\s\\u3000]+\\S/.test(ans[id])){f.q.classList.add("bad");f.q.querySelector(".err").textContent="姓と名の間に、スペースを入れてください(例:林 巫心)";if(!bad)bad=f.q;}});' +
 '  ["AP2:AP3","CH4:CH5","GE4:GE5","CO4:CO5"].forEach(function(p){var a=p.split(":");if(fields[a[0]]&&ans[a[0]]&&ans[a[1]]&&ans[a[0]]!==ans[a[1]]){var f=fields[a[1]];f.q.classList.add("bad");f.q.querySelector(".err").textContent="上のメールアドレスと一致していません";if(!bad)bad=f.q;}});' +
 '  if(bad){banner.style.display="block";banner.textContent="入力内容を、ご確認ください(赤い項目)";bad.scrollIntoView({behavior:"smooth",block:"center"});return;}' +
 '  banner.style.display="none";btn.disabled=true;btn.textContent="送信しています…";' +
@@ -1895,7 +1902,10 @@ function surveyOptions_(families, answered) {
       if (role === 'partner' && f.partnerJoin !== 'はい') return;
       var due = surveyDue_(f, role, answered);
       var label = role === 'parent' ? '申込者(' + givenName_(f.name) + ' 様)' : (role === 'child' ? 'お子様(' + givenName_(f.childName) + ' さん)' : 'パートナーの方(' + givenName_(f.partnerName) + ' 様)');
-      out.push({ id: f.id, role: role, label: label, state: due.state, time: due.time || '', form: due.key || '' });
+      var opt = { id: f.id, role: role, label: label, state: due.state, time: due.time || '', form: due.key || '' };
+      // 回答済みのあとの修正は、申込者ご本人の回答だけ(お子様・パートナーの回答は、あとから開かない)
+      if (role === 'parent' && due.state === 'done') { var last = surveyLatestAnswered_(f, role, answered); if (last) { opt.canEdit = true; opt.editForm = last.key; opt.editTime = last.time; } }
+      out.push(opt);
     });
   });
   return out;
@@ -1922,7 +1932,7 @@ function surveyClientDef_(key, vars) {
     key: key, role: d.role, title: d.title, intro: rn(d.intro),
     blocks: d.blocks.filter(function (b) { return !(b.type === 'q' && b.kind === 'id'); }).map(function (b) {
       if (b.type === 'page') return { type: 'page', title: rn(String(b.title)).replace(/^[A-Z](-[0-9]+)?\.\s*/, ''), desc: rn(b.desc || ''), conditional: !!b.conditional };
-      return { type: 'q', id: b.id, text: rn(b.text), kind: b.kind, required: isReq_(d, b), choices: choicesOf_(b), exclusive: b.exclusive || '', hiddenWhen: b.hiddenWhen || null, gate: b.gate || null, note: b.note || '' };
+      return { type: 'q', id: b.id, text: rn(b.text), kind: b.kind, required: isReq_(d, b), choices: choicesOf_(b), exclusive: b.exclusive || '', hiddenWhen: b.hiddenWhen || null, inline: !!b.inline, gate: b.gate || null, note: b.note || '' };
     })
   };
 }
@@ -1968,6 +1978,46 @@ function surveyMissing_(key, answers) {
   return miss;
 }
 
+/** 申込者が、最後に回答した(案内済みの)アンケート。なければ null */
+function surveyLatestAnswered_(fam, role, answered) {
+  for (var i = LINK_TIMES.length - 1; i >= 0; i--) {
+    var t = LINK_TIMES[i];
+    if (fam.sent && fam.sent[t] && answered[fam.id + '|' + surveyFormKey_(role, t)]) return { key: surveyFormKey_(role, t), time: t };
+  }
+  return null;
+}
+
+/** 回答済みのアンケートの、前回の回答(設問ID → 値。複数選択は配列)。申込者の修正用 */
+function surveyPrior_(db, id, key) {
+  var vals = db.getSheetByName(SHEETS.long).getDataRange().getValues();
+  var head = vals.shift(), ix = {};
+  head.forEach(function (h, i) { ix[h] = i; });
+  var kinds = {};
+  questionsOf_(key).forEach(function (q) { kinds[q.id] = q.kind; });
+  var out = {};
+  vals.forEach(function (r) {
+    if (String(r[ix['調査用ID']]) !== id || String(r[ix['フォームID']]) !== key || !isTrue_(r[ix['分析採用']]) || r[ix['状態']] !== '回答') return;
+    var qid = String(r[ix['設問ID']]), v = String(r[ix['回答内容']]);
+    out[qid] = kinds[qid] === 'multi' ? v.split(', ').filter(function (x) { return x !== ''; }) : v;
+  });
+  return out;
+}
+
+/** 修正のため、そのフォーム・家庭の、前回の回答の行(Submissions・Long・LongOptions)を消す */
+function dropSubmissionRows_(db, id, key) {
+  var sub = db.getSheetByName(SHEETS.submissions).getDataRange().getValues();
+  var sids = {};
+  for (var i = 1; i < sub.length; i++) if (String(sub[i][2]) === id && String(sub[i][4]) === key) sids[String(sub[i][0])] = true;
+  [SHEETS.submissions, SHEETS.long, SHEETS.options].forEach(function (name) {
+    var sh = db.getSheetByName(name);
+    var vals = sh.getDataRange().getValues();
+    var kept = [vals[0]].concat(vals.slice(1).filter(function (r) { return !sids[String(r[0])]; }));
+    if (kept.length === vals.length) return;
+    sh.clearContents();
+    sh.getRange(1, 1, kept.length, kept[0].length).setValues(kept);
+  });
+}
+
 function surveyAnswered_(db) {
   var sub = db.getSheetByName(SHEETS.submissions), prior = {};
   if (sub && sub.getLastRow() > 1) sub.getRange(2, 3, sub.getLastRow() - 1, 3).getValues().forEach(function (r) { prior[r[0] + '|' + r[2]] = true; });
@@ -1995,7 +2045,7 @@ function surveyLogin(email) {
 }
 
 /** 回答者(申込者・お子様)を選んで、そのアンケートを始める(合い鍵が必要)。同じメールアドレスの中で、切り替えられる */
-function surveyStart(token, id, role) {
+function surveyStart(token, id, role, edit) {
   token = String(token || '');
   var cache = CacheService.getScriptCache();
   var raw = /^[0-9a-f]{64}$/.test(token) ? cache.get('sv_tok_' + token) : null;
@@ -2006,7 +2056,17 @@ function surveyStart(token, id, role) {
   var fams = surveyFamiliesFor_(readRoster_(reg), sess.email).filter(function (f) { return f.id === String(id); });
   if (!fams.length) return { ok: false, message: '回答者が見つかりません。' };
   if (role === 'partner' && fams[0].partnerJoin !== 'はい') return { ok: false, message: '回答者が見つかりません。' };
-  var due = surveyDue_(fams[0], role, surveyAnswered_(db));
+  var ansd = surveyAnswered_(db);
+  if (edit) {
+    // 回答の修正: 申込者ご本人の回答だけ。お子様・パートナーの回答は、あとから開けない(回答を見られないようにするため)
+    if (role !== 'parent') return { ok: false, message: 'お子様・パートナーの方の回答は、回答後に開いたり、修正したりできません。' };
+    var last = surveyLatestAnswered_(fams[0], role, ansd);
+    if (!last || surveyDue_(fams[0], role, ansd).state !== 'done') return { ok: false, message: '修正できる回答が、ありません。' };
+    sess.cur = { id: fams[0].id, role: role, key: last.key, edit: true };
+    cache.put('sv_tok_' + token, JSON.stringify(sess), 21600);
+    return { ok: true, edit: true, who: givenName_(fams[0].name), prior: surveyPrior_(db, fams[0].id, last.key), def: surveyClientDef_(last.key, { child: fams[0].childName, parent: fams[0].name }) };
+  }
+  var due = surveyDue_(fams[0], role, ansd);
   if (due.state !== 'due') return { ok: false, done: true, message: 'この方のアンケートは、いま、答えられるものがありません。' };
   sess.cur = { id: fams[0].id, role: role, key: due.key };
   cache.put('sv_tok_' + token, JSON.stringify(sess), 21600);
@@ -2057,6 +2117,15 @@ function surveySubmit(token, answers) {
     var roster = readRoster_(reg);
     var fam = roster.filter(function (f) { return f.id === sess.cur.id; })[0] || { id: sess.cur.id, sent: {} };
     var due = surveyDue_(fam, sess.cur.role, surveyAnswered_(db));
+    if (sess.cur.edit) {
+      var missingE = surveyMissing_(sess.cur.key, answers);
+      if (missingE) return { ok: false, message: 'まだ答えていない質問があります。すべての質問に、ご回答をお願いします。(' + missingE.slice(0, 40) + ')' };
+      dropSubmissionRows_(db, sess.cur.id, sess.cur.key);
+      recordSubmission_(db, reg, sess.cur.key, sanitizeSurveyAnswers_(sess.cur.key, sess.cur.id, answers));
+      delete sess.cur;
+      cache.put('sv_tok_' + token, JSON.stringify(sess), 21600);
+      return { ok: true, edited: true, options: surveyOptions_(surveyFamiliesFor_(readRoster_(reg), sess.email), surveyAnswered_(db)) };
+    }
     if (due.state !== 'due' || due.key !== sess.cur.key) { delete sess.cur; cache.put('sv_tok_' + token, JSON.stringify(sess), 21600); return { ok: false, message: 'このアンケートには、すでにご回答いただいています。ありがとうございました。', done: true }; }
     var missing = surveyMissing_(sess.cur.key, answers);
     if (missing) return { ok: false, message: 'まだ答えていない質問があります。すべての質問に、ご回答をお願いします。(' + missing.slice(0, 40) + ')' };
@@ -2078,7 +2147,7 @@ function surveyClient_() {
 
   function qs() { return state.def.blocks.filter(function (b) { return b.type === 'q'; }); }
   /** 設問が「非表示」になるか(前の設問の答えによる分岐) */
-  function hidden(q) { return !!(q.hiddenWhen && state.ans[q.hiddenWhen.id] === q.hiddenWhen.value); }
+  function hidden(q) { if (!q.hiddenWhen) return false; var v = state.ans[q.hiddenWhen.id]; if (q.inline && (v === undefined || v === '')) return true; return v === q.hiddenWhen.value; }
   /** 画面のページ(ページ区切りごとの設問のまとまり)。先頭に区切りがない設問は、最初のページ */
   function buildPages(def) {
     var pages = [], cur = null;
@@ -2133,20 +2202,28 @@ function surveyClient_() {
         var b = el('button', 'btn', (o.time === 'T0' ? '受講前' : o.time === 'T1' ? '受講後' : '受講から約3か月後') + 'のアンケートに回答する'); b.type = 'button';
         b.onclick = function () { begin(o, b); };
         row.appendChild(b);
-      } else row.appendChild(el('div', 'whostate', o.state === 'done' ? '回答済み' : 'まだ、ご案内がありません'));
+      } else {
+        row.appendChild(el('div', 'whostate', o.state === 'done' ? '回答済み' : 'まだ、ご案内がありません'));
+        if (o.canEdit) {
+          var eb = el('button', 'btn ghost', '回答を修正する'); eb.type = 'button';
+          eb.onclick = function () { begin(o, eb, true); };
+          row.appendChild(eb);
+        }
+      }
       c.appendChild(row);
     });
     app.appendChild(c); window.scrollTo(0, 0);
   }
 
-  function begin(o, btn) {
+  function begin(o, btn, edit) {
     btn.disabled = true;
     google.script.run.withSuccessHandler(function (r) {
       btn.disabled = false;
-      if (r && r.ok) { state.def = r.def; state.ans = {}; state.pages = buildPages(r.def); state.idx = 0; intro(r.who); return; }
+      if (r && r.ok && r.edit) { state.def = r.def; state.ans = r.prior || {}; state.pages = buildPages(r.def); state.idx = 0; state.editing = true; show(); return; }
+      if (r && r.ok) { state.def = r.def; state.ans = {}; state.pages = buildPages(r.def); state.idx = 0; state.editing = false; intro(r.who); return; }
       if (r && r.expired) { alert(r.message); return login(); }
       alert((r && r.message) || '始められませんでした。');
-    }).withFailureHandler(function () { btn.disabled = false; alert('通信できませんでした。もう一度お試しください。'); }).surveyStart(state.token, o.id, o.role);
+    }).withFailureHandler(function () { btn.disabled = false; alert('通信できませんでした。もう一度お試しください。'); }).surveyStart(state.token, o.id, o.role, !!edit);
   }
 
   function intro(who) {
@@ -2230,7 +2307,7 @@ function surveyClient_() {
     var last = state.idx === pages.length - 1;
     var row = el('div', 'nav');
     if (state.idx > 0) { var back = el('button', 'btn ghost', '← もどる'); back.type = 'button'; back.onclick = function () { state.idx--; show(); window.scrollTo(0, 0); }; row.appendChild(back); }
-    var next = el('button', 'btn', last ? '送信する' : 'つぎへ →'); next.type = 'button';
+    var next = el('button', 'btn', last ? (state.editing ? '修正を送信する' : '送信する') : 'つぎへ →'); next.type = 'button';
     next.onclick = function () { if (!pageOk(p)) return; if (last) submit(next); else { state.idx++; show(); window.scrollTo(0, 0); } };
     row.appendChild(next); app.appendChild(row);
     if (keep) window.scrollTo(0, y);
@@ -2241,11 +2318,11 @@ function surveyClient_() {
     var out = {};
     qs().forEach(function (q) { if (!hidden(q) && state.ans[q.id] !== undefined) out[q.id] = state.ans[q.id]; });
     google.script.run.withSuccessHandler(function (r) {
-      if (r && r.ok) return chooser(r.options || [], 'ご回答ありがとうございました');
+      if (r && r.ok) return chooser(r.options || [], r.edited ? 'ご回答を修正しました' : 'ご回答ありがとうございました');
       if (r && (r.expired || r.done)) { alert(r.message); return login(); }
-      btn.disabled = false; btn.textContent = '送信する'; alert((r && r.message) || '送信できませんでした。もう一度お試しください。');
+      btn.disabled = false; btn.textContent = state.editing ? '修正を送信する' : '送信する'; alert((r && r.message) || '送信できませんでした。もう一度お試しください。');
     }).withFailureHandler(function () {
-      btn.disabled = false; btn.textContent = '送信する'; alert('通信できませんでした。もう一度お試しください。');
+      btn.disabled = false; btn.textContent = state.editing ? '修正を送信する' : '送信する'; alert('通信できませんでした。もう一度お試しください。');
     }).surveySubmit(state.token, out);
   }
 
