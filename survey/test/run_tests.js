@@ -137,7 +137,7 @@ const cd = id => r.rows.find(x => x[5] === id)[7];
 t('B2-1=いいえ → B2-2は非表示(分岐)', st('B2-2') === '非表示(分岐)' && st('B2-2o') === '非表示(分岐)');
 t('未回答S2は「未回答」、数値コードは空(0や1にしない)', st('S2') === '未回答' && cd('S2') === '');
 t('S1=3：少しそう思う → コード3', cd('S1') === 3);
-t('保護者用PT0: お子さんについて「いいえ」→ 自由記述(PX1t)は非表示(分岐)。「はい」→ 自由記述が回答として記録される', (() => { const pr0 = vm.runInContext('processSubmission_', ctx)('PT0', nv('PT0', { RID: 'F0001', PX1: 'いいえ' }), 't', 's9', ctxOk); const pr1 = vm.runInContext('processSubmission_', ctx)('PT0', nv('PT0', { RID: 'F0001', PX1: 'はい', PX1t: '明るくて、絵を描くのが好きです' }), 't', 's10', ctxOk); return pr0.rows.find(x => x[5] === 'PX1t')[9] === '非表示(分岐)' && pr1.rows.find(x => x[5] === 'PX1t')[9] === '回答' && /絵を描く/.test(pr1.rows.find(x => x[5] === 'PX1t')[6]); })());
+t('申込者用PT0: お子さんについて「いいえ」→ 自由記述(PX1t)は非表示(分岐)。「はい」→ 自由記述が回答として記録される', (() => { const pr0 = vm.runInContext('processSubmission_', ctx)('PT0', nv('PT0', { RID: 'F0001', PX1: 'いいえ' }), 't', 's9', ctxOk); const pr1 = vm.runInContext('processSubmission_', ctx)('PT0', nv('PT0', { RID: 'F0001', PX1: 'はい', PX1t: '明るくて、絵を描くのが好きです' }), 't', 's10', ctxOk); return pr0.rows.find(x => x[5] === 'PX1t')[9] === '非表示(分岐)' && pr1.rows.find(x => x[5] === 'PX1t')[9] === '回答' && /絵を描く/.test(pr1.rows.find(x => x[5] === 'PX1t')[6]); })());
 t('RID/CONSENTは分析対象の行に含まれない', !r.rows.some(x => x[5] === 'RID' || x[5] === 'CONSENT'));
 t('正常な送信にフラグなし', r.flags.length === 0, r.flags.join(','));
 
@@ -196,7 +196,7 @@ t('確認依頼の理由に回答内容(自由記述の本文)を含めない', 
 
 // 7. コードブック
 const cb = run('buildCodebookRows_()');
-const expected = 28 + 17 + 17 + 15 + 9 + 9 + 15 + 9 + 9;
+const expected = 28 + 17 + 17 + 17 + 9 + 9 + 15 + 9 + 9;
 t('コードブックの行数 = 全設問数(' + expected + ')', cb.length - 1 === expected, String(cb.length - 1));
 t('コードブックに「回答したくない」なし', !/回答したくない/.test(JSON.stringify(cb)));
 const csv = run('toCsv_(buildCodebookRows_())');
@@ -206,13 +206,14 @@ t('A型の対応(R3↔PR1)', cb.find(x => x[0] === 'R3')[12].indexOf('PR1[A]') !
 
 // 8. 設問数
 const counts = run('SURVEY.formKeys.map(k => k + ":" + questionsOf_(k).filter(q=>!q.system).length).join(",")');
-t('設問数 CT0=28(年齢は申込で入力済み) CT1=17 CT2=17 PT0=15(お子さんについて2問を追加) PT1=9 PT2=9', counts === 'CT0:28,CT1:17,CT2:17,PT0:15,PT1:9,PT2:9', counts);
+t('設問数 CT0=28(年齢は申込で入力済み) CT1=17 CT2=17 PT0=17(お子さんについて2問・受講の理由と目的2問を追加) PT1=9 PT2=9', counts === 'CT0:28,CT1:17,CT2:17,PT0:17,PT1:9,PT2:9', counts);
+t('申込者用の受講前(PT0)に、受講の理由・目的(PW1)と、受講後の理想の状態(PW2)がある(自由記述・任意)。お子様用(CT0)・パートナー用(PP0)には、ない', ['PW1', 'PW2'].every(id => run(`questionsOf_("PT0").some(q => q.id === "${id}" && q.kind === "text")`) && run(`!questionsOf_("CT0").some(q => q.id === "${id}") && !questionsOf_("PP0").some(q => q.id === "${id}")`)) && !run('SURVEY.forms.PP0.blocks.some(b => b.type === "page" && /受講の理由と目的/.test(b.title))') && !run('SURVEY.forms.CT0.blocks.some(b => b.type === "page" && /受講の理由と目的/.test(b.title))'));
 
 // 9. リマインド
 const rem = (roster, adopted, today) => vm.runInContext('remindersDue_', ctx)(roster, adopted, today);
 const R1 = [{ id: 'F0001', sessionDate: '2026-11-10', status: '参加中' }];
 let d = rem(R1, {}, '2026-11-05');
-t('鑑定5日前 → T0の子ども・保護者(1回目)', d.length === 2 && d.every(x => x.nth === 1 && /T0|CT0|PT0/.test(x.form)));
+t('鑑定5日前 → T0の子ども・申込者(1回目)', d.length === 2 && d.every(x => x.nth === 1 && /T0|CT0|PT0/.test(x.form)));
 d = rem(R1, {}, '2026-11-07');
 t('鑑定3日前 → T0の2回目', d.length === 2 && d.every(x => x.nth === 2));
 d = rem(R1, { 'F0001|CT0': true }, '2026-11-05');
@@ -242,8 +243,8 @@ const apQs = ap.blocks.filter(b => b.type === 'q');
 const consents = apQs.filter(q => q.kind === 'consent');
 t('申込フォームの同意は「全てに同意しました」の1つのチェックだけで、必須', consents.length === 1 && consents[0].id === 'CONSENT_ALL' && consents[0].required && consents[0].choices[0] === '全てに同意しました');
 const adultText = ap.intro + ap.blocks.filter(b => b.type === 'page' && !b.conditional && !/追加の鑑定/.test(b.title)).map(b => b.desc || '').join('\n') + consents.map(q => q.text).join('\n');
-t('お子様向けの説明ページ(条件ページ・表示の選択)は、申込フォームにない(保護者の同意のみ)', !ap.blocks.some(b => b.conditional && /お子様向け/.test(b.title)) && !apQs.some(q => q.id === 'AP_VIEW') && !/こたえたく ないときは/.test(adultText));
-t('お子様向けの説明の文は、保護者向けの本文に混ざっていない', !/こたえたく ないときは|おとうさん・おかあさんとは、べつの/.test(adultText));
+t('お子様向けの説明ページ(条件ページ・表示の選択)は、申込フォームにない(申込者の同意のみ)', !ap.blocks.some(b => b.conditional && /お子様向け/.test(b.title)) && !apQs.some(q => q.id === 'AP_VIEW') && !/こたえたく ないときは/.test(adultText));
+t('お子様向けの説明の文は、申込者向けの本文に混ざっていない', !/こたえたく ないときは|おとうさん・おかあさんとは、べつの/.test(adultText));
 t('責任者が「林 竜輔」、連絡先が運営メール', /責任者:林 竜輔/.test(adultText) && /kagami\.3588@gmail\.com/.test(adultText));
 t('鑑定のあとの回答は責任者の林 竜輔が確認する', /鑑定のあとのご回答は、責任者の林 竜輔が確認します/.test(adultText));
 t('削除のお申し出の文', /ご回答の削除をご希望の場合は、下の連絡先まで、お申し出ください。お申し出があれば、削除します/.test(adultText));
@@ -256,14 +257,14 @@ t('「回答したくない」「学年」が申込フォームに無い', !/回
 t('「保管期間は【要記入】」が残っていない', !/【要記入】/.test(adultText));
 // 項目(ご依頼のとおり)
 const byId = (id) => apQs.find(q => q.id === id);
-t('保護者用の項目: 名前・性別・生年月日・メール・LINE検索ID・Instagram(任意)・公式LINE追加(チェック)・紹介者(カタカナ)・自由記入欄', ['AP1', 'AP6', 'AP7', 'AP2', 'AP8', 'AP9', 'AP10', 'AP11', 'AP5'].every(id => !!byId(id)) && byId('AP9').required === false && byId('AP10').kind === 'check' && byId('AP10').required === true && byId('AP11').kind === 'katakana');
-t('保護者用の文言(フルネーム・生年月日の例20000218・LINE検索ID・公式LINE)', /名前\(フルネーム\)/.test(byId('AP1').text) && /20000218/.test(byId('AP7').text) && byId('AP8').text === 'LINE検索ID' && /林 竜輔の公式LINEを追加しましたか/.test(byId('AP10').text) && /Instagram/.test(byId('AP9').text) && /任意/.test(byId('AP9').text));
-t('お子様用の項目: 名前・性別・生年月日・自由記入欄(お子様のメールアドレスは聞かない。保護者のアドレスに統一)', ['CH1', 'CH2', 'CH3', 'CH6'].every(id => !!byId(id)) && !byId('CH4') && !byId('CH5') && /20100315/.test(byId('CH3').text));
-t('性別は個人情報の入力欄(保護者・お子様)にある', byId('AP6').text === '保護者さまの性別' && byId('CH2').text === 'お子様の性別' && JSON.stringify(byId('AP6').choices) === JSON.stringify(['男性', '女性']));
+t('申込者用の項目: 名前・性別・生年月日・メール・LINE検索ID・Instagram(任意)・公式LINE追加(チェック)・紹介者(カタカナ)・自由記入欄', ['AP1', 'AP6', 'AP7', 'AP2', 'AP8', 'AP9', 'AP10', 'AP11', 'AP5'].every(id => !!byId(id)) && byId('AP9').required === false && byId('AP10').kind === 'check' && byId('AP10').required === true && byId('AP11').kind === 'katakana');
+t('申込者用の文言(フルネーム・生年月日の例20000218・LINE検索ID・公式LINE)', /名前\(フルネーム\)/.test(byId('AP1').text) && /20000218/.test(byId('AP7').text) && byId('AP8').text === 'LINE検索ID' && /林 竜輔の公式LINEを追加しましたか/.test(byId('AP10').text) && /Instagram/.test(byId('AP9').text) && /任意/.test(byId('AP9').text));
+t('お子様用の項目: 名前・性別・生年月日・自由記入欄(お子様のメールアドレスは聞かない。申込者のアドレスに統一)', ['CH1', 'CH2', 'CH3', 'CH6'].every(id => !!byId(id)) && !byId('CH4') && !byId('CH5') && /20100315/.test(byId('CH3').text));
+t('性別は個人情報の入力欄(申込者・お子様)にある', byId('AP6').text === '申込者の性別' && byId('CH2').text === 'お子様の性別' && JSON.stringify(byId('AP6').choices) === JSON.stringify(['男性', '女性']));
 t('追加の鑑定: 人数(任意)と、お一人ずつの名前・性別・生年月日・内容(任意)。内容は、お子様=レポートのみ+5,000円/オンライン+10,000円、大人の方=レポート作成料+5,000円/オンライン鑑定料+20,000円', byId('EX0').required === false && byId('EX1').required === false && JSON.stringify(run('EXTRA_PLANS')) === JSON.stringify(['お子様・レポートのみ(+5,000円)', 'お子様・オンライン鑑定希望(+10,000円)', '大人の方・レポート作成料(+5,000円)', '大人の方・オンライン鑑定料(+20,000円)']) && JSON.stringify(byId('EX0').choices) === JSON.stringify(['追加なし','1名','2名','3名','4名','5名','6名','7名','8名','9名','10名']));
 const order = apQs.map(q => q.id);
-t('入力欄の順序: 説明書と同意(最初)→保護者用→お子様用→追加の鑑定', order.indexOf('CONSENT_ALL') < order.indexOf('AP1') && order.indexOf('AP1') < order.indexOf('CH1') && order.indexOf('CH1') < order.indexOf('EX1') && ap.blocks[0].type === 'page' && ap.blocks[0].title === '説明書と同意の確認' && ap.blocks[1].id === 'CONSENT_ALL');
-t('セクション見出しが「保護者用」「お子様用」', ap.blocks.some(b => b.type === 'page' && b.title === '保護者用') && ap.blocks.some(b => b.type === 'page' && b.title === 'お子様用'));
+t('入力欄の順序: 説明書と同意(最初)→申込者用→お子様用→追加の鑑定', order.indexOf('CONSENT_ALL') < order.indexOf('AP1') && order.indexOf('AP1') < order.indexOf('CH1') && order.indexOf('CH1') < order.indexOf('EX1') && ap.blocks[0].type === 'page' && ap.blocks[0].title === '説明書と同意の確認' && ap.blocks[1].id === 'CONSENT_ALL');
+t('セクション見出しが「申込者用」「お子様用」', ap.blocks.some(b => b.type === 'page' && b.title === '申込者用') && ap.blocks.some(b => b.type === 'page' && b.title === 'お子様用'));
 t('同意書・説明書のリンク用の設定(CONSENT_DOC_URL)がある。空欄ならリンクを表示しない', run('typeof CONSENT_DOC_URL') === 'string' && !/https?:\/\//.test(ap.blocks.find(b => b.title === '説明書と同意の確認').desc));
 
 const qt = (def, ...ids) => ids.map(id => run(`applyTitleParts_(SURVEY.${def}.blocks.find(b => b.id === '${id}')).title`));
@@ -274,7 +275,7 @@ const isQ = (def, re) => (i) => run(`SURVEY.${def}.blocks.filter(b => b.type ===
   const f = created[created.length - 1];
   t('申込フォーム構築', f.items.length > 10);
   const emailItems = f.items.filter(isQ('apply', '^AP[23]$'));
-  t('メールアドレス欄(保護者の入力と確認の2つ)にメール形式の検証', emailItems.length === 2 && emailItems.every(i => i.validation && i.validation.email));
+  t('メールアドレス欄(申込者の入力と確認の2つ)にメール形式の検証', emailItems.length === 2 && emailItems.every(i => i.validation && i.validation.email));
   const bd = f.items.filter(isQ('apply', '^(AP7|CH3)$'));
   t('生年月日欄は8桁の数字の検証', bd.length === 2 && bd.every(i => i.validation && i.validation.pattern === '^[0-9]{8}$'));
   const kt = f.items.find(isQ('apply', '^AP11$'));
@@ -287,7 +288,7 @@ const isQ = (def, re) => (i) => run(`SURVEY.${def}.blocks.filter(b => b.type ===
   const ex = f.items.filter(isQ('apply', '^EX[01]$'));
   t('追加の鑑定は任意', ex.length === 2 && ex.every(i => !i.required));
   const nameReq = f.items.filter(isQ('apply', '^(AP1|AP6|AP8|AP11|CH1|CH2)$'));
-  t('保護者名・性別・LINE ID・紹介者・お子様名・お子様の性別は必須', nameReq.length === 6 && nameReq.every(i => i.required));
+  t('申込者名・性別・LINE ID・紹介者・お子様名・お子様の性別は必須', nameReq.length === 6 && nameReq.every(i => i.required));
 }
 
 // 12. 申込の処理
@@ -312,13 +313,13 @@ t('追加の鑑定: 内容が不正 → 要確認。人数と入力数の不一�
 pr = pa(NVA({}), [{ id: 'F0001', email: 'x@example.com', childName: 'a' }, { id: 'F0007', email: 'y@example.com', childName: 'b' }, { id: 'F9999', email: 't@example.com', childName: 't' }], 't');
 t('次のIDは最大値+1(F0008)。テストID(F9999)は数えない', pr.ok && pr.id === 'F0008');
 pr = pa(NVA({ AP3: 'hanako@exampl.com' }), [], 't');
-t('保護者メールが確認欄と不一致 → IDを発行せず要確認', !pr.ok && /保護者のメールアドレスが確認欄と一致しない/.test(pr.reason) && pr.pendingRow.length === 7 && pr.pendingRow[1] === '進路相談用');
+t('申込者メールが確認欄と不一致 → IDを発行せず要確認', !pr.ok && /申込者のメールアドレスが確認欄と一致しない/.test(pr.reason) && pr.pendingRow.length === 7 && pr.pendingRow[1] === '進路相談用');
 pr = pa(NVA({ AP3: 'other@example.com' }), [], 't');
-t('保護者メールが確認欄と不一致 → 要確認', !pr.ok && /確認欄と一致しない/.test(pr.reason));
+t('申込者メールが確認欄と不一致 → 要確認', !pr.ok && /確認欄と一致しない/.test(pr.reason));
 pr = pa(NVA({ AP2: 'abc', AP3: 'abc' }), [], 't');
 t('メール形式不正 → 要確認', !pr.ok && /形式が不正/.test(pr.reason));
 pr = pa(NVA({ AP7: '2000-02-18' }), [], 't');
-t('生年月日が8桁の数字ではない → 要確認', !pr.ok && /保護者の生年月日が不正/.test(pr.reason));
+t('生年月日が8桁の数字ではない → 要確認', !pr.ok && /申込者の生年月日が不正/.test(pr.reason));
 pr = pa(NVA({ AP7: '20000230' }), [], 't');
 t('存在しない日付(2月30日)→ 要確認', !pr.ok);
 pr = pa(NVA({ CH3: '20991231' }), [], 't');
@@ -332,15 +333,15 @@ t('紹介者がカタカナ(全角スペース可)→ OK', pr.ok);
 pr = pa(NVA({ AP10: '' }), [], 't');
 t('公式LINEの追加が未確認 → 要確認', !pr.ok && /公式LINE/.test(pr.reason));
 pr = pa(NVA({ AP6: '' }), [], 't');
-t('性別が未選択 → 要確認', !pr.ok && /保護者の性別/.test(pr.reason));
+t('性別が未選択 → 要確認', !pr.ok && /申込者の性別/.test(pr.reason));
 pr = pa(NVA({ CONSENT_ALL: '' }), [], 't');
 t('必須の同意が欠けている → 要確認', !pr.ok && /同意未確認/.test(pr.reason));
 pr = pa(NVA({}), [{ id: 'F0001', email: 'HANAKO@example.com ', childName: '山田　太郎 ' }], 't');
-t('同じ保護者メールとお子様名(大文字小文字・空白を無視)→ 重複申込', !pr.ok && /重複申込/.test(pr.reason));
+t('同じ申込者メールとお子様名(大文字小文字・空白を無視)→ 重複申込', !pr.ok && /重複申込/.test(pr.reason));
 pr = pa(NVA({ CH1: '山田 花子', AP2: 'hana@example.com', AP3: 'hana@example.com' }), [{ id: 'F0001', email: 'hanako@example.com', childName: '山田 太郎' }], 't');
-t('同じ保護者メールでも、お子様が別人(兄弟姉妹)なら別の家庭として登録', pr.ok && pr.id === 'F0002');
+t('同じ申込者メールでも、お子様が別人(兄弟姉妹)なら別の家庭として登録', pr.ok && pr.id === 'F0002');
 pr = pa(NVA({ AP1: '' }), [], 't');
-t('保護者名が空 → 要確認', !pr.ok);
+t('申込者名が空 → 要確認', !pr.ok);
 t('nextId_: 空なら F0001', run('nextId_([])') === 'F0001');
 
 // 13. リンク送信の対象
@@ -352,16 +353,16 @@ t('T0: 送信済み → 対象外(二重送信しない)', lr([base({ sent: { T0
 t('T1: 鑑定日の前 → 対象外、当日以降 → 対象', lr([base({})], 'T1', '2026-11-09').length === 0 && lr([base({})], 'T1', '2026-11-10').length === 1);
 t('T2: 鑑定の89日後 → 対象外、90日後 → 対象', lr([base({})], 'T2', '2027-02-07').length === 0 && lr([base({})], 'T2', '2027-02-08').length === 1);
 t('辞退・削除済みの家庭は対象外', lr([base({ status: '辞退' })], 'T0', '2026-11-01').length === 0 && lr([base({ status: '削除済み' })], 'T0', '2026-11-01').length === 0);
-t('保護者のメールが無い・不正 → 対象外(お子様のメールは不要)', lr([base({ email: '' })], 'T0', '2026-11-01').length === 0 && lr([base({ childEmail: '' })], 'T0', '2026-11-01').length === 1 && lr([base({ email: 'abc' })], 'T0', '2026-11-01').length === 0);
+t('申込者のメールが無い・不正 → 対象外(お子様のメールは不要)', lr([base({ email: '' })], 'T0', '2026-11-01').length === 0 && lr([base({ childEmail: '' })], 'T0', '2026-11-01').length === 1 && lr([base({ email: 'abc' })], 'T0', '2026-11-01').length === 0);
 t('テストIDは対象外', lr([base({ id: 'F9999' })], 'T0', '2026-11-01').length === 0);
 t('選択した家庭は、日付の条件なしで対象(未送信・参加中・メールありのみ)', lr([base({ sessionDate: '' }), base({ row: 3, id: 'F0002' })], 'T0', '2026-11-01', { 2: true }).length === 1);
 const em = vm.runInContext('buildLinkEmails_', ctx)('T0', { name: '山田 花子', childName: '山田 太郎', sessionDate: '2026-11-10' }, { child: 'https://forms.example/c', parent: 'https://forms.example/p' });
-t('保護者宛: 保護者用リンクのみ(お子様用リンクを含まない)、お子様の回答を見ないお願い', /山田 花子 様/.test(em.parent.body) && /forms\.example\/p/.test(em.parent.body) && !/forms\.example\/c/.test(em.parent.body) && /見たり、聞き出したりしないでください/.test(em.parent.body) && /2026-11-10/.test(em.parent.body));
-t('案内メール(保護者宛1通)に、お子様のアンケートも同じページで答える旨と、お子様ご本人に答えてもらうお願いがある', /お子様用/.test(em.parent.body) && /お子様ご本人に/.test(em.parent.body) && /見たり、聞き出したりしないでください/.test(em.parent.body) && !em.child);
+t('申込者宛: 申込者用リンクのみ(お子様用リンクを含まない)、お子様の回答を見ないお願い', /山田 花子 様/.test(em.parent.body) && /forms\.example\/p/.test(em.parent.body) && !/forms\.example\/c/.test(em.parent.body) && /見たり、聞き出したりしないでください/.test(em.parent.body) && /2026-11-10/.test(em.parent.body));
+t('案内メール(申込者宛1通)に、お子様のアンケートも同じページで答える旨と、お子様ご本人に答えてもらうお願いがある', /お子様用/.test(em.parent.body) && /お子様ご本人に/.test(em.parent.body) && /見たり、聞き出したりしないでください/.test(em.parent.body) && !em.child);
 t('リンクメールに費用・謝礼の記載がない', !/費用|謝礼|円/.test(em.parent.body));
 const rcC = vm.runInContext('buildReceiptEmail_', ctx)('CT1', { name: '山田 花子', childName: '山田 太郎' });
 const rcP = vm.runInContext('buildReceiptEmail_', ctx)('PT1', { name: '山田 花子', childName: '山田 太郎' });
-t('受付確認メール: お子様用はお子様宛の文面、保護者用は保護者宛の文面。回答内容を含まない', /山田 太郎 さん/.test(rcC.body) && /山田 花子 様/.test(rcP.body) && /内容は、このメールには書いていません/.test(rcC.body) && /内容は、このメールには記載していません/.test(rcP.body) && !/D\d/.test(rcC.body + rcP.body));
+t('受付確認メール: お子様用はお子様宛の文面、申込者用は申込者宛の文面。回答内容を含まない', /山田 太郎 さん/.test(rcC.body) && /山田 花子 様/.test(rcP.body) && /内容は、このメールには書いていません/.test(rcC.body) && /内容は、このメールには記載していません/.test(rcP.body) && !/D\d/.test(rcC.body + rcP.body));
 const ar = vm.runInContext('buildApplyReceiptEmail_', ctx)({ name: '山田 花子', childName: '山田 太郎' });
 t('申込の受付確認メール: 日程調整は改めて連絡する旨', /日程の調整は、運営から改めてご連絡します/.test(ar.body));
 // 削除
@@ -390,15 +391,15 @@ const rosterD = [
 ];
 const subsD = [
   ['s1', '2026-11-03T10:00:00', 'F0001', '子ども', 'CT0', 'T0', 'TRUE', '', 1, 0, 0, 0, 'FALSE'],
-  ['s2', '2026-11-03T11:00:00', 'F0001', '保護者', 'PT0', 'T0', 'TRUE', '', 1, 0, 0, 0, 'FALSE'],
-  ['s3', '2026-11-03T12:00:00', 'F0001', '保護者', 'PT0', 'T0', 'FALSE', '重複送信', 1, 0, 0, 0, 'FALSE'],
+  ['s2', '2026-11-03T11:00:00', 'F0001', '申込者', 'PT0', 'T0', 'TRUE', '', 1, 0, 0, 0, 'FALSE'],
+  ['s3', '2026-11-03T12:00:00', 'F0001', '申込者', 'PT0', 'T0', 'FALSE', '重複送信', 1, 0, 0, 0, 'FALSE'],
   ['s4', 't', 'F9999', '子ども', 'CT0', 'T0', 'TRUE', '', 1, 0, 0, 0, 'TRUE']
 ];
 const safD = [['2026-11-20T10:00:00', 'F0001', 'CT2', 'F8', 'a', '送信済み', '2026-11-21 10:00', '未対応', '', '', ''], ['2026-11-20T10:00:00', 'F0002', 'CT2', 'F7', 'a', '送信済み', 'd', '対応済', '', '', '']];
 const dd = vm.runInContext('buildDashboardData_', ctx)(rosterD, [['2026-11-02T10:00:00', '進路相談用', 'z', 'z@example.com', 'q', 'メールが確認欄と一致しない', '']], subsD, safD, '2026-11-10');
 t('ダッシュボード: 家庭数・参加中・辞退の集計', dd.summary.total === 3 && dd.summary.active === 2 && dd.summary.withdrawn === 1);
 t('ダッシュボード: 要確認の申込・鑑定日未入力・未対応の安全確認・追加鑑定の希望', dd.summary.pending === 1 && dd.summary.noSession === 1 && dd.summary.safetyOpen === 1 && dd.summary.extraRequests === 1);
-t('ダッシュボード: T0の回答済みは、子ども・保護者の両方が分析採用で回答した家庭のみ(重複・テストを数えない)', dd.summary.responded.T0 === 1 && dd.families.find(f => f.id === 'F0001').resp.CT0 && dd.families.find(f => f.id === 'F0001').resp.PT0);
+t('ダッシュボード: T0の回答済みは、子ども・申込者の両方が分析採用で回答した家庭のみ(重複・テストを数えない)', dd.summary.responded.T0 === 1 && dd.families.find(f => f.id === 'F0001').resp.CT0 && dd.families.find(f => f.id === 'F0001').resp.PT0);
 t('ダッシュボード: 送れる家庭の数(T1=鑑定日10日・当日)', dd.summary.toSend.T1 === 1 && dd.summary.toSend.T0 === 0);
 t('ダッシュボード: 申込日の新しい順', dd.families[0].id === 'F0003');
 t('ダッシュボード: 状況が空欄なら「参加中」', dd.families.find(f => f.id === 'F0002').status === '参加中');
@@ -516,8 +517,8 @@ t('dueMs_: 文字「2026-10-23 13:04」とDateのどちらも読める。不正�
 {
   const subsB = [
     ['s1', new Date(Date.UTC(2026, 10, 3, 1, 0)), 'F0001', '子ども', 'CT0', 'T0', true, '', 1, 0, 0, 0, false],
-    ['s2', new Date(Date.UTC(2026, 10, 3, 2, 0)), 'F0001', '保護者', 'PT0', 'T0', true, '', 1, 0, 0, 0, false],
-    ['s3', 't', 'F0001', '保護者', 'PT0', 'T0', false, '重複送信', 1, 0, 0, 0, false],
+    ['s2', new Date(Date.UTC(2026, 10, 3, 2, 0)), 'F0001', '申込者', 'PT0', 'T0', true, '', 1, 0, 0, 0, false],
+    ['s3', 't', 'F0001', '申込者', 'PT0', 'T0', false, '重複送信', 1, 0, 0, 0, false],
     ['s4', 't', 'F9999', '子ども', 'CT0', 'T0', true, '', 1, 0, 0, 0, true]
   ];
   const safB = [[new Date(Date.UTC(2026, 10, 20, 1, 0)), 'F0001', 'CT2', 'F8', 'a', '送信済み', new Date(Date.UTC(2026, 10, 21, 1, 0)), '未対応', '', '', '']];
