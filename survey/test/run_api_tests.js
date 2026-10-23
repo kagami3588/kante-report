@@ -12,7 +12,7 @@ class Sheet {
   getLastColumn() { return Math.max(1, ...this.values.map(r => r.length)); }
   getDataRange() { const self = this; return { getValues: () => self.values.map(r => r.slice()) }; }
   appendRow(r) { this.values.push(r.slice()); return this; }
-  clearContents() { this.values = []; return this; } clear() { this.values = []; return this; }
+  clearContents() { this.values = []; return this; } clear() { this.values = []; return this; } setFrozenRows() {}
   getRange(r, c, nr, nc) {
     const self = this;
     if (typeof r === 'string') { const m = /^([A-Z])([0-9]+)$/.exec(r); c = m[1].charCodeAt(0) - 64; r = Number(m[2]); }
@@ -556,6 +556,14 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const srr = E.run('surveySubmit')(r.token, ans(sr2.def));
   t('受講の理由・目的: 空のままでも(任意)、回答できる。お子様用は、問題なく送信できる', srr.ok);
   t('申込者: 画面の呼び方が「申込者」になっている(「保護者」という言葉が、設問・案内に残らない)', !/保護者/.test(JSON.stringify(sa.def)) && !/保護者/.test(E.run('getTemplates_')(E.reg).T0_parent.body) && E.run('surveyOptions_')([E.run('readRoster_')(E.reg)[0]], {}).every(o => !/保護者/.test(o.label)));
+}
+{ // コードブックの更新
+  const E = makeEnv('me@example.com');
+  const cb = E.db.add('コードブック', null);
+  cb.values = [['古い見出し'], ['古い行']];
+  E.run('refreshCodebook')();
+  t('コードブックの更新: 回答DBのコードブックが、現在の設問(申込者用・パートナー用を含む)で書き直される。お名前の差し込み記号は残らない', cb.values.length === E.run('buildCodebookRows_')().length && cb.values[0][0] === '設問ID' && cb.values.some(r => r[1] === 'PP0' && r[2] === 'パートナー') && cb.values.some(r => r[1] === 'PT0' && r[2] === '申込者') && !cb.values.some(r => /\{\{/.test(String(r[5]))) && !/古い/.test(JSON.stringify(cb.values)));
+  t('コードブックの更新: 管理者以外は実行できない', /管理者のみ/.test(throws(() => makeEnv('x@example.com').run('refreshCodebook')()) || ''));
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

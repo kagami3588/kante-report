@@ -1487,12 +1487,24 @@ function initDbSheets_(db) {
   mkSheet_(db, SHEETS.long, HEAD.long);
   mkSheet_(db, SHEETS.options, HEAD.options);
   mkSheet_(db, SHEETS.summary, ['(buildSummary() を実行すると作成されます)']);
-  var cb = mkSheet_(db, SHEETS.codebook, null);
+  writeCodebook_(db);
+}
+
+/** 回答DBの「コードブック」(設問の一覧)を、現在の設問定義で書き直す */
+function writeCodebook_(db) {
+  var cb = db.getSheetByName(SHEETS.codebook) || mkSheet_(db, SHEETS.codebook, null);
   cb.clear();
   var rows = buildCodebookRows_();
   cb.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
   cb.getRange(1, 1, 1, rows[0].length).setFontWeight('bold');
   cb.setFrozenRows(1);
+}
+
+/** 設問を変えたあと、実行すると、回答DBのコードブックが、最新の設問になる(回答データは変わらない) */
+function refreshCodebook() {
+  ownerOnly_();
+  writeCodebook_(dbSS_());
+  Logger.log('コードブックを更新しました');
 }
 
 function initRegSheets_(reg) {
