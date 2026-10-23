@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-e/.test(pa.html) && /2026-10-23-e/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-f/.test(pa.html) && /2026-10-23-f/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -273,13 +273,13 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('サイト入室: メールの形式が不正ならエラー・未登録も同じ案内文(登録の有無を教えない)', !login('xxx').ok && /見つかりません/.test(login('nobody@example.com').message));
   E.roster.values[1][E.rc('T0')] = '2026-11-01T10:00:00';
   r = login('Hanako@Example.com');
-  t('サイト入室: 申込者のメールアドレス(大文字小文字は区別しない)で入り、回答者(申込者・お子様)が選べる', r.ok && /^[0-9a-f]{64}$/.test(r.token) && r.options.length === 2 && r.options[0].role === 'parent' && r.options[1].role === 'child' && r.options.every(o => o.state === 'due' && o.form.charAt(1) === 'T0'.charAt(1) || o.state === 'due') && r.options[0].form === 'PT0' && r.options[1].form === 'CT0' && /山田 太郎/.test(r.options[1].label));
+  t('サイト入室: 申込者のメールアドレス(大文字小文字は区別しない)で入り、回答者(申込者・お子様)が選べる', r.ok && /^[0-9a-f]{64}$/.test(r.token) && r.options.length === 2 && r.options[0].role === 'parent' && r.options[1].role === 'child' && r.options.every(o => o.state === 'due' && o.form.charAt(1) === 'T0'.charAt(1) || o.state === 'due') && r.options[0].form === 'PT0' && r.options[1].form === 'CT0' && /太郎/.test(r.options[1].label));
   const fullAns = (def) => { const a = {}; def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { a[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.kind === 'age' ? '13' : q.choices[0]; }); return a; };
   const stNoSel = E.run('surveySubmit')(r.token, {});
   t('サイト送信: 回答者を選ぶ前の送信は、受け付けない', !stNoSel.ok && /回答者を選んで/.test(stNoSel.message));
   t('サイト入室: 子ども用のメールアドレス(登録していない)では入れない', !login('taro@example.com').ok);
   const sc = E.run('surveyStart')(r.token, 'F0001', 'child');
-  t('サイト開始: お子様を選ぶと、お子様用T0(CT0)が出る。調査用IDは画面に出ず、題名に番号が付かない', sc.ok && sc.def.key === 'CT0' && sc.who === '山田 太郎' && sc.def.blocks.filter(b => b.type === 'q').every(b => b.id !== 'RID') && sc.def.blocks.every(b => !/^[A-Z][A-Za-z0-9_\-]*\.\s/.test(b.title || b.text)));
+  t('サイト開始: お子様を選ぶと、お子様用T0(CT0)が出る。調査用IDは画面に出ず、題名に番号が付かない', sc.ok && sc.def.key === 'CT0' && sc.who === '太郎' && sc.def.blocks.filter(b => b.type === 'q').every(b => b.id !== 'RID') && sc.def.blocks.every(b => !/^[A-Z][A-Za-z0-9_\-]*\.\s/.test(b.title || b.text)));
   const ans = Object.assign(fullAns(sc.def), { EVIL: 'x' });
   const missing = E.run('surveySubmit')(r.token, {});
   t('サイト送信: 未回答の必須の設問があると、記録せずに、案内を返す', !missing.ok && /まだ答えていない質問/.test(missing.message) && E.subs.values.length === 1);
@@ -292,7 +292,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const again = E.run('surveySubmit')(r.token, ans);
   t('サイト送信: 回答済みのあと、同じ合い鍵での再送信は受け付けない(二重送信なし)', !again.ok && E.subs.values.length === before + 1);
   const sp = E.run('surveyStart')(r.token, 'F0001', 'parent');
-  t('サイト開始: 続けて申込者を選ぶと、申込者用T0(PT0)が出る', sp.ok && sp.def.key === 'PT0' && sp.who === '山田 花子');
+  t('サイト開始: 続けて申込者を選ぶと、申込者用T0(PT0)が出る', sp.ok && sp.def.key === 'PT0' && sp.who === '花子');
   const srp = E.run('surveySubmit')(r.token, fullAns(sp.def));
   t('サイト送信: 申込者の回答も記録され、すべて回答済みになる', srp.ok && srp.options.every(o => o.state === 'done') && E.subs.values.some(x => x[2] === 'F0001' && x[4] === 'PT0'));
   t('サイト開始: 回答済みの方は、もう一度選べない', !E.run('surveyStart')(r.token, 'F0001', 'child').ok && !E.run('surveyStart')(r.token, 'F0009', 'child').ok && !E.run('surveyStart')(r.token, 'F0001', 'x').ok);
@@ -492,10 +492,10 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   E.addFamily({ pjoin: 'はい', ppname: '山田 次郎', ppgender: '男性', ppbirth: '19830101' });
   E.roster.values[1][E.rc('T0')] = '2026-11-01T10:00:00';
   const r = E.run('surveyLogin')('hanako@example.com');
-  t('パートナー: 参加する家庭は、回答者の選択肢が3つ(申込者・お子様・パートナーの方)', r.ok && r.options.map(o => o.role).join() === 'parent,child,partner' && /山田 次郎 様/.test(r.options[2].label) && r.options[2].form === 'PP0');
+  t('パートナー: 参加する家庭は、回答者の選択肢が3つ(申込者・お子様・パートナーの方)', r.ok && r.options.map(o => o.role).join() === 'parent,child,partner' && /次郎 様/.test(r.options[2].label) && r.options[2].form === 'PP0');
   const fullAns = (def) => { const a = {}; def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { a[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.kind === 'age' ? '13' : q.choices[0]; }); return a; };
   const sp = E.run('surveyStart')(r.token, 'F0001', 'partner');
-  t('パートナー: 選ぶと、申込者用と同じ設問(受講の理由・目的を除く)のPP0が出る(題名は「パートナー用」)', sp.ok && sp.def.key === 'PP0' && sp.who === '山田 次郎' && /パートナー用/.test(sp.def.title) && sp.def.blocks.filter(b => b.type === 'q').length === E.run('surveyClientDef_')('PT0').blocks.filter(b => b.type === 'q').length - 3);
+  t('パートナー: 選ぶと、申込者用と同じ設問(受講の理由・目的を除く)のPP0が出る(題名は「パートナー用」)', sp.ok && sp.def.key === 'PP0' && sp.who === '次郎' && /パートナー用/.test(sp.def.title) && sp.def.blocks.filter(b => b.type === 'q').length === E.run('surveyClientDef_')('PT0').blocks.filter(b => b.type === 'q').length - 3);
   const sr = E.run('surveySubmit')(r.token, fullAns(sp.def));
   const row = E.subs.values[E.subs.values.length - 1];
   t('パートナー: 回答は、フォームID=PP0・回答者区分=パートナー・同じ調査用IDで記録される。申込者(PT0)とは別に数えられる', sr.ok && row[2] === 'F0001' && row[3] === 'パートナー' && row[4] === 'PP0' && sr.options.find(o => o.role === 'partner').state === 'done' && sr.options.find(o => o.role === 'parent').state === 'due');
@@ -523,11 +523,11 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const r = E.run('surveyLogin')('hanako@example.com');
   const texts = (def) => def.blocks.map(b => (b.text || '') + ' ' + (b.title || '') + ' ' + (b.desc || '')).join('\n') + '\n' + def.intro;
   const sp = E.run('surveyStart')(r.token, 'F0001', 'parent');
-  t('お名前: 申込者用の設問に、お子様のお名前+さんが入る(「山田 太郎さんの性格や特徴を理解している」)。{{ }}は残らない', /山田 太郎さんの性格や特徴を理解している/.test(texts(sp.def)) && !/\{\{/.test(texts(sp.def)) && !/子ども/.test(sp.def.blocks.filter(b => b.type === 'q').map(b => b.text).join('')));
+  t('お名前: 申込者用の設問に、お子様のお名前+さんが入る(「太郎さんの性格や特徴を理解している」)。{{ }}は残らない', /太郎さんの性格や特徴を理解している/.test(texts(sp.def)) && !/\{\{/.test(texts(sp.def)) && !/子ども/.test(sp.def.blocks.filter(b => b.type === 'q').map(b => b.text).join('')));
   const sc = E.run('surveyStart')(r.token, 'F0001', 'child');
-  t('お名前: お子様用の設問では、「親」のかわりに、申込者のお名前+さん(「山田 花子さんが何を大切にしているのか…」)。「親子」は変えない', /山田 花子さんが何を大切にしているのか理解している/.test(texts(sc.def)) && /親子相互理解/.test(texts(sc.def)) && !/\{\{/.test(texts(sc.def)));
+  t('お名前: お子様用の設問では、「親」のかわりに、申込者のお名前+さん(「花子さんが何を大切にしているのか…」)。「親子」は変えない', /花子さんが何を大切にしているのか理解している/.test(texts(sc.def)) && /親子相互理解/.test(texts(sc.def)) && !/\{\{/.test(texts(sc.def)));
   const spp = E.run('surveyStart')(r.token, 'F0001', 'partner');
-  t('お名前: パートナーの方の設問にも、お子様のお名前+さんが入る', /山田 太郎さんの性格や特徴を理解している/.test(texts(spp.def)));
+  t('お名前: パートナーの方の設問にも、お子様のお名前+さんが入る', /太郎さんの性格や特徴を理解している/.test(texts(spp.def)));
   t('お名前: 選択肢には、お名前を入れない(回答内容として保存されるため)', JSON.stringify(sp.def.blocks.filter(b => b.type === 'q').map(b => b.choices)).indexOf('山田') === -1);
   const fullAns = (def) => { const a = {}; def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { a[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.kind === 'age' ? '13' : q.choices[0]; }); return a; };
   E.run('surveySubmit')(r.token, fullAns(spp.def));
@@ -569,11 +569,20 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const E = makeEnv('');
   const named = (key, id, vars) => E.run('surveyClientDef_')(key, vars).blocks.find(b => b.id === id).text;
   const v = { child: '林 巫心', parent: '林 竜輔' };
-  t('お名前: 同じ文でお名前が2回出るときは、2回目を「ご本人」にする(「林 巫心さんと自分の考え方が違うとき、ご本人がなぜそう考えるのか…」)', named('PT0', 'PO5', v) === '林 巫心さんと自分の考え方が違うとき、ご本人がなぜそう考えるのか理解しようとしている。');
-  t('お名前: 「子ども自身の」も、2回目は「ご本人の」(「…考えるとき、ご本人の希望や気持ちを…」)', /^林 巫心さんが将来について考えるとき、ご本人の希望や気持ちを大切にしたいと思う。$/.test(named('PT0', 'PZ1', v)));
+  t('お名前: 同じ文でお名前が2回出るときは、2回目を「ご本人」にする(「巫心さんと自分の考え方が違うとき、ご本人がなぜそう考えるのか…」)', named('PT0', 'PO5', v) === '巫心さんと自分の考え方が違うとき、ご本人がなぜそう考えるのか理解しようとしている。');
+  t('お名前: 「子ども自身の」も、2回目は「ご本人の」(「…考えるとき、ご本人の希望や気持ちを…」)', /^巫心さんが将来について考えるとき、ご本人の希望や気持ちを大切にしたいと思う。$/.test(named('PT0', 'PZ1', v)));
   t('お名前: 名前がないときも、1回目は「お子様」、2回目は「ご本人」', named('PT0', 'PO5', {}) === 'お子様と自分の考え方が違うとき、ご本人がなぜそう考えるのか理解しようとしている。');
   const all = ['CT0', 'CT1', 'CT2', 'PT0', 'PT1', 'PT2', 'PP0'].map(k => E.run('surveyClientDef_')(k, v).blocks.filter(b => b.type === 'q').map(b => b.text).join('\n')).join('\n');
-  t('お名前: どの設問でも、同じ文に、お名前が2回出ない', !all.split('\n').some(l => (l.match(/林 巫心さん/g) || []).length > 1 || (l.match(/林 竜輔さん/g) || []).length > 1));
+  t('お名前: どの設問でも、同じ文に、お名前が2回出ない', !all.split('\n').some(l => (l.match(/巫心さん/g) || []).length > 1 || (l.match(/竜輔さん/g) || []).length > 1));
+}
+{ // 名前(下の名)だけを表示
+  const E = makeEnv('');
+  t('お名前(下の名): 「林 巫心」→「巫心」。スペース(全角も)で、姓と名を分ける。スペースがなければ、そのまま', E.run('givenName_')('林 巫心') === '巫心' && E.run('givenName_')('林　巫心') === '巫心' && E.run('givenName_')('林巫心') === '林巫心' && E.run('givenName_')('') === '');
+  const d = E.run('surveyClientDef_')('PT0', { child: '林 巫心', parent: '林 竜輔' });
+  const pg = d.blocks.filter(b => b.type === 'page').map(b => b.title);
+  t('お名前(下の名): 設問・ページの題名に、苗字が出ない(「巫心さんの意思決定への支援」)', pg.indexOf('巫心さんの意思決定への支援') !== -1 && !/林/.test(JSON.stringify(d)));
+  const pgApply = E.run('publicSiteData_')('career').cats[0].blocks.find(b => b.id === 'AP1');
+  t('申込: お名前の欄に、「姓と名の間にスペース」の案内がある(申込者・お子様・パートナー)', /スペースを入れてください/.test(pgApply.help) && /スペースを入れてください/.test(E.run('publicSiteData_')('career').cats[0].blocks.find(b => b.id === 'CH1').help) && /スペースを入れてください/.test(E.run('publicSiteData_')('career').cats[0].blocks.find(b => b.id === 'PN1').help));
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

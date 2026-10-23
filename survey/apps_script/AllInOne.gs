@@ -633,6 +633,14 @@ SURVEY.apply.confirm = confirmMessage_('career');
 SURVEY.applyG.confirm = confirmMessage_('general');
 SURVEY.applyB.confirm = confirmMessage_('corp');
 
+// 申込のお名前の欄には、「姓と名の間にスペース」の案内を付ける(アンケートでは、名前(下の名)だけを表示するため)
+[SURVEY.apply].forEach(function (d) {
+  d.blocks.forEach(function (b) {
+    if (b.type === 'q' && /^(AP1|CH1|PN1)$/.test(b.id)) b.help = '姓と名の間に、スペースを入れてください(例:林 巫心)。アンケートでは、お名前(下の名)だけを表示します。';
+  });
+});
+
+
 
 /**
  * 算命学×自己理解・他者理解・キャリア形成 調査アンケート — 実装(Google Apps Script)
@@ -699,9 +707,15 @@ function parseQid_(title) {
 function qTitle_(q) { return q.id + '. ' + q.text; }
 
 /** 設問の文の {{子}} {{親}} を、お名前(+さん)に置きかえる。vars = {child, parent}。名前が無いときは「お子様」「申込者の方」 */
+/** フルネームから、名前(下の名)だけを取り出す。「林 巫心」→「巫心」。姓と名の間にスペース(半角・全角)がないときは、そのまま返す */
+function givenName_(full) {
+  var parts = String(full || '').trim().split(/[\s\u3000]+/).filter(function (x) { return x !== ''; });
+  return parts.length >= 2 ? parts.slice(1).join(' ') : (parts[0] || '');
+}
+
 function renderNames_(text, vars) {
   vars = vars || {};
-  var child = String(vars.child || '').trim(), parent = String(vars.parent || '').trim();
+  var child = givenName_(vars.child), parent = givenName_(vars.parent);
   // 同じ文の中で、お名前が2回目以降に出るときは、「ご本人」「その方」にして、くどくならないようにする
   var nc = 0, np = 0;
   return String(text || '').replace(/\{\{子\}\}(ご自身)?|\{\{親\}\}/g, function (m, honorific) {
@@ -1364,6 +1378,7 @@ function buildFormFromDef_(def, ss, confirmMessage) {
     } else if (b.kind === 'text1') {
       it = form.addTextItem().setTitle(title);
       it.setRequired(isReq_(def, b));
+      if (b.help) it.setHelpText(b.help);
     } else if (b.kind === 'birth') {
       it = form.addTextItem().setTitle(title);
       setValidationSafe_(it, FormApp.createTextValidation().requireTextMatchesPattern('^[0-9]{8}$').setHelpText('8桁の数字で入力してください。(例:20000218)').build());
@@ -2258,7 +2273,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-23-e';
+var SITE_VERSION = '2026-10-23-f';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2523,7 +2538,7 @@ function surveyOptions_(families, answered) {
     ['parent', 'child', 'partner'].forEach(function (role) {
       if (role === 'partner' && f.partnerJoin !== 'はい') return;
       var due = surveyDue_(f, role, answered);
-      var label = role === 'parent' ? '申込者(' + (f.name || '') + ' 様)' : (role === 'child' ? 'お子様(' + (f.childName || '') + ' さん)' : 'パートナーの方(' + (f.partnerName || '') + ' 様)');
+      var label = role === 'parent' ? '申込者(' + givenName_(f.name) + ' 様)' : (role === 'child' ? 'お子様(' + givenName_(f.childName) + ' さん)' : 'パートナーの方(' + givenName_(f.partnerName) + ' 様)');
       out.push({ id: f.id, role: role, label: label, state: due.state, time: due.time || '', form: due.key || '' });
     });
   });
@@ -2639,7 +2654,7 @@ function surveyStart(token, id, role) {
   if (due.state !== 'due') return { ok: false, done: true, message: 'この方のアンケートは、いま、答えられるものがありません。' };
   sess.cur = { id: fams[0].id, role: role, key: due.key };
   cache.put('sv_tok_' + token, JSON.stringify(sess), 21600);
-  return { ok: true, who: role === 'child' ? (fams[0].childName || '') : (role === 'partner' ? (fams[0].partnerName || '') : (fams[0].name || '')), def: surveyClientDef_(due.key, { child: fams[0].childName, parent: fams[0].name }) };
+  return { ok: true, who: givenName_(role === 'child' ? fams[0].childName : (role === 'partner' ? fams[0].partnerName : fams[0].name)), def: surveyClientDef_(due.key, { child: fams[0].childName, parent: fams[0].name }) };
 }
 
 function maskEmail_(e) {

@@ -629,3 +629,11 @@ function confirmMessage_(category) {
 SURVEY.apply.confirm = confirmMessage_('career');
 SURVEY.applyG.confirm = confirmMessage_('general');
 SURVEY.applyB.confirm = confirmMessage_('corp');
+
+// 申込のお名前の欄には、「姓と名の間にスペース」の案内を付ける(アンケートでは、名前(下の名)だけを表示するため)
+[SURVEY.apply].forEach(function (d) {
+  d.blocks.forEach(function (b) {
+    if (b.type === 'q' && /^(AP1|CH1|PN1)$/.test(b.id)) b.help = '姓と名の間に、スペースを入れてください(例:林 巫心)。アンケートでは、お名前(下の名)だけを表示します。';
+  });
+});
+
