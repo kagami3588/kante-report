@@ -200,7 +200,7 @@ SURVEY.forms.CT1 = {
     blocks.push(P_('C. 受講後の行動(' + (i + 1) + '/4)'));
     blocks.push(SG_('F4_' + (i + 1), '鑑定を受けてから、次のような行動をしましたか。【' + b + '】', 'YESNO', AXIS.ACT, '受講後の実際の行動(項目別)', { gate: { skip: 'いいえ' } }));
     blocks.push(P_('C. 行動のきっかけ(' + (i + 1) + '/4)', { conditional: true }));
-    blocks.push(SG_('F5_' + (i + 1), 'F4_' + (i + 1) + 'で「はい」と回答した行動【' + b + '】について、今回の鑑定が行動するきっかけになったと感じますか。', 'TRIGGER4', AXIS.ACT,
+    blocks.push(SG_('F5_' + (i + 1), '前の質問で「はい」と回答した行動【' + b + '】について、今回の鑑定が行動するきっかけになったと感じますか。', 'TRIGGER4', AXIS.ACT,
       '行動のきっかけとして鑑定を認識している程度(行動の有無とは別に記録)', { hiddenWhen: { id: 'F4_' + (i + 1), value: 'いいえ' } }));
   }
   blocks.push(P_('D. 将来の選択肢'));
@@ -304,6 +304,33 @@ SURVEY.forms.PT2 = {
 };
 
 SURVEY.formKeys = ['CT0', 'CT1', 'CT2', 'PT0', 'PT1', 'PT2'];
+
+// 設問の文に、お子様・保護者のお名前を入れる。{{子}}=「お子様のお名前さん」、{{親}}=「保護者のお名前さん」(名前が無いときは「お子様」「保護者の方」)。
+// 選択肢には、お名前を入れない(回答内容として保存されるため)。
+function personalizeText_(s, role) {
+  s = String(s || '');
+  if (role === 'child') return s.replace(/親(?!子)/g, '{{親}}');
+  return s.replace(/お子さま|お子さん/g, '{{子}}').replace(/子ども自身/g, '{{子}}ご自身').replace(/子ども/g, '{{子}}');
+}
+['CT0', 'CT1', 'CT2', 'PT0', 'PT1', 'PT2'].forEach(function (k) {
+  var d = SURVEY.forms[k], role = d.role;
+  d.intro = personalizeText_(d.intro, role);
+  d.blocks.forEach(function (b) {
+    if (b.type === 'page') { b.title = personalizeText_(b.title, role); b.desc = personalizeText_(b.desc, role); }
+    else b.text = personalizeText_(b.text, role);
+  });
+});
+
+// パートナーの方(参加する場合)のアンケート。保護者用と同じ設問。回答は、別のフォームID(PP0〜PP2)・回答者区分「パートナー」として記録する。Googleフォームは作らない(アンケートサイトのみ)
+SURVEY.partnerKeys = ['PP0', 'PP1', 'PP2'];
+SURVEY.partnerKeys.forEach(function (pk, i) {
+  var src = SURVEY.forms['PT' + i];
+  var d = JSON.parse(JSON.stringify(src));
+  d.key = pk; d.role = 'partner';
+  d.title = src.title.replace('【保護者用】', '【パートナー用】');
+  SURVEY.forms[pk] = d;
+});
+SURVEY.allKeys = SURVEY.formKeys.concat(SURVEY.partnerKeys);
 
 // ---------- 参考対応(比較設問)。type: A=同一概念・立場違い(一致度可) / B=関連・別概念 / R=参考対応(同一尺度ではない。差分にしない) ----------
 var REL_PAIRS = [
@@ -432,6 +459,12 @@ SURVEY.apply = {
     CHK_('AP10', '林 竜輔の公式LINEを追加しましたか?', '公式LINEの追加確認'),
     Q_({ id: 'AP11', text: '紹介者氏名(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)', kind: 'katakana', axis: AXIS.ID, system: true, required: true, purpose: '紹介者(個人情報)' }),
     Q_({ id: 'AP5', text: '保護者さまの自由記入欄(質問がありましたら、内容をご記入ください)', kind: 'text', axis: AXIS.ID, system: true, purpose: '保護者からの連絡事項・質問(任意)' }),
+    P_('パートナーの方について', { desc: 'パートナーの方も、本プロジェクトに参加すると、保護者さまと同じ内容のアンケートに、同じメールアドレスのページから回答できます。参加されない場合も、お申込みいただけます。' }),
+    Q_({ id: 'PN0', text: 'パートナーの方は、本プロジェクトに参加しますか?', kind: 'single', axis: AXIS.ID, system: true, required: true, choices: ['はい', 'いいえ'], gate: { skip: 'いいえ' }, purpose: 'パートナーの参加の有無' }),
+    P_('パートナーの方の情報', { conditional: true, desc: 'パートナーの方の、お名前・生年月日・性別を、ご入力ください。' }),
+    Q_({ id: 'PN1', text: 'パートナーの方のお名前(フルネーム)', kind: 'text1', axis: AXIS.ID, system: true, required: true, hiddenWhen: { id: 'PN0', value: 'いいえ' }, purpose: 'パートナーの氏名(個人情報)' }),
+    Q_({ id: 'PN3', text: 'パートナーの方の生年月日(例:19850612)', kind: 'birth', axis: AXIS.ID, system: true, required: true, hiddenWhen: { id: 'PN0', value: 'いいえ' }, purpose: 'パートナーの生年月日(個人情報)' }),
+    Q_({ id: 'PN2', text: 'パートナーの方の性別', kind: 'single', axis: AXIS.ID, system: true, required: true, choices: GENDERS, hiddenWhen: { id: 'PN0', value: 'いいえ' }, purpose: 'パートナーの性別(個人情報)' }),
     P_('お子様用', { desc: 'お子様のご情報です。保護者の方が、お子様と一緒にご入力ください。お子様のアンケートも、保護者さまのメールアドレスでご案内します(同じページで、お子様ご本人が回答できます)。' }),
     T1_('CH1', 'お子様の名前(フルネーム)', 'お子様の氏名(個人情報。回答DBとは別に保管)', true),
     SEL_('CH2', 'お子様の性別', GENDERS, true, 'お子様の性別(個人情報)'),

@@ -50,7 +50,7 @@ function makeEnv(activeEmail) {
   const resp = db.add('resp_CT0', ['タイムスタンプ', '調査用ID(運営から届いた専用リンクで自動入力されます。変更しないでください)', 'S1. x']);
   const rc = (n) => vm.runInContext('RC.' + n, env);
   function addFamily(o) {
-    const row = new Array(34).fill('');
+    const row = new Array(38).fill('');
     Object.entries({ id: 'F0001', ts: '2026-11-01T10:00:00', pname: '山田 花子', pgender: '女性', pbirth: '19850612', pemail: 'hanako@example.com', line: 'hana', officialLine: '追加しました', referrer: 'ナシ',
       cname: '山田 太郎', cgender: '男性', cbirth: '20100315', cemail: '', status: '参加中', category: 'career' }).forEach(([k, v]) => { row[rc(k)] = (o && o[k] !== undefined) ? o[k] : v; });
     Object.keys(o || {}).forEach(k => { row[rc(k)] = o[k]; });
@@ -209,7 +209,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const GE = { GE1: '佐藤 一郎', GE2: '男性', GE3: '19800101', GE4: 'ichiro@example.com', GE5: 'ichiro@example.com', GE6: 'ichiro_line', GE8: '追加しました', GE9: 'ナシ', CONSENT_ALL: '全てに同意しました' };
   const E = makeEnv('');
   const r = E.run('submitApplication')('general', GE, '');
-  t('サイト申込(一般): 受付 → G0001・名簿に34列で登録', r.ok && E.roster.values.length === 2 && E.roster.values[1][0] === 'G0001' && E.roster.values[1].length === 34);
+  t('サイト申込(一般): 受付 → G0001・名簿に38列で登録', r.ok && E.roster.values.length === 2 && E.roster.values[1][0] === 'G0001' && E.roster.values[1].length === 38);
   t('サイト申込: 完了画面に鑑定料・お振込先・LINEを返す', /30,000円/.test(r.fee.join()) && /7332659/.test(r.bank.join()) && r.line === 'https://lin.ee/ewijo32');
   t('サイト申込: 申込者に受付メール(HTMLつき・お振込先入り)と、運営に通知', E.sent.some(m => m.to === 'ichiro@example.com' && /7332659/.test(m.body) && /7332659/.test(m.htmlBody)) && E.sent.some(m => m.to === 'op@example.com'));
   t('サイト申込: 送信ログに記録', E.sendlog.values.some(x => /申込受付/.test(x[2])));
@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-a/.test(pa.html) && /2026-10-23-a/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-b/.test(pa.html) && /2026-10-23-b/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -478,7 +478,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('文面: 文章の途中で改行しない(長い一文は、1行のまま)', brokenMid.length === 0, brokenMid.join(' | '));
 }
 { // 追加の鑑定の料金(人数・お一人ずつ)
-  const base = { AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'ex1@example.com', AP3: 'ex1@example.com', AP8: 'l', AP10: '追加しました', AP11: 'ナシ', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH4: 'ex2@example.com', CH5: 'ex2@example.com', CONSENT_ALL: '全てに同意しました' };
+  const base = { PN0: 'いいえ', AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'ex1@example.com', AP3: 'ex1@example.com', AP8: 'l', AP10: '追加しました', AP11: 'ナシ', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CH4: 'ex2@example.com', CH5: 'ex2@example.com', CONSENT_ALL: '全てに同意しました' };
   const go = (o) => { const E = makeEnv(''); return { E, r: E.run('submitApplication')('career', Object.assign({}, base, o), '') }; };
   const { r: r0 } = go({});
   t('追加の鑑定なし: 鑑定料30,000円のみ', r0.ok && r0.fee.length === 1 && /30,000円/.test(r0.fee[0]));
@@ -486,6 +486,56 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('追加2名(大人オンライン+20,000円・お子様レポート+5,000円): 合計55,000円が先頭、内訳に鑑定料・お一人ずつの内容・追加料金25,000円', r1.ok && r1.fee[0] === '合計:55,000円' && /鑑定料:30,000円/.test(r1.fee.join()) && /山田 次郎 さん\(大人の方・オンライン鑑定料/.test(r1.fee.join()) && /山田 三郎 さん\(お子様・レポートのみ/.test(r1.fee.join()) && /追加料金:25,000円/.test(r1.fee.join()));
   t('追加の鑑定: 受付メールの本文・HTMLに合計と内訳が入る。名簿に、名前・内容・原文が入る', E.sent.some(m => m.to === 'ex1@example.com' && /合計:55,000円/.test(m.body) && /55,000円/.test(m.htmlBody) && /追加料金/.test(m.htmlBody)) && E.roster.values[1][E.rc('exName')] === '山田 次郎、山田 三郎' && /山田 次郎\/男性\/19800101/.test(E.roster.values[1][E.rc('targets')]));
   t('追加の鑑定: 人数と入力数の不一致・内容の不正・追加なしなのに入力あり は受け付けない', !go({ EX0: '2名', EX1: '山田 次郎/男性/19800101/大人の方・レポート作成料(+5,000円)' }).r.ok && !go({ EX0: '1名', EX1: '山田 次郎/男性/19800101/偽の内容' }).r.ok && !go({ EX0: '追加なし', EX1: '山田 次郎/男性/19800101/大人の方・レポート作成料(+5,000円)' }).r.ok && !go({ EX0: '1名', EX1: '山田 次郎/男性/1980/大人の方・レポート作成料(+5,000円)' }).r.ok);
+}
+{ // パートナーの方のアンケート
+  const E = makeEnv('');
+  E.addFamily({ pjoin: 'はい', ppname: '山田 次郎', ppgender: '男性', ppbirth: '19830101' });
+  E.roster.values[1][E.rc('T0')] = '2026-11-01T10:00:00';
+  const r = E.run('surveyLogin')('hanako@example.com');
+  t('パートナー: 参加する家庭は、回答者の選択肢が3つ(保護者・お子様・パートナーの方)', r.ok && r.options.map(o => o.role).join() === 'parent,child,partner' && /山田 次郎 様/.test(r.options[2].label) && r.options[2].form === 'PP0');
+  const fullAns = (def) => { const a = {}; def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { a[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.kind === 'age' ? '13' : q.choices[0]; }); return a; };
+  const sp = E.run('surveyStart')(r.token, 'F0001', 'partner');
+  t('パートナー: 選ぶと、保護者用と同じ設問のPP0が出る(題名は「パートナー用」)', sp.ok && sp.def.key === 'PP0' && sp.who === '山田 次郎' && /パートナー用/.test(sp.def.title) && sp.def.blocks.filter(b => b.type === 'q').length === E.run('surveyClientDef_')('PT0').blocks.filter(b => b.type === 'q').length);
+  const sr = E.run('surveySubmit')(r.token, fullAns(sp.def));
+  const row = E.subs.values[E.subs.values.length - 1];
+  t('パートナー: 回答は、フォームID=PP0・回答者区分=パートナー・同じ調査用IDで記録される。保護者(PT0)とは別に数えられる', sr.ok && row[2] === 'F0001' && row[3] === 'パートナー' && row[4] === 'PP0' && sr.options.find(o => o.role === 'partner').state === 'done' && sr.options.find(o => o.role === 'parent').state === 'due');
+  t('パートナー: 受付確認は保護者のアドレスに「パートナーの方用」として届く', E.sent.some(m => m.to === 'hanako@example.com' && /パートナーの方用/.test(m.subject)));
+  const sp2 = E.run('surveyStart')(r.token, 'F0001', 'parent');
+  const sr2 = E.run('surveySubmit')(r.token, fullAns(sp2.def));
+  t('パートナー: 保護者の回答も、続けて同じアドレスで記録できる(別々の回答として、重複扱いにならない)', sr2.ok && E.subs.values.filter(x => x[2] === 'F0001' && /^(PT0|PP0)$/.test(x[4]) && x[6] === 'TRUE').length === 2);
+  const E2 = makeEnv(''); E2.addFamily({ pjoin: 'いいえ' }); E2.roster.values[1][E2.rc('T0')] = '2026-11-01T10:00:00';
+  const r2 = E2.run('surveyLogin')('hanako@example.com');
+  t('パートナー: 参加しない家庭は、選択肢が2つだけ。パートナーとしては始められない', r2.options.length === 2 && !E2.run('surveyStart')(r2.token, 'F0001', 'partner').ok);
+  // 申込サイト
+  const E3 = makeEnv('');
+  const base = { PN0: 'はい', PN1: '山田 次郎', PN2: '男性', PN3: '19830101', AP1: '山田 花子', AP6: '女性', AP7: '19850612', AP2: 'pn@example.com', AP3: 'pn@example.com', AP8: 'l', AP10: '追加しました', AP11: 'ナシ', CH1: '山田 太郎', CH2: '男性', CH3: '20100315', CONSENT_ALL: '全てに同意しました' };
+  const a = E3.run('submitApplication')('career', base, '');
+  t('パートナー: 申込サイトで「はい」+情報を送ると、名簿に入る', a.ok && E3.roster.values[1][E3.rc('pjoin')] === 'はい' && E3.roster.values[1][E3.rc('ppname')] === '山田 次郎');
+  const E4 = makeEnv('');
+  t('パートナー: 「はい」なのに情報がないと、受け付けない', !E4.run('submitApplication')('career', Object.assign({}, base, { PN1: '', AP2: 'pn2@example.com', AP3: 'pn2@example.com' }), '').ok);
+  const pg = E3.run('doGet')({ parameter: { cat: 'career' } });
+  t('パートナー: 申込ページに、参加の質問と、条件付きのパートナー情報(はい の場合のみ)がある', /パートナーの方は、本プロジェクトに参加しますか/.test(pg.html) && /パートナーの方の情報/.test(pg.html) && /"conditional":true/.test(pg.html));
+}
+{ // 設問にお名前(さん)を入れる
+  const E = makeEnv('');
+  E.addFamily({ pjoin: 'はい', ppname: '山田 次郎', ppgender: '男性', ppbirth: '19830101' });
+  E.roster.values[1][E.rc('T0')] = '2026-11-01T10:00:00';
+  const r = E.run('surveyLogin')('hanako@example.com');
+  const texts = (def) => def.blocks.map(b => (b.text || '') + ' ' + (b.title || '') + ' ' + (b.desc || '')).join('\n') + '\n' + def.intro;
+  const sp = E.run('surveyStart')(r.token, 'F0001', 'parent');
+  t('お名前: 保護者用の設問に、お子様のお名前+さんが入る(「山田 太郎さんの性格や特徴を理解している」)。{{ }}は残らない', /山田 太郎さんの性格や特徴を理解している/.test(texts(sp.def)) && !/\{\{/.test(texts(sp.def)) && !/子ども/.test(sp.def.blocks.filter(b => b.type === 'q').map(b => b.text).join('')));
+  const sc = E.run('surveyStart')(r.token, 'F0001', 'child');
+  t('お名前: お子様用の設問では、「親」のかわりに、保護者のお名前+さん(「山田 花子さんが何を大切にしているのか…」)。「親子」は変えない', /山田 花子さんが何を大切にしているのか理解している/.test(texts(sc.def)) && /親子相互理解/.test(texts(sc.def)) && !/\{\{/.test(texts(sc.def)));
+  const spp = E.run('surveyStart')(r.token, 'F0001', 'partner');
+  t('お名前: パートナーの方の設問にも、お子様のお名前+さんが入る', /山田 太郎さんの性格や特徴を理解している/.test(texts(spp.def)));
+  t('お名前: 選択肢には、お名前を入れない(回答内容として保存されるため)', JSON.stringify(sp.def.blocks.filter(b => b.type === 'q').map(b => b.choices)).indexOf('山田') === -1);
+  const fullAns = (def) => { const a = {}; def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { a[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.kind === 'age' ? '13' : q.choices[0]; }); return a; };
+  E.run('surveySubmit')(r.token, fullAns(spp.def));
+  const dbText = JSON.stringify(E.subs.values) + JSON.stringify(E.long.values) + JSON.stringify(E.opts.values);
+  t('お名前: 回答DB(Submissions・Long・LongOptions)には、お名前が入らない', dbText.indexOf('山田') === -1 && dbText.indexOf('次郎') === -1 && E.subs.values.some(x => x[3] === 'パートナー'));
+  const nameless = E.run('surveyClientDef_')('PT0', {});
+  t('お名前: 名前がないときは「お子様」と表示する(Googleフォーム版・名前未登録)', /お子様の性格や特徴を理解している/.test(texts(nameless)) && /保護者の方が何を大切にしている/.test(texts(E.run('surveyClientDef_')('CT0', {}))));
+  t('お名前: コードブックの設問文は、名前なしの形(お子様)で出る', E.run('buildCodebookRows_')().some(r => /お子様の性格や特徴を理解している/.test(String(r[5]))) && !E.run('buildCodebookRows_')().some(r => /\{\{/.test(String(r[5]))));
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

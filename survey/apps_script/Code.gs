@@ -41,7 +41,7 @@ var SHEETS = {
 };
 
 var HEAD = {
-  roster: ['調査用ID', '申込日時', '保護者名(申込者名)', '保護者(申込者)の性別', '保護者(申込者)の生年月日', '保護者(申込者)メール', 'LINE検索ID', 'Instagram', '公式LINE追加', '紹介者', 'お子様名', 'お子様の性別', 'お子様の生年月日', 'お子様メール', '鑑定日(yyyy-mm-dd)', '参加状況(参加中/辞退/完了)', 'T0送信日時', 'T1送信日時', 'T2送信日時', '追加鑑定の対象者名', '追加鑑定の希望', '連絡事項(保護者・申込者)', 'お子様の連絡事項', 'メモ', '区分', '法人名', '部署・役職', '電話番号', '鑑定を受ける人数', '鑑定を受ける方(名前・性別・生年月日)', '請求書・領収書の宛名', 'ご希望の内容', 'プラン', 'セッション終了日時'],
+  roster: ['調査用ID', '申込日時', '保護者名(申込者名)', '保護者(申込者)の性別', '保護者(申込者)の生年月日', '保護者(申込者)メール', 'LINE検索ID', 'Instagram', '公式LINE追加', '紹介者', 'お子様名', 'お子様の性別', 'お子様の生年月日', 'お子様メール', '鑑定日(yyyy-mm-dd)', '参加状況(参加中/辞退/完了)', 'T0送信日時', 'T1送信日時', 'T2送信日時', '追加鑑定の対象者名', '追加鑑定の希望', '連絡事項(保護者・申込者)', 'お子様の連絡事項', 'メモ', '区分', '法人名', '部署・役職', '電話番号', '鑑定を受ける人数', '鑑定を受ける方(名前・性別・生年月日)', '請求書・領収書の宛名', 'ご希望の内容', 'プラン', 'セッション終了日時', 'パートナーの参加', 'パートナーの名前', 'パートナーの性別', 'パートナーの生年月日'],
   pending: ['受付日時', '区分', '名前', 'メールアドレス', 'お子様名 / 法人名', '要確認の理由', '連絡事項'],
   sendlog: ['日時', '調査用ID', '時点', '送信先', '結果'],
   submissions: ['submission_id', '回答日時', '調査用ID', '回答者区分', 'フォームID', '時点', '分析採用', 'フラグ', '回答数', '未回答数', '非表示数', '自由記述あり数', 'テスト'],
@@ -62,6 +62,13 @@ function parseQid_(title) {
 
 function qTitle_(q) { return q.id + '. ' + q.text; }
 
+/** 設問の文の {{子}} {{親}} を、お名前(+さん)に置きかえる。vars = {child, parent}。名前が無いときは「お子様」「保護者の方」 */
+function renderNames_(text, vars) {
+  vars = vars || {};
+  var child = String(vars.child || '').trim(), parent = String(vars.parent || '').trim();
+  return String(text || '').replace(/\{\{子\}\}/g, child ? child + 'さん' : 'お子様').replace(/\{\{親\}\}/g, parent ? parent + 'さん' : '保護者の方');
+}
+
 /** 申込フォームは、回答者に設問番号を見せない(題名は文言のみ)。回答を受け取るときに、文言から「ID. 文言」の形へ戻す */
 function applyTitleParts_(q) {
   var m = /^(.*?)[(（]([^()（）]*)[)）]$/.exec(String(q.text));
@@ -70,7 +77,7 @@ function applyTitleParts_(q) {
 }
 
 /** フォームに表示する設問の題名。設問番号は回答者に見せない(申込フォームは、カッコ内の説明も説明文へ移す) */
-function shownTitle_(def, q) { return def.category ? applyTitleParts_(q).title : q.text; }
+function shownTitle_(def, q) { return def.category ? applyTitleParts_(q).title : renderNames_(q.text, {}); }
 
 /** 回答の項目名(表示題名)を、内部の「ID. 文言」の形に戻す。すでに内部の形のものは、そのまま使う */
 function normalizeApplyNamed_(def, namedValues) {
@@ -118,7 +125,7 @@ function splitMulti_(q, raw) {
   return parts.filter(function (p) { return ch.indexOf(p) !== -1; });
 }
 
-function roleOf_(formKey) { return SURVEY.forms[formKey].role === 'child' ? '子ども' : '保護者'; }
+function roleOf_(formKey) { var r = SURVEY.forms[formKey].role; return r === 'child' ? '子ども' : (r === 'partner' ? 'パートナー' : '保護者'); }
 
 /** 安全対応ルール(暫定。専門家確認後に確定する) */
 var SAFETY_RULES = [
@@ -239,8 +246,8 @@ function remindersDue_(roster, adoptedKeys, today) {
 /** 設問定義の整合性チェック(エラー文字列の配列。空なら問題なし) */
 function validateSurveyDefinition_() {
   var errors = [];
-  var expectedCount = { CT0: 28, CT1: 17, CT2: 17, PT0: 15, PT1: 9, PT2: 9 };
-  SURVEY.formKeys.forEach(function (key) {
+  var expectedCount = { CT0: 28, CT1: 17, CT2: 17, PT0: 15, PT1: 9, PT2: 9, PP0: 15, PP1: 9, PP2: 9 };
+  SURVEY.allKeys.forEach(function (key) {
     var def = SURVEY.forms[key];
     if (!def) { errors.push(key + ': 定義なし'); return; }
     var seen = {};
@@ -287,7 +294,7 @@ function buildCodebookRows_() {
     (relMap[p[1]] = relMap[p[1]] || []).push(p[0] + '[' + p[2] + ']');
   });
   var rows = [['設問ID', 'フォームID', '回答者', '時点', 'セクション', '設問文', '回答形式', '選択肢(コード)', '排他選択肢', '表示条件', '測定軸', '何を測る設問か', '比較する設問(A/B/R)', '主な分析']];
-  SURVEY.formKeys.forEach(function (key) {
+  SURVEY.allKeys.forEach(function (key) {
     var def = SURVEY.forms[key];
     var section = '';
     def.blocks.forEach(function (b) {
@@ -313,7 +320,7 @@ function buildCodebookRows_() {
       else if (def.time === 'T1') analysis = 'T1内の分布。T0の水準別の気づきの差(探索)。満足度とは別集計';
       else analysis = 'T2内の分布。T0の関連設問と並置。否定的影響は肯定的変化と別集計';
       if (b.risk) analysis += '。否定的影響として件数・割合を必ず報告';
-      rows.push([b.id, key, roleOf_(key), def.time, section, b.text, typeText, chText, b.exclusive || '',
+      rows.push([b.id, key, roleOf_(key), def.time, section, renderNames_(b.text, {}), typeText, chText, b.exclusive || '',
         cond + (b.gate ? (cond ? ' / ' : '') + 'ゲート(「' + b.gate.skip + '」で後続の条件設問を非表示)' : ''),
         b.axis, b.purpose || '', (relMap[b.id] || []).join(', '), analysis]);
     });
@@ -395,6 +402,12 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   if (!a.CH1) problems.push('お子様の名前が未入力');
   if (GENDERS.indexOf(a.CH2) === -1) problems.push('お子様の性別が未選択');
   if (!isBirthDate_(a.CH3)) problems.push('お子様の生年月日が不正(8桁の数字。例:20100315)');
+  if (a.PN0 !== 'はい' && a.PN0 !== 'いいえ') problems.push('パートナーの方の参加が未選択');
+  if (a.PN0 === 'はい') {
+    if (!a.PN1) problems.push('パートナーの方のお名前が未入力');
+    if (GENDERS.indexOf(a.PN2) === -1) problems.push('パートナーの方の性別が未選択');
+    if (!isBirthDate_(a.PN3)) problems.push('パートナーの方の生年月日が不正(8桁の数字。例:19850612)');
+  }
   var ex = parseExtraPersons_(a.EX0, a.EX1);
   ex.problems.forEach(function (x) { problems.push('追加の鑑定: ' + x); });
   if (!a.CONSENT_ALL) problems.push('同意未確認');
@@ -405,6 +418,7 @@ function processCareerApplication_(namedValues, existing, tsIso) {
   }
   var id = nextId_((existing || []).map(function (e) { return e.id; }), 'F');
   var row = [id, tsIso, a.AP1, a.AP6, a.AP7, a.AP2, a.AP8, a.AP9, a.AP10, a.AP11, a.CH1, a.CH2, a.CH3, '', '', '参加中', '', '', '', ex.persons.map(function (x) { return x.name; }).join('、'), ex.persons.map(function (x) { return x.name + ': ' + x.plan; }).join(' / '), a.AP5, a.CH6, '', 'career', '', '', '', '', '', '', '', '', ''];
+  row[RC.pjoin] = a.PN0 === 'はい' ? 'はい' : 'いいえ'; row[RC.ppname] = a.PN0 === 'はい' ? a.PN1 : ''; row[RC.ppgender] = a.PN0 === 'はい' ? a.PN2 : ''; row[RC.ppbirth] = a.PN0 === 'はい' ? a.PN3 : '';
   row[RC.targets] = ex.persons.map(function (x) { return [x.name, x.gender, x.birth, x.plan].join('/'); }).join('\n');
   return { ok: true, category: 'career', id: id, name: a.AP1, email: a.AP2, childName: a.CH1, childEmail: '', extra: ex.persons.length ? { fee: ex.fee, persons: ex.persons } : null, row: row };
 }
@@ -419,7 +433,7 @@ function readAnswers_(formDef, namedValues) {
   return a;
 }
 
-function blankRow_() { var r = []; for (var i = 0; i < 34; i++) r.push(''); return r; }
+function blankRow_() { var r = []; for (var i = 0; i < 38; i++) r.push(''); return r; }
 
 /** 一般鑑定者用の申込を処理する */
 function processGeneralApplication_(namedValues, existing, tsIso) {
@@ -493,7 +507,7 @@ function dropRowsById_(values, idCol, id) {
 }
 
 // 名簿の列の位置(0始まり。シートの列番号は +1)
-var RC = { id: 0, ts: 1, pname: 2, pgender: 3, pbirth: 4, pemail: 5, line: 6, insta: 7, officialLine: 8, referrer: 9, cname: 10, cgender: 11, cbirth: 12, cemail: 13, session: 14, status: 15, T0: 16, T1: 17, T2: 18, exName: 19, exPlan: 20, pnote: 21, cnote: 22, memo: 23, category: 24, company: 25, dept: 26, phone: 27, headcount: 28, targets: 29, invoice: 30, request: 31, plan: 32, ended: 33 };
+var RC = { id: 0, ts: 1, pname: 2, pgender: 3, pbirth: 4, pemail: 5, line: 6, insta: 7, officialLine: 8, referrer: 9, cname: 10, cgender: 11, cbirth: 12, cemail: 13, session: 14, status: 15, T0: 16, T1: 17, T2: 18, exName: 19, exPlan: 20, pnote: 21, cnote: 22, memo: 23, category: 24, company: 25, dept: 26, phone: 27, headcount: 28, targets: 29, invoice: 30, request: 31, plan: 32, ended: 33, pjoin: 34, ppname: 35, ppgender: 36, ppbirth: 37 };
 
 var LINK_TIMES = ['T0', 'T1', 'T2'];
 function isParticipating_(status) { var s = String(status || '').trim(); return s === '' || s === '参加中'; }
@@ -521,7 +535,7 @@ var TIME_LABEL = { T0: '受講前', T1: '受講後', T2: '受講から約3か月
 // ---------- メールの文面(台帳の「メール文面」シートで編集できる) ----------
 var TEMPLATE_VARS_HELP = '使える差し込み: {{宛名}} {{保護者名}} {{お子様名}} {{鑑定日}} {{アンケート名}} {{アンケートURL}} {{入力案内}} {{期限}} {{所要時間}} {{アンケート状況}} {{未回答の注意}} {{署名}} {{連絡先}}';
 
-var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}のアンケートをご案内します。保護者さま用と、お子様用があります。{{期限}}ご回答ください。(所要時間の目安:{{所要時間}})\n{{未回答の注意}}\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・お子様用のアンケートは、お子様ご本人に、お答えいただいてください。お子様の回答は、見たり、聞き出したりしないでください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n・リンクは、他の方に転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。\n\n{{署名}}';
+var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}のアンケートをご案内します。保護者さま用と、お子様用があります(パートナーの方が参加される場合は、パートナーの方用もあります)。{{期限}}ご回答ください。(所要時間の目安:{{所要時間}})\n{{未回答の注意}}\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n【お願い】\n・お子様用のアンケートは、お子様ご本人に、お答えいただいてください。お子様の回答は、見たり、聞き出したりしないでください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n・リンクは、他の方に転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。\n\n{{署名}}';
 
 var DEFAULT_TEMPLATES = (function () {
   var out = [];
@@ -585,8 +599,15 @@ function buildLinkEmails_(time, p, urls, templates) {
 /** 受付確認メール(保護者のメールへ。お子様の回答でも同じ)。回答内容は載せない */
 function buildReceiptEmail_(formKey, p) {
   var isChild = SURVEY.forms[formKey].role === 'child';
+  var isPartner = SURVEY.forms[formKey].role === 'partner';
   var tl = TIME_LABEL[SURVEY.forms[formKey].time];
   var foot = '\n\n' + CONFIG.SENDER_NAME + '\n' + CONFIG.CONTACT_MAIL;
+  if (isPartner) {
+    return {
+      subject: '【アンケートを受け付けました】パートナーの方用(' + tl + ')',
+      body: p.name + ' 様\n\nパートナーの方用(' + tl + ')のアンケートへのご回答を、受け付けました。ありがとうございました。\n(ご回答の内容は、このメールには書いていません。)\n\nご不明な点や、気になることがあれば、このメールにご返信ください。' + foot
+    };
+  }
   if (isChild) {
     return {
       subject: '【アンケートを受け付けました】お子様用(' + tl + ')',
@@ -659,7 +680,7 @@ function isReq_(def, q) { return def.category ? !!q.required : (q.kind === 'id' 
 
 function buildFormFromDef_(def, ss, confirmMessage) {
   var form = FormApp.create(def.title);
-  form.setDescription(def.intro);
+  form.setDescription(renderNames_(def.intro, {}));
   form.setCollectEmail(false);
   form.setAllowResponseEdits(false);
   form.setLimitOneResponsePerUser(false);
@@ -675,13 +696,13 @@ function buildFormFromDef_(def, ss, confirmMessage) {
   def.blocks.forEach(function (b) {
     if (b.type === 'page') {
       var item;
-      var pageTitle = b.title.replace(/^[A-Z](-[0-9]+)?\.\s*/, '');
+      var pageTitle = renderNames_(b.title, {}).replace(/^[A-Z](-[0-9]+)?\.\s*/, '');
       if (firstBlock) {
         item = form.addSectionHeaderItem().setTitle(pageTitle);
-        if (b.desc) item.setHelpText(b.desc);
+        if (b.desc) item.setHelpText(renderNames_(b.desc, {}));
       } else {
         item = form.addPageBreakItem().setTitle(pageTitle);
-        if (b.desc) item.setHelpText(b.desc);
+        if (b.desc) item.setHelpText(renderNames_(b.desc, {}));
       }
       pages.push({ block: b, item: item, isHeader: firstBlock });
       firstBlock = false;
@@ -889,7 +910,7 @@ function readRoster_(reg) {
       sessionDate: ds(r[RC.session]), status: r[RC.status], sent: { T0: ts(r[RC.T0]), T1: ts(r[RC.T1]), T2: ts(r[RC.T2]) },
       exName: t(r[RC.exName]), exPlan: t(r[RC.exPlan]), pNote: t(r[RC.pnote]), cNote: t(r[RC.cnote]), memo: t(r[RC.memo]),
       category: t(r[RC.category]) || 'career', company: t(r[RC.company]), dept: t(r[RC.dept]), phone: t(r[RC.phone]), headcount: t(r[RC.headcount]),
-      targets: t(r[RC.targets]), invoice: t(r[RC.invoice]), request: t(r[RC.request]), plan: t(r[RC.plan]), ended: ts(r[RC.ended]) };
+      targets: t(r[RC.targets]), invoice: t(r[RC.invoice]), request: t(r[RC.request]), plan: t(r[RC.plan]), ended: ts(r[RC.ended]), partnerJoin: t(r[RC.pjoin]), partnerName: t(r[RC.ppname]), partnerGender: t(r[RC.ppgender]), partnerBirth: t(r[RC.ppbirth]) };
   }).filter(function (r) { return r.id; });
 }
 
@@ -1244,7 +1265,7 @@ function buildDashboardData_(roster, pending, subs, safety, today, auto) {
       officialLine: f.officialLine, referrer: f.referrer, childName: f.childName, cGender: f.cGender, cBirth: f.cBirth, childEmail: f.childEmail,
       sessionDate: f.sessionDate, status: String(f.status || '参加中'), sent: f.sent, resp: resp, exName: f.exName, exPlan: f.exPlan,
       pNote: f.pNote, cNote: f.cNote, memo: f.memo, company: f.company, dept: f.dept, phone: f.phone, headcount: f.headcount,
-      targets: f.targets, invoice: f.invoice, request: f.request, plan: f.plan, ended: f.ended, auto: autoScheduleText_(f, auto.sch, auto.done), next: nextAction_(f, resp, today) };
+      targets: f.targets, invoice: f.invoice, request: f.request, plan: f.plan, ended: f.ended, partnerJoin: f.partnerJoin, partnerName: f.partnerName, partnerGender: f.partnerGender, partnerBirth: f.partnerBirth, auto: autoScheduleText_(f, auto.sch, auto.done), next: nextAction_(f, resp, today) };
   });
   var active = roster.filter(function (f) { return isParticipating_(f.status); });
   var careerActive = active.filter(function (f) { return (f.category || 'career') === 'career'; });
@@ -1455,12 +1476,12 @@ var DASHBOARD_HTML = [
   'c.appendChild(card("未対応の安全確認",s.safetyOpen,s.safetyOpen?"bad":""));c.appendChild(card("追加の鑑定の希望",s.extraRequests));c.appendChild(card("辞退・削除済み",s.withdrawn+s.deleted));',
   'document.getElementById("sub").textContent="更新: "+DATA.generatedAt+" 時点 / 申込 全"+s.total+"件"}',
   'function renderTabs(){var t=document.getElementById("tabs");t.innerHTML="";var items=CATS.map(function(x){return [x[0],x[1]+" ("+DATA.summary.by[x[0]].total+")"]});items.push(["pend","要確認の申込 ("+DATA.pending.length+")"]);items.push(["saf","安全確認 ("+DATA.safety.length+")"]);items.forEach(function(x){var b=el("button",tab===x[0]?"on":"",x[1]);b.onclick=function(){tab=x[0];render()};t.appendChild(b)})}',
-  'function dots(f,t){var n=t.charAt(1),c=!!f.resp["CT"+n],p=!!f.resp["PT"+n],w=el("span");var a=el("span","dot"+(c?" on":f.sent[t]?" sent":""));a.title="子ども "+(c?"回答済み":f.sent[t]?"送信済み・未回答":"未送信");var b=el("span","dot"+(p?" on":f.sent[t]?" sent":""));b.title="保護者 "+(p?"回答済み":f.sent[t]?"送信済み・未回答":"未送信");w.appendChild(el("span",null,t+" "));w.appendChild(a);w.appendChild(b);w.appendChild(document.createTextNode("  "));return w}',
+  'function dots(f,t){var n=t.charAt(1),c=!!f.resp["CT"+n],p=!!f.resp["PT"+n],w=el("span");var a=el("span","dot"+(c?" on":f.sent[t]?" sent":""));a.title="子ども "+(c?"回答済み":f.sent[t]?"送信済み・未回答":"未送信");var b=el("span","dot"+(p?" on":f.sent[t]?" sent":""));b.title="保護者 "+(p?"回答済み":f.sent[t]?"送信済み・未回答":"未送信");w.appendChild(el("span",null,t+" "));w.appendChild(a);w.appendChild(b);if(f.partnerJoin==="はい"){var q=!!f.resp["PP"+n],d=el("span","dot"+(q?" on":f.sent[t]?" sent":""));d.title="パートナー("+(f.partnerName||"")+") "+(q?"回答済み":f.sent[t]?"送信済み・未回答":"未送信");w.appendChild(d)}w.appendChild(document.createTextNode("  "));return w}',
   'function fields(f){var base=[["ID",f.id],["区分",f.category==="career"?"進路相談用":f.category==="general"?"一般鑑定者用":"法人鑑定者用"],["申込日時",f.appliedAt]];var mid;',
   'if(f.category==="career")mid=[["保護者",f.name+"("+f.pGender+" / "+f.pBirth+")"],["保護者メール",f.email],["LINE検索ID",f.line],["Instagram",f.insta||"-"],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["お子様",f.childName+"("+f.cGender+" / "+f.cBirth+")"],["お子様メール",f.childEmail],["追加の鑑定",(f.exName||"-")+" "+(f.exPlan||"")],["保護者の連絡事項",f.pNote||"-"],["お子様の連絡事項",f.cNote||"-"]];',
   'else if(f.category==="general")mid=[["お名前",f.name+"("+f.pGender+" / "+f.pBirth+")"],["メール",f.email],["LINE検索ID",f.line],["Instagram",f.insta||"-"],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["ご希望の内容",f.request||"-"],["自由記入欄",f.pNote||"-"]];',
   'else mid=[["法人名",f.company],["部署・役職",f.dept||"-"],["ご担当者",f.name],["メール",f.email],["電話番号",f.phone],["LINE検索ID",f.line],["公式LINE追加",f.officialLine||"-"],["紹介者",f.referrer],["プラン",f.plan||"-"],["鑑定を受ける人数",f.headcount],["鑑定を受ける方",f.targets],["ご希望の内容",f.request||"-"],["請求書・領収書の宛名",f.invoice||"-"],["自由記入欄",f.pNote||"-"]];',
-  'var tail=[["自動配信の予定",f.auto||"-"],["セッション終了",f.ended||"-"],["鑑定日",f.sessionDate||"未入力"],["参加状況",f.status]];if(f.category==="career")tail.push(["送信日時 T0/T1/T2",[f.sent.T0,f.sent.T1,f.sent.T2].map(function(x){return x||"-"}).join(" / ")]);tail.push(["メモ",f.memo||"-"]);return base.concat(mid,tail)}',
+  'var tail=[["パートナーの参加",f.partnerJoin==="はい"?"はい("+(f.partnerName||"")+" / "+(f.partnerGender||"")+" / "+(f.partnerBirth||"")+")":(f.partnerJoin||"-")],["自動配信の予定",f.auto||"-"],["セッション終了",f.ended||"-"],["鑑定日",f.sessionDate||"未入力"],["参加状況",f.status]];if(f.category==="career")tail.push(["送信日時 T0/T1/T2",[f.sent.T0,f.sent.T1,f.sent.T2].map(function(x){return x||"-"}).join(" / ")]);tail.push(["メモ",f.memo||"-"]);return base.concat(mid,tail)}',
   'function dl(f){var d=el("dl","dl");fields(f).forEach(function(r){d.appendChild(el("dt",null,r[0]));d.appendChild(el("dd",null,r[1]))});return d}',
   'function renderFam(v){var q=document.getElementById("q").value.trim().toLowerCase(),st=document.getElementById("st").value;',
   'var rows=DATA.families.filter(function(f){if(f.category!==tab)return false;if(st&&f.status!==st)return false;if(!q)return true;return [f.id,f.name,f.childName,f.company,f.email,f.childEmail,f.line,f.insta,f.referrer].join(" ").toLowerCase().indexOf(q)>=0});',
@@ -1534,7 +1555,7 @@ function publicSiteData_(cat) {
           var parts = applyTitleParts_(b);
           if (b.id === 'EX1') parts = { title: '追加で鑑定を受ける方の情報', hint: '人数を選ぶと、その人数分の入力欄が出ます。' };
           if (b.id === 'CO11') parts = { title: '鑑定を受ける方の情報', hint: '代表の方から順に、追加の方の分までご入力ください。' };
-          return { type: 'q', id: b.id, text: parts.title, kind: b.kind, required: !!b.required, choices: b.choices || null, help: [b.help, parts.hint].filter(Boolean).join('\n'), gate: !!b.gate };
+          return { type: 'q', id: b.id, text: parts.title, kind: b.kind, required: !!b.required, choices: b.choices || null, help: [b.help, parts.hint].filter(Boolean).join('\n'), gate: !!b.gate, hiddenWhen: b.hiddenWhen || null };
         })
       };
     })
@@ -1584,7 +1605,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-23-a';
+var SITE_VERSION = '2026-10-23-b';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -1737,26 +1758,27 @@ SITE_CSS_ + '</style></head><body>' +
 '<main><div id="app"></div></main><footer id="foot"></footer>' +
 '<script>var SITE = __DATA__;__EXT__' +
 'var el=function(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e;};' +
-'var cur=null,fields={},app=document.getElementById("app");' +
+'var cur=null,fields={},app=document.getElementById("app"),updCond=function(){};' +
 'function linkify(box,text){String(text).split(/(https?:\\/\\/[^\\s]+)/).forEach(function(p){if(/^https?:/.test(p)){var a=el("a","",p);a.href=p;a.target="_blank";a.rel="noopener";box.appendChild(a);}else box.appendChild(document.createTextNode(p));});}' +
 'var checks={email:function(v){return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v);},birth:function(v){if(!/^[0-9]{8}$/.test(v))return false;var y=+v.slice(0,4),m=+v.slice(4,6),d=+v.slice(6,8),t=new Date(y,m-1,d);return y>1900&&t.getFullYear()===y&&t.getMonth()===m-1&&t.getDate()===d&&t<=new Date();},phone:function(v){return /^[0-9\\-]{9,13}$/.test(v);},katakana:function(v){return /^[ァ-ヺー・\\s　]+$/.test(v);},int:function(v){return /^[0-9]{1,3}$/.test(v);}};' +
 'var msg={email:"メールアドレスの形式が正しくありません",birth:"生年月日は8桁の半角数字で入力してください(例:20000218)",phone:"電話番号は、数字とハイフンで入力してください",katakana:"カタカナで入力してください",int:"半角数字で入力してください"};' +
 'function show(key){cur=SITE.cats.filter(function(c){return c.key===key;})[0];fields={};app.innerHTML="";' +
 '  var tabs=el("div","tabs");if(SITE.cats.length>1)SITE.cats.forEach(function(c){var b=el("button","tab"+(c.key===key?" on":""));b.type="button";b.appendChild(el("b","",c.label));b.appendChild(el("small","",c.sub));b.onclick=function(){show(c.key);window.scrollTo(0,0);};tabs.appendChild(b);});if(SITE.cats.length>1)app.appendChild(tabs);' +
-' var banner=el("div","banner");app.appendChild(banner);var card=null;' +
-' cur.blocks.forEach(function(b,i){if(b.type==="page"){if(b.conditional)return;card=el("div","card");card.appendChild(el("h2","",b.title));if(b.desc)card.appendChild(el("div","desc",b.desc));if(i===0){card.appendChild(el("span","fee",cur.fee));}app.appendChild(card);return;}' +
-'  if(b.id==="AP_VIEW")return;if(!card){card=el("div","card");app.appendChild(card);}' +
+' var banner=el("div","banner");app.appendChild(banner);var card=null,condCards=[];' +
+' cur.blocks.forEach(function(b,i){if(b.type==="page"){card=el("div","card"+(b.conditional?" cond":""));if(b.conditional){card.style.display="none";condCards.push(card);}card.appendChild(el("h2","",b.title));if(b.desc)card.appendChild(el("div","desc",b.desc));if(i===0){card.appendChild(el("span","fee",cur.fee));}app.appendChild(card);return;}' +
+'  if(b.id==="AP_VIEW")return;if(!card){card=el("div","card");app.appendChild(card);}if(b.hiddenWhen&&card.className.indexOf("cond")>-1)card.__hw=b.hiddenWhen;' +
 '  var q=el("div","q"),l=el("label","t",b.text);if(b.required){l.appendChild(el("span","req","必須"));}q.appendChild(l);if(b.help){var h=el("div","help");linkify(h,b.help);q.appendChild(h);}' +
 '  var f={b:b,q:q,get:null};' +
 '  var isP=(cur.key==="corp"&&b.id==="CO11");if(isP){var pr=corpPersons_(el,function(){return corpAddCount_(fields.CO10?fields.CO10.get():"");},SITE.corp.base,SITE.corp.add);q.appendChild(pr.node);f.get=pr.get;f.check=pr.check;if(fields.CO10)fields.CO10.onchange=pr.refresh;}' +
 '  else if(cur.key==="career"&&b.id==="EX1"){var pe=extraPersons_(el,function(){return extraCountC_(fields.EX0?fields.EX0.get():"");},SITE.extra);q.appendChild(pe.node);f.get=pe.get;f.check=pe.check;if(fields.EX0)fields.EX0.onchange=pe.refresh;}' +
-'  else if(b.kind==="single"){var name="r_"+b.id;(b.choices||[]).forEach(function(c){var lab=el("label","opt"),r=document.createElement("input");r.type="radio";r.name=name;r.value=c;r.onchange=function(){if(f.onchange)f.onchange();};lab.appendChild(r);lab.appendChild(el("span","",c));q.appendChild(lab);});f.get=function(){var x=q.querySelector("input:checked");return x?x.value:"";};}' +
+'  else if(b.kind==="single"){var name="r_"+b.id;(b.choices||[]).forEach(function(c){var lab=el("label","opt"),r=document.createElement("input");r.type="radio";r.name=name;r.value=c;r.onchange=function(){if(f.onchange)f.onchange();updCond();};lab.appendChild(r);lab.appendChild(el("span","",c));q.appendChild(lab);});f.get=function(){var x=q.querySelector("input:checked");return x?x.value:"";};}' +
 '  else if(b.kind==="consent"||b.kind==="check"){var lab=el("label","opt"),r=document.createElement("input");r.type="checkbox";lab.appendChild(r);lab.appendChild(el("span","",b.choices[0]));q.appendChild(lab);f.get=function(){return r.checked?b.choices[0]:"";};}' +
 '  else{var inp=b.kind==="text"?document.createElement("textarea"):document.createElement("input");if(b.kind!=="text")inp.type=b.kind==="email"?"email":b.kind==="phone"?"tel":"text";if(b.kind==="birth")inp.inputMode="numeric";inp.autocomplete="off";q.appendChild(inp);f.get=function(){return inp.value.trim();};}' +
 '  q.appendChild(el("div","err"));card.appendChild(q);fields[b.id]=f;});' +
+' updCond=function(){condCards.forEach(function(cd){var hw=cd.__hw;if(!hw)return;var v=fields[hw.id]?fields[hw.id].get():"";cd.style.display=(v!==""&&v!==hw.value)?"":"none";});};' +
 ' var hp=el("div","hp");var hpi=document.createElement("input");hpi.type="text";hpi.tabIndex=-1;hpi.autocomplete="off";hp.appendChild(hpi);app.appendChild(hp);' +
 ' var btn=el("button","btn","同意して、送信する");btn.type="button";app.appendChild(btn);' +
-' btn.onclick=function(){var ans={},bad=null;Object.keys(fields).forEach(function(id){var f=fields[id],v=f.get(),e=null;ans[id]=v;if(f.check){e=f.check();}else if(f.b.required&&!v)e=f.b.kind==="consent"||f.b.kind==="check"?"チェックをお願いします":"入力してください";else if(v&&checks[f.b.kind]&&!checks[f.b.kind](v))e=msg[f.b.kind];f.q.classList.toggle("bad",!!e);f.q.querySelector(".err").textContent=e||"";if(e&&!bad)bad=f.q;});' +
+' btn.onclick=function(){var ans={},bad=null;Object.keys(fields).forEach(function(id){var f=fields[id],hc=f.q.closest&&f.q.closest(".card"),v=f.get(),e=null;if(hc&&hc.style.display==="none"){ans[id]="";f.q.classList.remove("bad");return;}ans[id]=v;if(f.check){e=f.check();}else if(f.b.required&&!v)e=f.b.kind==="consent"||f.b.kind==="check"?"チェックをお願いします":"入力してください";else if(v&&checks[f.b.kind]&&!checks[f.b.kind](v))e=msg[f.b.kind];f.q.classList.toggle("bad",!!e);f.q.querySelector(".err").textContent=e||"";if(e&&!bad)bad=f.q;});' +
 '  ["AP2:AP3","CH4:CH5","GE4:GE5","CO4:CO5"].forEach(function(p){var a=p.split(":");if(fields[a[0]]&&ans[a[0]]&&ans[a[1]]&&ans[a[0]]!==ans[a[1]]){var f=fields[a[1]];f.q.classList.add("bad");f.q.querySelector(".err").textContent="上のメールアドレスと一致していません";if(!bad)bad=f.q;}});' +
 '  if(bad){banner.style.display="block";banner.textContent="入力内容を、ご確認ください(赤い項目)";bad.scrollIntoView({behavior:"smooth",block:"center"});return;}' +
 '  banner.style.display="none";btn.disabled=true;btn.textContent="送信しています…";' +
@@ -1830,7 +1852,7 @@ function requireSurveySiteUrl_(reg) {
   return u;
 }
 
-function surveyFormKey_(role, time) { return (role === 'child' ? 'CT' : 'PT') + time.charAt(1); }
+function surveyFormKey_(role, time) { return (role === 'child' ? 'CT' : (role === 'partner' ? 'PP' : 'PT')) + time.charAt(1); }
 
 /** 保護者のメールアドレスに一致する、進路相談の家庭(辞退・削除済みを除く)。同じアドレスで、お子様の回答もできる */
 function surveyFamiliesFor_(roster, email) {
@@ -1845,9 +1867,11 @@ function surveyFamiliesFor_(roster, email) {
 function surveyOptions_(families, answered) {
   var out = [];
   families.forEach(function (f) {
-    ['parent', 'child'].forEach(function (role) {
+    ['parent', 'child', 'partner'].forEach(function (role) {
+      if (role === 'partner' && f.partnerJoin !== 'はい') return;
       var due = surveyDue_(f, role, answered);
-      out.push({ id: f.id, role: role, label: role === 'parent' ? '保護者さま(' + (f.name || '') + ' 様)' : 'お子様(' + (f.childName || '') + ' さん)', state: due.state, time: due.time || '', form: due.key || '' });
+      var label = role === 'parent' ? '保護者さま(' + (f.name || '') + ' 様)' : (role === 'child' ? 'お子様(' + (f.childName || '') + ' さん)' : 'パートナーの方(' + (f.partnerName || '') + ' 様)');
+      out.push({ id: f.id, role: role, label: label, state: due.state, time: due.time || '', form: due.key || '' });
     });
   });
   return out;
@@ -1867,13 +1891,14 @@ function surveyDue_(fam, role, answered) {
 }
 
 /** 画面に渡す設問の定義。区分の記号(A.など)は外す。調査用IDは画面には出さない(サーバーで付ける) */
-function surveyClientDef_(key) {
+function surveyClientDef_(key, vars) {
   var d = SURVEY.forms[key];
+  var rn = function (x) { return renderNames_(x, vars); };
   return {
-    key: key, role: d.role, title: d.title, intro: d.intro,
+    key: key, role: d.role, title: d.title, intro: rn(d.intro),
     blocks: d.blocks.filter(function (b) { return !(b.type === 'q' && b.kind === 'id'); }).map(function (b) {
-      if (b.type === 'page') return { type: 'page', title: String(b.title).replace(/^[A-Z](-[0-9]+)?\.\s*/, ''), desc: b.desc || '', conditional: !!b.conditional };
-      return { type: 'q', id: b.id, text: b.text, kind: b.kind, required: isReq_(d, b), choices: choicesOf_(b), exclusive: b.exclusive || '', hiddenWhen: b.hiddenWhen || null, gate: b.gate || null, note: b.note || '' };
+      if (b.type === 'page') return { type: 'page', title: rn(String(b.title)).replace(/^[A-Z](-[0-9]+)?\.\s*/, ''), desc: rn(b.desc || ''), conditional: !!b.conditional };
+      return { type: 'q', id: b.id, text: rn(b.text), kind: b.kind, required: isReq_(d, b), choices: choicesOf_(b), exclusive: b.exclusive || '', hiddenWhen: b.hiddenWhen || null, gate: b.gate || null, note: b.note || '' };
     })
   };
 }
@@ -1952,15 +1977,16 @@ function surveyStart(token, id, role) {
   var raw = /^[0-9a-f]{64}$/.test(token) ? cache.get('sv_tok_' + token) : null;
   if (!raw) return { ok: false, expired: true, message: '時間がたったため、最初からやり直してください。メールアドレスの入力画面にもどります。' };
   var sess = JSON.parse(raw);
-  if (role !== 'parent' && role !== 'child') return { ok: false, message: '回答者を選んでください。' };
+  if (role !== 'parent' && role !== 'child' && role !== 'partner') return { ok: false, message: '回答者を選んでください。' };
   var reg = regSS_(), db = dbSS_();
   var fams = surveyFamiliesFor_(readRoster_(reg), sess.email).filter(function (f) { return f.id === String(id); });
   if (!fams.length) return { ok: false, message: '回答者が見つかりません。' };
+  if (role === 'partner' && fams[0].partnerJoin !== 'はい') return { ok: false, message: '回答者が見つかりません。' };
   var due = surveyDue_(fams[0], role, surveyAnswered_(db));
   if (due.state !== 'due') return { ok: false, done: true, message: 'この方のアンケートは、いま、答えられるものがありません。' };
   sess.cur = { id: fams[0].id, role: role, key: due.key };
   cache.put('sv_tok_' + token, JSON.stringify(sess), 21600);
-  return { ok: true, who: role === 'child' ? (fams[0].childName || '') : (fams[0].name || ''), def: surveyClientDef_(due.key) };
+  return { ok: true, who: role === 'child' ? (fams[0].childName || '') : (role === 'partner' ? (fams[0].partnerName || '') : (fams[0].name || '')), def: surveyClientDef_(due.key, { child: fams[0].childName, parent: fams[0].name }) };
 }
 
 function maskEmail_(e) {
@@ -2365,7 +2391,7 @@ function buildSummary() {
     else if (st === '未回答') a.miss++; else a.hid++;
   });
   var text = {};
-  SURVEY.formKeys.forEach(function (k) { questionsOf_(k).forEach(function (q) { text[k + '|' + q.id] = q.text; }); });
+  SURVEY.allKeys.forEach(function (k) { questionsOf_(k).forEach(function (q) { text[k + '|' + q.id] = renderNames_(q.text, {}); }); });
   var out = [['フォームID', '設問ID', '設問文', '採用送信数', '回答数', '未回答数', '非表示数', '平均(数値コード、8除く)', '中央値', '分布(回答内容=人数。複数選択は選択肢ごと)']];
   Object.keys(agg).sort().forEach(function (k) {
     var a = agg[k];
