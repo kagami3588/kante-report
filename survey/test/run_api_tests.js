@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-24-a/.test(pa.html) && /2026-10-24-a/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-25-a/.test(pa.html) && /2026-10-25-a/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -692,6 +692,42 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('案内メール: 「このリンクと、ご登録のメールアドレスを、ご家族に共有すると、それぞれの携帯から回答できます」の案内がある。リンクは「ご家族以外には転送しない」', /このリンクと、ご登録のメールアドレスを、ご家族\(お子様・パートナーの方\)に共有していただくと、それぞれの携帯から、回答できます/.test(m.parent.body) && /ご家族以外の方には、転送しないでください/.test(m.parent.body) && !/他の方に転送しないでください/.test(m.parent.body));
   const pg = E.run('surveyPage_')();
   t('アンケートのページにも、「リンクとメールアドレスをご家族に共有すると、それぞれの携帯から回答できます」の案内がある', /共有すると、それぞれの携帯から、回答できます/.test(pg));
+}
+{ // 管理画面: 回答を、お名前つきで見る
+  const E = makeEnv('me@example.com');
+  E.addFamily({ pjoin: 'はい', ppname: '山田 次郎', ppgender: '男性', ppbirth: '19830101' });
+  E.roster.values[1][E.rc('T0')] = '2026-11-01T10:00:00';
+  const lg = E.run('surveyLogin')('hanako@example.com');
+  const fullAns = (def) => { const a = {}; def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { a[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.choices[0]; }); return a; };
+  const sp = E.run('surveyStart')(lg.token, 'F0001', 'parent');
+  E.run('surveySubmit')(lg.token, Object.assign(fullAns(sp.def), { PW1: '対話の時間を持ちたいため', PX2: 'はい', PX2t: '明るくて優しい' }));
+  const sc = E.run('surveyStart')(lg.token, 'F0001', 'child'); E.run('surveySubmit')(lg.token, fullAns(sc.def));
+  const r = E.run('apiResponses')('F0001');
+  const gp = r.groups.find(g => g.role === 'parent'), gc = r.groups.find(g => g.role === 'child');
+  t('回答を見る: 申込者・お子様の回答が、時期ごとに、お名前つきで返る(パートナーは未回答なので出ない)', r.groups.length === 2 && gp.timeLabel === '受講前' && gp.who === '山田 花子' && gc.who === '山田 太郎' && gp.roleLabel === '申込者' && /^2026-/.test(gp.answeredAt));
+  const item = (g, re) => g.items.find(x => re.test(x.text));
+  t('回答を見る: 設問の文は、お名前入り(下の名前)で、回答内容と並ぶ。自由記述は、目印(free)つき', !!item(gp, /^太郎さんの性格や特徴を理解している。$/) && item(gp, /受講するに至った理由/).answer === '対話の時間を持ちたいため' && item(gp, /受講するに至った理由/).free === true && item(gp, /特徴について、教えてください/).answer === 'はい' && item(gp, /特徴を、自由にご記入/).answer === '明るくて優しい' && !!item(gc, /^花子さんが何を大切にしているのか理解している。$/) && item(gp, /性格や特徴を理解/).free === false);
+  t('回答を見る: セクション名(ページの題名)も付く。回答のない設問(隠れた自由記述など)は出ない', gp.items.some(x => x.section === '太郎さんへの理解') && !item(gp, /大切にしていることを、自由にご記入/));
+  t('回答を見る: 管理者以外は呼べない。存在しないIDはエラー', /権限がありません/.test(throws(() => makeEnv('other@example.com').run('apiResponses')('F0001')) || '') && !!throws(() => E.run('apiResponses')('F0099')));
+  // 画面
+  const data = E.run('apiData')();
+  const page = E.run('dashboardPage_')(data);
+  const src = page.slice(page.indexOf('<script>') + 8, page.lastIndexOf('</script>'));
+  const mk = (tag) => { const e = { tag, children: [], style: {}, _text: '', className: '', disabled: false, value: '', parentNode: null, appendChild(c) { c.parentNode = this; this.children.push(c); return c; }, removeChild(c) { this.children = this.children.filter(x => x !== c); }, querySelector() { return null; }, set innerHTML(v) { this.children = []; this._text = ''; }, get innerHTML() { return ''; }, set textContent(v) { this._text = String(v); }, get textContent() { return this._text; }, set colSpan(v) {} }; return e; };
+  const ids = {}; const doc = { createElement: mk, createTextNode: (x) => { const e = mk('#text'); e._text = x; return e; }, getElementById: (id) => ids[id] || (ids[id] = mk(id)) };
+  ids.q = mk('q'); ids.st = mk('st');
+  let ok2; const calls = [];
+  const gsr = () => { const o = { withSuccessHandler: (f) => { ok2 = f; return o; }, withFailureHandler: () => o }; ['apiResponses', 'apiSetSessionDate'].forEach(n => { o[n] = (...a) => { calls.push([n, a]); }; }); return o; };
+  const win = vm.createContext({ document: doc, window: {}, google: { script: { run: null } }, setTimeout: () => 1, clearTimeout: () => {} });
+  win.window.google = win.google; win.google.script.run = gsr();
+  vm.runInContext(src, win);
+  const findAll = (n, f, out = []) => { if (f(n)) out.push(n); n.children.forEach(c => findAll(c, f, out)); return out; };
+  const text = (n) => [n._text].concat(...n.children.map(text)).join('|');
+  const rb = findAll(ids.view, n => n.tag === 'button' && n._text === '回答を見る')[0];
+  rb.onclick();
+  t('回答を見る(画面): 家庭の詳細に「回答を見る」ボタンがあり、押すと apiResponses(ID) が呼ばれる', !!rb && calls.some(c => c[0] === 'apiResponses' && c[1][0] === 'F0001'));
+  ok2(r);
+  t('回答を見る(画面): 結果が、時期・回答者(お名前)・設問と回答の形で表示される', /受講前 \/ 申込者\(山田 花子\)/.test(text(ids.view)) && /対話の時間を持ちたいため/.test(text(ids.view)) && /管理者のみ/.test(text(ids.view)));
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

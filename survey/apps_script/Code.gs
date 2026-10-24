@@ -1396,6 +1396,45 @@ function findFamily_(reg, id) {
 /** 最新のデータを返す(サイトの更新用) */
 function apiData() { return dashboardData_(apiGuard_()); }
 
+/** 管理画面: その家庭の回答を、お名前つきで、読める形で返す(管理者のみ)。回答DBの回答(分析採用のもの)を、設問の文と並べる */
+function apiResponses(id) {
+  var reg = apiGuard_();
+  var fam = findFamily_(reg, id);
+  var db = dbSS_();
+  var vals = db.getSheetByName(SHEETS.long).getDataRange().getValues();
+  var head = vals.shift(), ix = {};
+  head.forEach(function (h, i) { ix[h] = i; });
+  var subs = db.getSheetByName(SHEETS.submissions).getDataRange().getValues();
+  var when = {};
+  subs.slice(1).forEach(function (r) { if (String(r[2]) === fam.id && isTrue_(r[6])) when[String(r[4])] = cellStr_(r[1]); });
+  var byKey = {};
+  vals.forEach(function (r) {
+    if (String(r[ix['調査用ID']]) !== fam.id || !isTrue_(r[ix['分析採用']])) return;
+    var k = String(r[ix['フォームID']]);
+    (byKey[k] = byKey[k] || {})[String(r[ix['設問ID']])] = { value: String(r[ix['回答内容']]), status: String(r[ix['状態']]) };
+  });
+  var vars = { child: fam.childName, parent: fam.name };
+  var who = { parent: fam.name, child: fam.childName, partner: fam.partnerName };
+  var roleLabel = { parent: '申込者', child: 'お子様', partner: 'パートナー' };
+  var groups = [];
+  LINK_TIMES.forEach(function (t) {
+    ['parent', 'child', 'partner'].forEach(function (role) {
+      var key = surveyFormKey_(role, t);
+      if (!byKey[key]) return;
+      var def = SURVEY.forms[key], section = '', items = [];
+      def.blocks.forEach(function (b) {
+        if (b.type === 'page') { section = renderNames_(String(b.title), vars).replace(/^[A-Z](-[0-9]+)?\.\s*/, ''); return; }
+        if (b.kind === 'id') return;
+        var a = byKey[key][b.id];
+        if (!a || a.status !== '回答') return;
+        items.push({ section: section, text: renderNames_(b.text, vars), answer: a.value, free: b.kind === 'text' });
+      });
+      groups.push({ key: key, time: t, timeLabel: TIME_LABEL[t], role: role, roleLabel: roleLabel[role], who: who[role] || '', answeredAt: when[key] || '', items: items });
+    });
+  });
+  return { id: fam.id, name: fam.name, childName: fam.childName, partnerName: fam.partnerName, groups: groups };
+}
+
 /** 受講日を入力・変更する。空文字で消去 */
 function apiSetSessionDate(id, date) {
   var reg = apiGuard_();
@@ -1481,6 +1520,7 @@ var DASHBOARD_HTML = [
   '.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:8px}table{border-collapse:collapse;width:100%;min-width:760px}',
   'th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--mut);font-weight:600;font-size:12px;white-space:nowrap}',
   'tr.row{cursor:pointer}tr.row:hover{background:rgba(46,109,164,.08)}tr.det td{background:var(--bg)}',
+  '.resp{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}.rh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.rg{margin:12px 0;padding-top:8px;border-top:1px dashed var(--line)}.rt{font-weight:700;margin-bottom:6px}.rs{margin:10px 0 4px;color:var(--mut);font-size:12px}.rq{margin:6px 0;padding:6px 8px;border-left:3px solid var(--line)}.rq.free{border-left-color:var(--acc);background:rgba(47,74,125,.06)}.rqt{color:var(--mut);font-size:12px}.rqa{white-space:pre-wrap;word-break:break-all}',
   '.dl{display:grid;grid-template-columns:160px 1fr;gap:2px 12px}.dl dt{color:var(--mut)}.dl dd{margin:0;word-break:break-all;white-space:pre-wrap}',
   '.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;border:1px solid var(--line)}.tag.ok{color:var(--ok);border-color:var(--ok)}.tag.warn{color:var(--warn);border-color:var(--warn)}.tag.bad{color:var(--bad);border-color:var(--bad)}',
   '.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;border:1px solid var(--mut)}.dot.on{background:var(--ok);border-color:var(--ok)}.dot.sent{background:var(--warn);border-color:var(--warn)}',
@@ -1510,7 +1550,9 @@ var DASHBOARD_HTML = [
   'var l2=el("label",null,"参加状況");a.appendChild(l2);var se=el("select");["参加中","辞退","完了"].forEach(function(x){var o=el("option",null,x);o.value=x;if(f.status===x)o.selected=true;se.appendChild(o)});se.disabled=gone;a.appendChild(se);var sv2=el("button","act","保存");sv2.disabled=gone;sv2.onclick=function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();call("apiSetStatus",[f.id,se.value])};a.appendChild(sv2);',
   'if(f.category==="career"&&!gone&&f.status==="参加中"){a.appendChild(armBtn(f.sent.T1?"セッション終了を記録(送信済み)":"セッション終了(アンケートを送る)",function(){call("apiEndSession",[f.id])}))}',
   'if(f.category==="career"&&!gone){["T0","T1","T2"].forEach(function(t){a.appendChild(armBtn(t+"のリンクを送る",function(){call("apiSendLinks",[t,[f.id]])}))})}',
+  'if(!gone&&f.category==="career"){var rb=el("button","act","回答を見る");rb.onclick=function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();showResp(f,a)};a.appendChild(rb)}',
   'if(!gone)a.appendChild(armBtn("データを削除",function(){call("apiDeleteFamily",[f.id])},"danger"));return a}',
+  'function showResp(f,host){var old=host.parentNode.querySelector(".resp");if(old)old.parentNode.removeChild(old);var box=el("div","resp");box.appendChild(el("div",null,"読み込み中…"));host.parentNode.appendChild(box);if(!window.google||!google.script||!google.script.run){box.textContent="この画面では開けません。Apps Scriptのウェブアプリとして開いてください。";return}google.script.run.withSuccessHandler(function(r){box.innerHTML="";if(!r||!r.groups.length){box.appendChild(el("div",null,"まだ、回答がありません。"));return}var h=el("div","rh");h.appendChild(el("b",null,"回答の内容(管理者のみ・お名前つき)"));var cb=el("button","act","閉じる");cb.onclick=function(ev){if(ev&&ev.stopPropagation)ev.stopPropagation();box.parentNode.removeChild(box)};h.appendChild(cb);box.appendChild(h);r.groups.forEach(function(g){var gg=el("div","rg");gg.appendChild(el("div","rt",g.timeLabel+" / "+g.roleLabel+"("+g.who+")"+(g.answeredAt?"  回答日時:"+g.answeredAt:"")));var sec="";g.items.forEach(function(it){if(it.section!==sec){sec=it.section;if(sec)gg.appendChild(el("div","rs",sec))}var row=el("div","rq"+(it.free?" free":""));row.appendChild(el("div","rqt",it.text));row.appendChild(el("div","rqa",it.answer));gg.appendChild(row)});box.appendChild(gg)})}).withFailureHandler(function(e){box.textContent="開けませんでした: "+(e&&e.message?e.message:e)}).apiResponses(f.id)}',
   'function renderBulk(){var b=document.getElementById("bulk");b.innerHTML="";if(tab!=="career")return;var s=DATA.summary;["T0","T1","T2"].forEach(function(t){var n=s.toSend[t];var x=armBtn(t+"のリンクを、条件に合う全家庭に送る ("+n+")",function(){call("apiSendLinks",[t,null])});x.disabled=!n;b.appendChild(x)})}',
   'function card(l,v,k){var d=el("div","card"+(k?" "+k:""));d.appendChild(el("b",null,String(v)));d.appendChild(el("span",null,l));return d}',
   'function renderCards(){var s=DATA.summary,c=document.getElementById("cards");c.innerHTML="";',
@@ -1650,7 +1692,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-24-a';
+var SITE_VERSION = '2026-10-25-a';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
