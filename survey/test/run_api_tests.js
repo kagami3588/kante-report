@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-23-l/.test(pa.html) && /2026-10-23-l/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-24-a/.test(pa.html) && /2026-10-24-a/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -685,6 +685,13 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('申込直後の自動送信: 個人・法人プランには、アンケートの案内を送らない', !E4.sent.some(m => /アンケートのご案内/.test(m.subject)));
   E.run('runAutomation_')(E.reg, E.db);
   t('申込直後の自動送信: 送信済みなので、毎朝の自動配信で、T0が二重に送られない', E.sent.filter(m => /受講前のアンケート/.test(m.subject) && m.to === 'auto@example.com').length === 1);
+}
+{ // ご家族への共有の案内
+  const E = makeEnv('');
+  const m = E.run('buildLinkEmails_')('T0', { name: '林 竜輔', email: 'h@example.com', childName: '林 巫心', sessionDate: '' }, { parent: 'https://site.example/x?page=survey' });
+  t('案内メール: 「このリンクと、ご登録のメールアドレスを、ご家族に共有すると、それぞれの携帯から回答できます」の案内がある。リンクは「ご家族以外には転送しない」', /このリンクと、ご登録のメールアドレスを、ご家族\(お子様・パートナーの方\)に共有していただくと、それぞれの携帯から、回答できます/.test(m.parent.body) && /ご家族以外の方には、転送しないでください/.test(m.parent.body) && !/他の方に転送しないでください/.test(m.parent.body));
+  const pg = E.run('surveyPage_')();
+  t('アンケートのページにも、「リンクとメールアドレスをご家族に共有すると、それぞれの携帯から回答できます」の案内がある', /共有すると、それぞれの携帯から、回答できます/.test(pg));
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
