@@ -2380,7 +2380,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-25-c';
+var SITE_VERSION = '2026-10-25-d';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2786,9 +2786,25 @@ function surveyAnswered_(db) {
 }
 
 /** メールアドレス(申込者のもの)での入室(誰でも呼べる)。回答者(申込者・お子様)の選択肢と、送信用の合い鍵(6時間有効)を返す */
+/** テスト確認用: 入力欄に「3588」と入れると、全アンケートを、ダミーのお名前で確認できる(回答は保存しない・個人情報は使わない) */
+var PREVIEW_CODE = '3588';
+var PREVIEW_FAM = { name: '山田 花子', childName: '山田 太郎', partnerName: '山田 次郎', partnerJoin: 'はい' };
+function surveyPreviewOptions_() {
+  var roleOf = { parent: '申込者', child: 'お子様', partner: 'パートナーの方' };
+  return SURVEY.allKeys.map(function (k) {
+    var d = SURVEY.forms[k];
+    return { id: k, role: d.role, label: 'テスト確認用: ' + roleOf[d.role] + '(' + givenName_(d.role === 'child' ? PREVIEW_FAM.childName : (d.role === 'partner' ? PREVIEW_FAM.partnerName : PREVIEW_FAM.name)) + ')', state: 'due', time: d.time, form: k, preview: true };
+  });
+}
+
 function surveyLogin(email) {
   var generic = { ok: false, message: 'このメールアドレスでは、いま答えられるアンケートが見つかりません。申込のときに登録した、申込者のメールアドレスを、ご確認ください。ご案内のメールが届いていない場合は、' + CONTACT_MAIL + ' までご連絡ください。' };
   email = String(email || '').trim().toLowerCase().slice(0, 200);
+  if (email === PREVIEW_CODE) {
+    var ptoken = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+    CacheService.getScriptCache().put('sv_tok_' + ptoken, JSON.stringify({ preview: true }), 21600);
+    return { ok: true, token: ptoken, preview: true, options: surveyPreviewOptions_() };
+  }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, message: 'メールアドレスの形式が正しくありません。' };
   var cache = CacheService.getScriptCache();
   if (rateLimited_(cache, 'sv_login_all_' + Math.floor(Date.now() / 600000), 300, 700)) return { ok: false, message: 'ただいま、混み合っています。しばらくしてから、もう一度お試しください。' };
@@ -2813,6 +2829,11 @@ function surveyStart(token, id, role, edit) {
   if (!raw) return { ok: false, expired: true, message: '時間がたったため、最初からやり直してください。メールアドレスの入力画面にもどります。' };
   var sess = JSON.parse(raw);
   if (role !== 'parent' && role !== 'child' && role !== 'partner') return { ok: false, message: '回答者を選んでください。' };
+  if (sess.preview) {
+    var pk = String(id);
+    if (SURVEY.allKeys.indexOf(pk) === -1 || SURVEY.forms[pk].role !== role) return { ok: false, message: '始められませんでした。' };
+    return { ok: true, preview: true, who: givenName_(role === 'child' ? PREVIEW_FAM.childName : (role === 'partner' ? PREVIEW_FAM.partnerName : PREVIEW_FAM.name)), def: surveyClientDef_(pk, nameVars_(PREVIEW_FAM, role)) };
+  }
   var reg = regSS_(), db = dbSS_();
   var fams = surveyFamiliesFor_(readRoster_(reg), sess.email).filter(function (f) { return f.id === String(id); });
   if (!fams.length) return { ok: false, message: '回答者が見つかりません。' };
@@ -2869,6 +2890,7 @@ function surveySubmit(token, answers) {
   var raw = /^[0-9a-f]{64}$/.test(token) ? cache.get('sv_tok_' + token) : null;
   if (!raw) return { ok: false, message: '時間がたったため、最初からやり直してください。メールアドレスの入力画面にもどります。', expired: true };
   var sess = JSON.parse(raw);
+  if (sess.preview) return { ok: true, preview: true, options: surveyPreviewOptions_() }; // テスト確認用: 回答は、保存しない
   if (!sess.cur) return { ok: false, message: '回答者を選んでから、始めてください。' };
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -2939,7 +2961,7 @@ function surveyClient_() {
       google.script.run.withSuccessHandler(function (r) {
         btn.disabled = false; btn.textContent = 'はじめる';
         if (!r || !r.ok) { msg.style.display = 'block'; msg.textContent = (r && r.message) || 'うまくいきませんでした。'; return; }
-        state.token = r.token; chooser(r.options, '');
+        state.token = r.token; state.preview = !!r.preview; chooser(r.options, '');
       }).withFailureHandler(function () {
         btn.disabled = false; btn.textContent = 'はじめる'; msg.style.display = 'block'; msg.textContent = '通信できませんでした。もう一度お試しください。';
       }).surveyLogin(inp.value);
@@ -2953,10 +2975,10 @@ function surveyClient_() {
     app.innerHTML = '';
     var c = el('div', 'card');
     if (thanks) { c.appendChild(el('div', 'ok', '✓')); c.appendChild(el('h2', '', thanks)); }
-    else c.appendChild(el('h2', '', '回答する方を選んでください'));
+    else c.appendChild(el('h2', '', state.preview ? 'テスト確認用(回答は保存されません)' : '回答する方を選んでください'));
     var left = options.filter(function (o) { return o.state === 'due'; });
     var hasPartner = options.some(function (o) { return o.role === 'partner'; });
-    c.appendChild(el('div', 'desc', left.length ? (hasPartner ? '申込者・お子様・パートナーの方の、アンケートがあります。このページのリンクと、ご登録のメールアドレスを、パートナーの方にも共有してください。共有すると、他の端末からも回答できます。パートナーの方にも、ぜひご協力をお願いします。' : '申込者と、お子様の、アンケートがあります。このページのリンクと、ご登録のメールアドレスを共有すると、他の端末からも回答できます。') + 'お子様のアンケートは、お子様ご本人に、お答えいただいてください(申込者の方は、お子様の回答を、見たり、聞き出したりしないでください)。' : 'すべてのアンケートに、ご回答いただきました。ありがとうございました。回答は、このまま修正もできます。次のアンケートの案内が届くと、前の回答は、表示も修正もできなくなります。'));
+    c.appendChild(el('div', 'desc', state.preview ? 'ダミーのお名前(申込者=花子、お子様=太郎、パートナー=次郎)で、全てのアンケートの全ての質問を確認できます。送信しても、回答は保存されません。' : left.length ? (hasPartner ? '申込者・お子様・パートナーの方の、アンケートがあります。このページのリンクと、ご登録のメールアドレスを、パートナーの方にも共有してください。共有すると、他の端末からも回答できます。パートナーの方にも、ぜひご協力をお願いします。' : '申込者と、お子様の、アンケートがあります。このページのリンクと、ご登録のメールアドレスを共有すると、他の端末からも回答できます。') + 'お子様のアンケートは、お子様ご本人に、お答えいただいてください(申込者の方は、お子様の回答を、見たり、聞き出したりしないでください)。' : 'すべてのアンケートに、ご回答いただきました。ありがとうございました。回答は、このまま修正もできます。次のアンケートの案内が届くと、前の回答は、表示も修正もできなくなります。'));
     options.forEach(function (o) {
       var row = el('div', 'who');
       row.appendChild(el('div', 'whoname', o.label));
@@ -3080,7 +3102,7 @@ function surveyClient_() {
     var out = {};
     qs().forEach(function (q) { if (!hidden(q) && state.ans[q.id] !== undefined) out[q.id] = state.ans[q.id]; });
     google.script.run.withSuccessHandler(function (r) {
-      if (r && r.ok) return chooser(r.options || [], r.edited ? 'ご回答を修正しました' : 'ご回答ありがとうございました');
+      if (r && r.ok) return chooser(r.options || [], r.preview ? 'テスト確認用です(回答は保存していません)' : r.edited ? 'ご回答を修正しました' : 'ご回答ありがとうございました');
       if (r && (r.expired || r.done)) { alert(r.message); return login(); }
       btn.disabled = false; btn.textContent = state.editing ? '修正を送信する' : '送信する'; alert((r && r.message) || '送信できませんでした。もう一度お試しください。');
     }).withFailureHandler(function () {
