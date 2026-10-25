@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-25-a/.test(pa.html) && /2026-10-25-a/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-25-b/.test(pa.html) && /2026-10-25-a/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -495,7 +495,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('パートナー: 参加する家庭は、回答者の選択肢が3つ(申込者・お子様・パートナーの方)', r.ok && r.options.map(o => o.role).join() === 'parent,child,partner' && /次郎 様/.test(r.options[2].label) && r.options[2].form === 'PP0');
   const fullAns = (def) => { const a = {}; def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { a[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.kind === 'age' ? '13' : q.choices[0]; }); return a; };
   const sp = E.run('surveyStart')(r.token, 'F0001', 'partner');
-  t('パートナー: 選ぶと、申込者用と同じ設問(受講の理由・目的を除く)のPP0が出る(題名は「パートナー用」)', sp.ok && sp.def.key === 'PP0' && sp.who === '次郎' && /パートナー用/.test(sp.def.title) && sp.def.blocks.filter(b => b.type === 'q').length === E.run('surveyClientDef_')('PT0').blocks.filter(b => b.type === 'q').length - 3);
+  t('パートナー: 選ぶと、申込者用と同じ設問(受講の理由・目的を除く)のPP0が出る(題名は「パートナー用」)', sp.ok && sp.def.key === 'PP0' && sp.who === '次郎' && /パートナー用/.test(sp.def.title) && sp.def.blocks.filter(b => b.type === 'q').length === E.run('surveyClientDef_')('PT0', { partner: true }).blocks.filter(b => b.type === 'q').length - 3);
   const sr = E.run('surveySubmit')(r.token, fullAns(sp.def));
   const row = E.subs.values[E.subs.values.length - 1];
   t('パートナー: 回答は、フォームID=PP0・回答者区分=パートナー・同じ調査用IDで記録される。申込者(PT0)とは別に数えられる', sr.ok && row[2] === 'F0001' && row[3] === 'パートナー' && row[4] === 'PP0' && sr.options.find(o => o.role === 'partner').state === 'done' && sr.options.find(o => o.role === 'parent').state === 'due');
@@ -728,6 +728,23 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('回答を見る(画面): 家庭の詳細に「回答を見る」ボタンがあり、押すと apiResponses(ID) が呼ばれる', !!rb && calls.some(c => c[0] === 'apiResponses' && c[1][0] === 'F0001'));
   ok2(r);
   t('回答を見る(画面): 結果が、時期・回答者(お名前)・設問と回答の形で表示される', /受講前 \/ 申込者\(山田 花子\)/.test(text(ids.view)) && /対話の時間を持ちたいため/.test(text(ids.view)) && /管理者のみ/.test(text(ids.view)));
+}
+{ // パートナーへの理解(受講前・受講後)
+  const E = makeEnv('me@example.com');
+  E.addFamily({ pjoin: 'はい', ppname: '山田 次郎', ppgender: '男性', ppbirth: '19830101' });
+  E.roster.values[1][E.rc('T0')] = '2026-11-01T10:00:00';
+  const lg = E.run('surveyLogin')('hanako@example.com');
+  const sp = E.run('surveyStart')(lg.token, 'F0001', 'parent');
+  const sq = E.run('surveyStart')(lg.token, 'F0001', 'partner');
+  const txt = (d, id) => (d.blocks.find(b => b.id === id) || {}).text;
+  t('パートナーへの理解(受講前): 申込者には「次郎さん」、パートナーには「申込者のお名前(花子さん)」で、同じ設問が出る', txt(sp.def, 'PU1') === '次郎さんの性格や特徴を理解している。' && txt(sp.def, 'PU4') === '次郎さんと自分の考え方が違うとき、ご本人がなぜそう考えるのか理解しようとしている。'.replace('ご本人', 'その方') && txt(sq.def, 'PU1') === '花子さんの性格や特徴を理解している。' && sp.def.blocks.some(b => b.type === 'page' && /次郎さんへの理解/.test(b.title)));
+  const solo = makeEnv('me@example.com'); solo.addFamily({}); solo.roster.values[1][solo.rc('T0')] = '2026-11-01T10:00:00';
+  const l2 = solo.run('surveyLogin')('hanako@example.com'); const s2 = solo.run('surveyStart')(l2.token, 'F0001', 'parent');
+  t('パートナーへの理解: パートナーが参加しない家庭には、出ない(必須でもない)', !s2.def.blocks.some(b => /^PU/.test(b.id || '')) && !s2.def.blocks.some(b => b.type === 'page' && /への理解/.test(b.title) && /パートナー/.test(b.title)));
+  const ans = {}; sp.def.blocks.filter(b => b.type === 'q' && b.required).forEach(q => { ans[q.id] = q.kind === 'multi' ? [q.choices[q.choices.length - 1]] : q.choices[0]; });
+  delete ans.PU2;
+  const bad = E.run('surveySubmit')(lg.token, ans);
+  t('パートナーへの理解: 参加する家庭では必須(未回答だと送れない)', bad.ok === false && /まだ答えていない/.test(bad.message));
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

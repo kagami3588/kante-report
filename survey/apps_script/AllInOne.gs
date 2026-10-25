@@ -84,6 +84,8 @@ function P_(title, opts) {
   opts = opts || {};
   return { type: 'page', title: title, conditional: !!opts.conditional, desc: opts.desc || '' };
 }
+// パートナーの方が参加するご家庭にだけ出す設問・区分(partnerOnly)。{{相方}}=申込者には「パートナーのお名前さん」、パートナー用には「申込者のお名前さん」
+function PO_(b) { b.partnerOnly = true; return b; }
 function Q_(o) { o.type = 'q'; return o; }
 function LK_(id, text, axis, purpose, o) {
   return Q_(Object.assign({ id: id, text: text, kind: 'single', scale: 'L4', axis: axis, purpose: purpose }, o || {}));
@@ -259,7 +261,12 @@ SURVEY.forms.PT0 = {
     LK_('PC1', '子どもが自分に合った選択をできるように支援している。', AXIS.CAREER, '選択の支援'),
     LK_('PZ1', '子どもが将来について考えるとき、子ども自身の希望や気持ちを大切にしたいと思う。', AXIS.CAREER, '子どもの希望の尊重(意向)'),
     LK_('PZ2', '子どもが私とは違う選択をした場合でも、その選択を尊重したいと思う。', AXIS.CAREER, '異なる選択の尊重(意向)'),
-    P_('E. お子さんについて', { desc: 'お子さんについて、思うことを、項目ごとに教えてください。「はい」を選ぶと、自由に記入できます。「わからない」の場合は、記入は不要です。' }),
+    PO_(P_('F. {{相方}}への理解', { desc: '次の各項目について、あてはまるものを選んでください。' })),
+    PO_(LK_('PU1', '{{相方}}の性格や特徴を理解している。', AXIS.OTHER, 'パートナーの性格・特徴の理解')),
+    PO_(LK_('PU2', '{{相方}}の得意なことや苦手なことを理解している。', AXIS.OTHER, 'パートナーの強み・弱みの理解')),
+    PO_(LK_('PU3', '{{相方}}が大切にしていることや価値観を理解している。', AXIS.OTHER, 'パートナーの価値観の理解')),
+    PO_(LK_('PU4', '{{相方}}と自分の考え方が違うとき、{{相方}}がなぜそう考えるのか理解しようとしている。', AXIS.OTHER, 'パートナーの考えの背景を理解しようとする姿勢')),
+    P_('G. お子さんについて', { desc: 'お子さんについて、思うことを、項目ごとに教えてください。「はい」を選ぶと、自由に記入できます。「わからない」の場合は、記入は不要です。' }),
     SG_('PX1', 'お子さんが大切にしていることについて、教えてください。', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(大切にしていること)。記述するか、わからないか', {}),
     TX_('PX1t', 'お子さんが大切にしていることを、自由にご記入ください。', '保護者から見た子どもの人物像(大切にしていること・自由記述。任意)', { hiddenWhen: { id: 'PX1', value: 'わからない' }, inline: true, axis: AXIS.FREE, note: 'お子さんのお名前や学校名など、個人が特定される情報は書かないでください。' }),
     SG_('PX2', 'お子さんの特徴について、教えてください。', 'YES_DK', AXIS.OTHER, '保護者から見た子どもの人物像(特徴)。記述するか、わからないか', {}),
@@ -290,7 +297,11 @@ SURVEY.forms.PT1 = {
     P_('C. 将来への関わり方', { desc: '次の各項目について、あてはまるものを選んでください。' }),
     LK_('PD7', '今回の本プログラムを通じて、子どもの将来について話し合うことの大切さを感じた。', AXIS.CAREER, '将来の対話の重要性の認識'),
     LK_('PD8', '今回の本プログラムを通じて、子ども自身が選択することを大切にしたいと思った。', AXIS.CAREER, '子どもの選択の尊重(意向)'),
-    P_('D. 自由記述'),
+    PO_(P_('E. {{相方}}への新しい理解', { desc: '次の各項目について、あてはまるものを選んでください。' })),
+    PO_(LK_('PU5', '今回の本プログラムを通じて、{{相方}}の性格や特徴について新しい気づきがあった。', AXIS.OTHER, 'パートナーの性格・特徴の気づき')),
+    PO_(LK_('PU6', '今回の本プログラムを通じて、{{相方}}の得意なことや苦手なことについて新しい気づきがあった。', AXIS.OTHER, 'パートナーの強み・弱みの気づき')),
+    PO_(LK_('PU7', '今回の本プログラムを通じて、{{相方}}の価値観や大切にしていることについて新しい気づきがあった。', AXIS.OTHER, 'パートナーの価値観の気づき')),
+    P_('F. 自由記述'),
     TX_('PD9', '今回の本プログラムで、子どもについて新しく気づいたことや、今後の接し方について考えたことがあれば教えてください。', '気づき・接し方の考え(任意)')
   ]
 };
@@ -744,10 +755,11 @@ function givenName_(full) {
 
 function renderNames_(text, vars) {
   vars = vars || {};
-  var child = givenName_(vars.child), parent = givenName_(vars.parent);
+  var child = givenName_(vars.child), parent = givenName_(vars.parent), other = givenName_(vars.other);
   // 同じ文の中で、お名前が2回目以降に出るときは、「ご本人」「その方」にして、くどくならないようにする
-  var nc = 0, np = 0;
-  return String(text || '').replace(/\{\{子\}\}(ご自身)?|\{\{親\}\}/g, function (m, honorific) {
+  var nc = 0, np = 0, no = 0;
+  return String(text || '').replace(/\{\{子\}\}(ご自身)?|\{\{親\}\}|\{\{相方\}\}/g, function (m, honorific) {
+    if (m === '{{相方}}') { no++; return no > 1 ? 'その方' : (other ? other + 'さん' : (vars.otherLabel || 'パートナーの方')); }
     if (m.indexOf('子') !== -1) { nc++; return nc === 1 ? (child ? child + 'さん' : 'お子様') + (honorific || '') : 'ご本人'; }
     np++; return np === 1 ? (parent ? parent + 'さん' : '申込者の方') : 'その方';
   });
@@ -930,7 +942,7 @@ function remindersDue_(roster, adoptedKeys, today) {
 /** 設問定義の整合性チェック(エラー文字列の配列。空なら問題なし) */
 function validateSurveyDefinition_() {
   var errors = [];
-  var expectedCount = { CT0: 29, CT1: 17, CT2: 17, PT0: 25, PT1: 9, PT2: 9, PP0: 22, PP1: 9, PP2: 9 };
+  var expectedCount = { CT0: 29, CT1: 17, CT2: 17, PT0: 29, PT1: 12, PT2: 9, PP0: 26, PP1: 12, PP2: 9 };
   SURVEY.allKeys.forEach(function (key) {
     var def = SURVEY.forms[key];
     if (!def) { errors.push(key + ': 定義なし'); return; }
@@ -1381,6 +1393,7 @@ function buildFormFromDef_(def, ss, confirmMessage) {
   var pendingGates = [];
   var firstBlock = true;
   def.blocks.forEach(function (b) {
+    if (b.partnerOnly) return; // パートナーの参加の有無が分からないGoogleフォームには出さない(アンケートサイトのみ)
     if (b.type === 'page') {
       var item;
       var pageTitle = renderNames_(b.title, {}).replace(/^[A-Z](-[0-9]+)?\.\s*/, '');
@@ -2069,7 +2082,6 @@ function apiResponses(id) {
     var k = String(r[ix['フォームID']]);
     (byKey[k] = byKey[k] || {})[String(r[ix['設問ID']])] = { value: String(r[ix['回答内容']]), status: String(r[ix['状態']]) };
   });
-  var vars = { child: fam.childName, parent: fam.name };
   var who = { parent: fam.name, child: fam.childName, partner: fam.partnerName };
   var roleLabel = { parent: '申込者', child: 'お子様', partner: 'パートナー' };
   var groups = [];
@@ -2077,7 +2089,7 @@ function apiResponses(id) {
     ['parent', 'child', 'partner'].forEach(function (role) {
       var key = surveyFormKey_(role, t);
       if (!byKey[key]) return;
-      var def = SURVEY.forms[key], section = '', items = [];
+      var def = SURVEY.forms[key], section = '', items = [], vars = nameVars_(fam, role);
       def.blocks.forEach(function (b) {
         if (b.type === 'page') { section = renderNames_(String(b.title), vars).replace(/^[A-Z](-[0-9]+)?\.\s*/, ''); return; }
         if (b.kind === 'id') return;
@@ -2348,7 +2360,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-25-a';
+var SITE_VERSION = '2026-10-25-b';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2655,13 +2667,20 @@ function surveyDue_(fam, role, answered) {
   return answered[fam.id + '|' + key] ? { state: 'done', key: key, time: cur } : { state: 'due', key: key, time: cur };
 }
 
+/** 設問の文に入れるお名前。other=相手(申込者には、パートナー。パートナーには、申込者)。partner=パートナーが参加するか */
+function nameVars_(fam, role) {
+  var isP = role === 'partner';
+  return { child: fam.childName, parent: fam.name, other: isP ? fam.name : fam.partnerName, otherLabel: isP ? '申込者の方' : 'パートナーの方', partner: fam.partnerJoin === 'はい' };
+}
+
 /** 画面に渡す設問の定義。区分の記号(A.など)は外す。調査用IDは画面には出さない(サーバーで付ける) */
 function surveyClientDef_(key, vars) {
+  vars = vars || {};
   var d = SURVEY.forms[key];
   var rn = function (x) { return renderNames_(x, vars); };
   return {
     key: key, role: d.role, title: d.title, intro: rn(d.intro),
-    blocks: d.blocks.filter(function (b) { return !(b.type === 'q' && b.kind === 'id'); }).map(function (b) {
+    blocks: d.blocks.filter(function (b) { return !(b.type === 'q' && b.kind === 'id') && !(b.partnerOnly && !vars.partner); }).map(function (b) {
       if (b.type === 'page') return { type: 'page', title: rn(String(b.title)).replace(/^[A-Z](-[0-9]+)?\.\s*/, ''), desc: rn(b.desc || ''), conditional: !!b.conditional };
       return { type: 'q', id: b.id, text: rn(b.text), kind: b.kind, required: isReq_(d, b), choices: choicesOf_(b), exclusive: b.exclusive || '', hiddenWhen: b.hiddenWhen || null, showIfChosen: b.showIfChosen || null, inline: !!b.inline, gate: b.gate || null, note: b.note || '' };
     })
@@ -2696,11 +2715,11 @@ function sanitizeSurveyAnswers_(key, rid, answers) {
 }
 
 /** 必須の設問(分岐で非表示のものを除く)に、未回答がないか。あれば、その設問の文を返す */
-function surveyMissing_(key, answers) {
+function surveyMissing_(key, answers, hasPartner) {
   answers = answers || {};
   var d = SURVEY.forms[key], miss = null;
   questionsOf_(key).forEach(function (q) {
-    if (miss || q.kind === 'id' || !isReq_(d, q)) return;
+    if (miss || q.kind === 'id' || !isReq_(d, q) || (q.partnerOnly && !hasPartner)) return;
     if (isHiddenQ_(q, answers)) return;
     var v = answers[q.id];
     var empty = q.kind === 'multi' ? !(Array.isArray(v) && v.length) : (v === undefined || v === null || String(v).trim() === '');
@@ -2785,13 +2804,13 @@ function surveyStart(token, id, role, edit) {
     if (cd.state !== 'done') return { ok: false, message: '修正できる回答が、ありません(次のアンケートの時期に進んだ場合は、前の回答は、表示も修正もできません)。' };
     sess.cur = { id: fams[0].id, role: role, key: cd.key, edit: true };
     cache.put('sv_tok_' + token, JSON.stringify(sess), 21600);
-    return { ok: true, edit: true, who: givenName_(role === 'child' ? fams[0].childName : (role === 'partner' ? fams[0].partnerName : fams[0].name)), prior: surveyPrior_(db, fams[0].id, cd.key), def: surveyClientDef_(cd.key, { child: fams[0].childName, parent: fams[0].name }) };
+    return { ok: true, edit: true, who: givenName_(role === 'child' ? fams[0].childName : (role === 'partner' ? fams[0].partnerName : fams[0].name)), prior: surveyPrior_(db, fams[0].id, cd.key), def: surveyClientDef_(cd.key, nameVars_(fams[0], role)) };
   }
   var due = surveyDue_(fams[0], role, ansd);
   if (due.state !== 'due') return { ok: false, done: true, message: 'この方のアンケートは、いま、答えられるものがありません。' };
   sess.cur = { id: fams[0].id, role: role, key: due.key };
   cache.put('sv_tok_' + token, JSON.stringify(sess), 21600);
-  return { ok: true, who: givenName_(role === 'child' ? fams[0].childName : (role === 'partner' ? fams[0].partnerName : fams[0].name)), def: surveyClientDef_(due.key, { child: fams[0].childName, parent: fams[0].name }) };
+  return { ok: true, who: givenName_(role === 'child' ? fams[0].childName : (role === 'partner' ? fams[0].partnerName : fams[0].name)), def: surveyClientDef_(due.key, nameVars_(fams[0], role)) };
 }
 
 function maskEmail_(e) {
@@ -2840,7 +2859,7 @@ function surveySubmit(token, answers) {
     var due = surveyDue_(fam, sess.cur.role, surveyAnswered_(db));
     if (sess.cur.edit) {
       if (due.state !== 'done' || due.key !== sess.cur.key) { delete sess.cur; cache.put('sv_tok_' + token, JSON.stringify(sess), 21600); return { ok: false, message: '次のアンケートの時期に進んだため、この回答は、修正できません。', done: true }; }
-      var missingE = surveyMissing_(sess.cur.key, answers);
+      var missingE = surveyMissing_(sess.cur.key, answers, fam.partnerJoin === 'はい');
       if (missingE) return { ok: false, message: 'まだ答えていない質問があります。すべての質問に、ご回答をお願いします。(' + missingE.slice(0, 40) + ')' };
       dropSubmissionRows_(db, sess.cur.id, sess.cur.key);
       recordSubmission_(db, reg, sess.cur.key, sanitizeSurveyAnswers_(sess.cur.key, sess.cur.id, answers));
@@ -2849,7 +2868,7 @@ function surveySubmit(token, answers) {
       return { ok: true, edited: true, options: surveyOptions_(surveyFamiliesFor_(readRoster_(reg), sess.email), surveyAnswered_(db)) };
     }
     if (due.state !== 'due' || due.key !== sess.cur.key) { delete sess.cur; cache.put('sv_tok_' + token, JSON.stringify(sess), 21600); return { ok: false, message: 'このアンケートには、すでにご回答いただいています。ありがとうございました。', done: true }; }
-    var missing = surveyMissing_(sess.cur.key, answers);
+    var missing = surveyMissing_(sess.cur.key, answers, fam.partnerJoin === 'はい');
     if (missing) return { ok: false, message: 'まだ答えていない質問があります。すべての質問に、ご回答をお願いします。(' + missing.slice(0, 40) + ')' };
     recordSubmission_(db, reg, sess.cur.key, sanitizeSurveyAnswers_(sess.cur.key, sess.cur.id, answers));
     delete sess.cur;
