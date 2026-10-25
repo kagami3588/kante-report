@@ -572,7 +572,7 @@ var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}の�
 var DEFAULT_TEMPLATES = (function () {
   var out = [];
   [['T0', '受講前'], ['T1', '受講後'], ['T2', '受講から約3か月後']].forEach(function (t) {
-    out.push({ key: t[0] + '_parent', to: '申込者(お子様のアンケートも、このメールのページで回答)', subject: '【アンケートのご案内】{{アンケート名}}のアンケート', body: TEMPLATE_BASE_PARENT, note: t[1] + 'のアンケートの案内(自動配信・送信ボタン共通)' });
+    out.push({ key: t[0] + '_parent', to: '申込者(お子様のアンケートも、このメールのページで回答)', subject: '【アンケートのご案内】{{アンケート名}}のアンケート', body: t[0] === 'T1' ? TEMPLATE_BASE_PARENT.replace('ご案内します。申込者用と、お子様用があります(パートナーの方が参加される場合は、パートナーの方用もあります)。{{期限}}ご回答をお願いいたします。(所要時間の目安:{{所要時間}})', 'ご案内します。\n{{期限}}ご回答をお願い致します。\n(所要時間の目安:{{所要時間}})') : TEMPLATE_BASE_PARENT, note: t[1] + 'のアンケートの案内(自動配信・送信ボタン共通)' });
   });
   out.push({ key: 'remind7_parent', to: '申込者', subject: '【受講日のご案内】{{受講日}}の受講について', body: '{{宛名}}\n\nいつもありがとうございます。受講日が近づいてまいりましたので、ご案内します。\n\n■ 受講日\n{{受講日}}\n\n日程の変更などがある場合は、このメールにご返信ください。\n受講の前に、アンケート(受講前)のご案内を、メールでお送りします。申込者とお子様(パートナーの方が参加される場合は、パートナーの方も)、それぞれのアンケートがあります。\n\n{{署名}}', note: '受講日の1週間前のリマインド' });
   out.push({ key: 'remind1_parent', to: '申込者', subject: '【明日は受講日です】{{受講日}}', body: '{{宛名}}\n\n明日({{受講日}})は、受講の日です。\n\n{{アンケート状況}}\n\n当日は、どうぞよろしくお願いいたします。ご不明な点は、このメールにご返信ください。\n\n{{署名}}', note: '受講日の前日のリマインド' });
@@ -608,7 +608,7 @@ function templateVars_(time, role, p, url) {
   return {
     '宛名': parent ? (p.name || '') + ' 様' : (p.childName || '') + ' さん',
     '申込者名': p.name || '', 'お子様名': p.childName || '', '受講日': p.sessionDate || '',
-    '挨拶': time === 'T0' ? 'このたびは、お申込みありがとうございます。' : 'いつもご協力ありがとうございます。',
+    '挨拶': time === 'T0' ? 'このたびは、お申込みありがとうございます。' : time === 'T1' ? '本日は親子対話プログラムの受講ありがとうございました。' : 'いつもご協力ありがとうございます。',
     'アンケート名': time ? TIME_LABEL[time] : '',
     '期限': time ? late[time] : '', '所要時間': time ? mins[time] : '',
     'アンケートURL': url || '',
@@ -1694,7 +1694,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-25-f';
+var SITE_VERSION = '2026-10-25-g';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
