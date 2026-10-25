@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-25-d/.test(pa.html) && /2026-10-25-d/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-25-e/.test(pa.html) && /2026-10-25-e/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -767,15 +767,15 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
 }
 { // テスト確認用(3588)
   const E = makeEnv('me@example.com');
-  const before = E.run('surveyLogin')('3588');
-  t('テスト確認用: 「3588」を入れると、全9種類のアンケートが選べる(申込者・お子様・パートナー × 受講前・受講後・3か月後)', before.ok && before.preview && before.options.length === 9 && before.options.every(o => o.state === 'due' && o.preview) && ['CT0', 'CT1', 'CT2', 'PT0', 'PT1', 'PT2', 'PP0', 'PP1', 'PP2'].every(k => before.options.some(o => o.form === k)));
+  const before = E.run('surveyLogin')('admin3588');
+  t('テスト確認用: 「admin3588」を入れると、全9種類のアンケートが選べる(申込者・お子様・パートナー × 受講前・受講後・3か月後)', before.ok && before.preview && before.options.length === 9 && before.options.every(o => o.state === 'due' && o.preview) && ['CT0', 'CT1', 'CT2', 'PT0', 'PT1', 'PT2', 'PP0', 'PP1', 'PP2'].every(k => before.options.some(o => o.form === k)));
   const sc = E.run('surveyStart')(before.token, 'CT1', 'child');
   const sp = E.run('surveyStart')(before.token, 'PP1', 'partner');
   const has = (d, id) => d.blocks.some(b => b.id === id);
   t('テスト確認用: パートナーの設問も含め、全ての質問が出る。お名前はダミー(太郎・花子・次郎)', sc.ok && has(sc.def, 'DP1') && has(sc.def, 'D1t') && /次郎さん/.test(sc.def.blocks.find(b => b.id === 'DP1').text) && has(sp.def, 'PU5') && has(sp.def, 'PD0t') && /花子さん/.test(sp.def.blocks.find(b => b.id === 'PU5').text));
   const sub = E.run('surveySubmit')(before.token, { RID: 'x' });
   t('テスト確認用: 送信しても、回答DBには保存されない(個人情報も使わない)', sub.ok && sub.preview && E.subs.values.length === 1 && E.long.values.length === 1);
-  t('テスト確認用: 別の値(3589など)では入れない。不正なフォームキーも開けない', !E.run('surveyLogin')('3589').ok && E.run('surveyStart')(before.token, 'XX9', 'parent').ok === false && E.run('surveyStart')(before.token, 'CT1', 'parent').ok === false);
+  t('テスト確認用: 別の値(3588など)では入れない。不正なフォームキーも開けない', !E.run('surveyLogin')('3588').ok && E.run('surveyStart')(before.token, 'XX9', 'parent').ok === false && E.run('surveyStart')(before.token, 'CT1', 'parent').ok === false);
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

@@ -1694,7 +1694,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-25-d';
+var SITE_VERSION = '2026-10-25-e';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2101,7 +2101,7 @@ function surveyAnswered_(db) {
 
 /** メールアドレス(申込者のもの)での入室(誰でも呼べる)。回答者(申込者・お子様)の選択肢と、送信用の合い鍵(6時間有効)を返す */
 /** テスト確認用: 入力欄に「3588」と入れると、全アンケートを、ダミーのお名前で確認できる(回答は保存しない・個人情報は使わない) */
-var PREVIEW_CODE = '3588';
+var PREVIEW_CODE = 'admin3588';
 var PREVIEW_FAM = { name: '山田 花子', childName: '山田 太郎', partnerName: '山田 次郎', partnerJoin: 'はい' };
 function surveyPreviewOptions_() {
   var roleOf = { parent: '申込者', child: 'お子様', partner: 'パートナーの方' };
