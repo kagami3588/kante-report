@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-25-g/.test(pa.html) && /2026-10-25-g/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-25-h/.test(pa.html) && /2026-10-25-h/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -669,7 +669,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   const r = E.run('submitApplication')('career', base, '');
   const t0 = E.sent.find(m => m.to === 'auto@example.com' && /アンケートのご案内/.test(m.subject));
   t('申込直後の自動送信: 親子プランの申込を受けると、受講前アンケート(T0)の案内が、申込者に自動で届く(受付確認メールとは別)', r.ok && !!t0 && E.sent.filter(m => m.to === 'auto@example.com').length === 2 && /受講前/.test(t0.subject) && /site\.example\/exec\?page=survey/.test(t0.body) && /auto@example\.com/.test(t0.body));
-  t('申込直後の自動送信: 案内文に「ご回答をお願いいたします」が入る。名簿のT0送信日時が記録され、すぐにアンケートのページに入れる', /ご回答をお願いいたします/.test(t0.body) && String(E.roster.values[1][E.rc('T0')]).length > 10 && E.run('surveyLogin')('auto@example.com').ok);
+  t('申込直後の自動送信: 案内文に「ご回答をお願い致します」が入る。名簿のT0送信日時が記録され、すぐにアンケートのページに入れる', /ご回答をお願い致します/.test(t0.body) && String(E.roster.values[1][E.rc('T0')]).length > 10 && E.run('surveyLogin')('auto@example.com').ok);
   t('申込直後の自動送信: 運営への通知に「T0の案内を自動で送りました」と載る', E.sent.some(m => m.to === 'op@example.com' && /新しい申込/.test(m.subject) && /自動で送りました/.test(m.body)));
   // B7 未入力
   const E2 = makeEnv(''); E2.reg.getSheetByName('設定').values[6][1] = '';
