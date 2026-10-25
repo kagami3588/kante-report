@@ -275,7 +275,7 @@ function remindersDue_(roster, adoptedKeys, today) {
 /** 設問定義の整合性チェック(エラー文字列の配列。空なら問題なし) */
 function validateSurveyDefinition_() {
   var errors = [];
-  var expectedCount = { CT0: 29, CT1: 17, CT2: 17, PT0: 29, PT1: 12, PT2: 9, PP0: 26, PP1: 12, PP2: 9 };
+  var expectedCount = { CT0: 35, CT1: 21, CT2: 19, PT0: 29, PT1: 15, PT2: 9, PP0: 26, PP1: 15, PP2: 9 };
   SURVEY.allKeys.forEach(function (key) {
     var def = SURVEY.forms[key];
     if (!def) { errors.push(key + ': 定義なし'); return; }
@@ -565,9 +565,9 @@ function linksDue_(rows, time, today, selectedSet) {
 var TIME_LABEL = { T0: '受講前', T1: '受講後', T2: '受講から約3か月後' };
 
 // ---------- メールの文面(台帳の「メール文面」シートで編集できる) ----------
-var TEMPLATE_VARS_HELP = '使える差し込み: {{宛名}} {{申込者名}} {{お子様名}} {{受講日}} {{アンケート名}} {{アンケートURL}} {{入力案内}} {{期限}} {{所要時間}} {{アンケート状況}} {{未回答の注意}} {{署名}} {{連絡先}}';
+var TEMPLATE_VARS_HELP = '使える差し込み: {{宛名}} {{申込者名}} {{お子様名}} {{受講日}} {{アンケート名}} {{アンケートURL}} {{入力案内}} {{期限}} {{所要時間}} {{アンケート状況}} {{未回答の注意}} {{パートナー案内}} {{署名}} {{連絡先}}';
 
-var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}のアンケートをご案内します。申込者用と、お子様用があります(パートナーの方が参加される場合は、パートナーの方用もあります)。{{期限}}ご回答をお願いいたします。(所要時間の目安:{{所要時間}})\n{{未回答の注意}}\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n■ ご家族の回答について\nこのリンクと、ご登録のメールアドレスを、ご家族(お子様・パートナーの方)に共有していただくと、それぞれの携帯から、回答できます。\n\n【お願い】\n・お子様用のアンケートは、お子様ご本人に、お答えいただいてください。お子様の回答は、見たり、聞き出したりしないでください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n・リンクは、ご家族以外の方には、転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。\n\n{{署名}}';
+var TEMPLATE_BASE_PARENT = '{{宛名}}\n\n{{挨拶}}\n{{アンケート名}}のアンケートをご案内します。申込者用と、お子様用があります(パートナーの方が参加される場合は、パートナーの方用もあります)。{{期限}}ご回答をお願いいたします。(所要時間の目安:{{所要時間}})\n{{未回答の注意}}\n\n■ アンケートのページ\n{{アンケートURL}}\n{{入力案内}}\n\n{{パートナー案内}}■ ご家族の回答について\nこのリンクと、ご登録のメールアドレスを共有すると、他の端末(携帯・パソコンなど)からも、回答できます。それぞれ、ご自分の端末でお答えください。\n\n【お願い】\n・お子様用のアンケートは、お子様ご本人に、お答えいただいてください。お子様の回答は、見たり、聞き出したりしないでください。\n・すべての質問に、お答えください。答えにくいと感じたときや、途中でやめたくなったときは、やめても大丈夫です。\n・リンクは、ご家族以外の方には、転送しないでください。\n\nご不明な点や、気になることがあれば、このメールにご返信ください。\n\n{{署名}}';
 
 var DEFAULT_TEMPLATES = (function () {
   var out = [];
@@ -614,6 +614,7 @@ function templateVars_(time, role, p, url) {
     'アンケートURL': url || '',
     '入力案内': url ? '(ページを開いたら、このメールを受け取ったメールアドレス(' + (addr || '') + ')を入力してください。回答する方(申込者・お子様)を選んで、いま答えるアンケートに進めます)' : '',
     'アンケート状況': p.surveyNote || '',
+    'パートナー案内': p.partnerJoin === 'はい' ? '■ パートナーの方へのご協力のお願い\n本プログラムには、パートナーの方もご参加いただけます。このメールのリンクと、ご登録のメールアドレスを、パートナーの方にも共有してください。パートナーの方用のアンケートに、ご協力をお願いします。\n\n' : '',
     '未回答の注意': time === 'T0' ? (parent ? '※未回答の方に関しては、算命学の鑑定結果には反映されません。' : '※こたえていない人は、算命学の鑑定の結果には入りません。') : '',
     '署名': CONFIG.SENDER_NAME + '\n' + CONFIG.CONTACT_MAIL, '連絡先': CONFIG.CONTACT_MAIL
   };
@@ -1693,7 +1694,7 @@ function rateLimited_(cache, key, max, ttlSec) {
 
 
 /** 公開ページの版。ページの下に表示し、反映されているかを確かめられるようにする */
-var SITE_VERSION = '2026-10-25-b';
+var SITE_VERSION = '2026-10-25-c';
 
 var SITE_CSS_ = ':root{--bg:#f7f5f0;--card:#fff;--ink:#2b2a33;--mute:#6f6c78;--line:#e4e0d6;--accent:#2f4a7d;--accent2:#8a6d3b;--err:#b3261e;--ok:#2e7d4f}' +
 '@media(prefers-color-scheme:dark){:root{--bg:#17161c;--card:#211f28;--ink:#eceaf2;--mute:#a4a1b0;--line:#34313e;--accent:#8fb0ee;--accent2:#d6b676;--err:#ff8a80;--ok:#7bd69d}}' +
@@ -2268,7 +2269,8 @@ function surveyClient_() {
     if (thanks) { c.appendChild(el('div', 'ok', '✓')); c.appendChild(el('h2', '', thanks)); }
     else c.appendChild(el('h2', '', '回答する方を選んでください'));
     var left = options.filter(function (o) { return o.state === 'due'; });
-    c.appendChild(el('div', 'desc', left.length ? '申込者と、お子様の、アンケートがあります。このページのリンクと、ご登録のメールアドレスをご家族に共有すると、それぞれの携帯から、回答できます。お子様のアンケートは、お子様ご本人に、お答えいただいてください(申込者の方は、お子様の回答を、見たり、聞き出したりしないでください)。' : 'すべてのアンケートに、ご回答いただきました。ありがとうございました。回答は、このまま修正もできます。次のアンケートの案内が届くと、前の回答は、表示も修正もできなくなります。'));
+    var hasPartner = options.some(function (o) { return o.role === 'partner'; });
+    c.appendChild(el('div', 'desc', left.length ? (hasPartner ? '申込者・お子様・パートナーの方の、アンケートがあります。このページのリンクと、ご登録のメールアドレスを、パートナーの方にも共有してください。共有すると、他の端末からも回答できます。パートナーの方にも、ぜひご協力をお願いします。' : '申込者と、お子様の、アンケートがあります。このページのリンクと、ご登録のメールアドレスを共有すると、他の端末からも回答できます。') + 'お子様のアンケートは、お子様ご本人に、お答えいただいてください(申込者の方は、お子様の回答を、見たり、聞き出したりしないでください)。' : 'すべてのアンケートに、ご回答いただきました。ありがとうございました。回答は、このまま修正もできます。次のアンケートの案内が届くと、前の回答は、表示も修正もできなくなります。'));
     options.forEach(function (o) {
       var row = el('div', 'who');
       row.appendChild(el('div', 'whoname', o.label));
@@ -2500,7 +2502,7 @@ function remindDone_(reg) {
 /** 受講日のリマインド(remind7 / remind1)を送り、送信ログに記録する */
 function sendNotice_(reg, kind, fam, templates, surveyNote) {
   var log = reg.getSheetByName(SHEETS.sendlog), stamp = nowStr_();
-  var p = { name: fam.name, email: fam.email, childName: fam.childName, sessionDate: fam.sessionDate, surveyNote: surveyNote };
+  var p = { name: fam.name, email: fam.email, childName: fam.childName, sessionDate: fam.sessionDate, surveyNote: surveyNote, partnerJoin: fam.partnerJoin };
   var mails = buildLinkEmails_(kind, p, null, templates);
   var res = '送信済み', ok = true;
   try { sendMail_(fam.email, mails.parent.subject, mails.parent.body); } catch (err) { res = '【失敗】' + err; ok = false; }

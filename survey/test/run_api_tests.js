@@ -245,7 +245,7 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   t('区分ごとのURL: 個人の申込ページには、法人のプランが含まれない', !/50,000円|100,000円|法人名|お子様/.test(pg2.html));
   t('区分の指定がない(または不正な)URLでは、フォームの設問を一切出さず、案内文だけ', !/"id":"(GE|AP|CO|CONSENT)/.test(pn.html) && !/"id":"(GE|AP|CO|CONSENT)/.test(A.run('doGet')({ parameter: { cat: 'x' } }).html) && /ご案内したURL/.test(pn.html));
   t('タイトルに、親子プラン・個人プラン・法人プランが入る(ページ・フォーム・受付メール)', /親子プラン/.test(pa.title) && /法人プラン/.test(pc.title) && /個人プラン/.test(pg2.title) && /親子プラン/.test(run('SURVEY.apply.title')) && /個人プラン/.test(run('SURVEY.applyG.title')) && /法人プラン/.test(run('SURVEY.applyB.title')) && /法人プラン/.test(run("buildApplyReceiptEmail_({ name: 'a', company: 'b' }, 'corp').subject")));
-  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-25-b/.test(pa.html) && /2026-10-25-b/.test(pn.html));
+  t('ページの下に「版」が表示される(反映の確認用)', /2026-10-25-c/.test(pa.html) && /2026-10-25-c/.test(pn.html));
   t('管理者でも、?cat= を付ければ、その区分の申込ページが開く', /お申込み/.test(O.run('doGet')({ parameter: { cat: 'general' } }).title));
   const src = pa.html.slice(pa.html.indexOf('<script>') + 8, pa.html.lastIndexOf('</script>'));
   let ok = true; try { new Function(src); } catch (e) { ok = false; console.log(e.message); }
@@ -689,9 +689,9 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
 { // ご家族への共有の案内
   const E = makeEnv('');
   const m = E.run('buildLinkEmails_')('T0', { name: '林 竜輔', email: 'h@example.com', childName: '林 巫心', sessionDate: '' }, { parent: 'https://site.example/x?page=survey' });
-  t('案内メール: 「このリンクと、ご登録のメールアドレスを、ご家族に共有すると、それぞれの携帯から回答できます」の案内がある。リンクは「ご家族以外には転送しない」', /このリンクと、ご登録のメールアドレスを、ご家族\(お子様・パートナーの方\)に共有していただくと、それぞれの携帯から、回答できます/.test(m.parent.body) && /ご家族以外の方には、転送しないでください/.test(m.parent.body) && !/他の方に転送しないでください/.test(m.parent.body));
+  t('案内メール: 「このリンクと、ご登録のメールアドレスを、ご家族に共有すると、それぞれの携帯から回答できます」の案内がある。リンクは「ご家族以外には転送しない」', /このリンクと、ご登録のメールアドレスを共有すると、他の端末\(携帯・パソコンなど\)からも、回答できます/.test(m.parent.body) && !/パートナーの方へのご協力のお願い/.test(m.parent.body) && /ご家族以外の方には、転送しないでください/.test(m.parent.body) && !/他の方に転送しないでください/.test(m.parent.body));
   const pg = E.run('surveyPage_')();
-  t('アンケートのページにも、「リンクとメールアドレスをご家族に共有すると、それぞれの携帯から回答できます」の案内がある', /共有すると、それぞれの携帯から、回答できます/.test(pg));
+  t('アンケートのページにも、「リンクとメールアドレスを共有すると他の端末からも回答できます」の案内がある(パートナーがいるときは、パートナーにも共有する旨)', /共有すると、他の端末からも回答できます/.test(pg) && /パートナーの方にも共有してください/.test(pg));
 }
 { // 管理画面: 回答を、お名前つきで見る
   const E = makeEnv('me@example.com');
@@ -745,6 +745,25 @@ function throws(fn) { try { fn(); return null; } catch (e) { return e.message; }
   delete ans.PU2;
   const bad = E.run('surveySubmit')(lg.token, ans);
   t('パートナーへの理解: 参加する家庭では必須(未回答だと送れない)', bad.ok === false && /まだ答えていない/.test(bad.message));
+}
+{ // パートナーがいる場合の案内、お子様用のパートナー設問、満足度の理由
+  const E = makeEnv('');
+  const base = { name: '林 竜輔', email: 'h@example.com', childName: '林 巫心', sessionDate: '' };
+  const m1 = E.run('buildLinkEmails_')('T1', Object.assign({ partnerJoin: 'はい' }, base), { parent: 'https://site.example/x?page=survey' });
+  t('案内メール: パートナーがいるときだけ、「パートナーの方へのご協力のお願い」が入る', /■ パートナーの方へのご協力のお願い/.test(m1.parent.body) && /パートナーの方にも共有してください/.test(m1.parent.body) && !/{{/.test(m1.parent.body));
+  const F = makeEnv('me@example.com');
+  F.addFamily({ pjoin: 'はい', ppname: '山田 次郎', ppgender: '男性', ppbirth: '19830101' });
+  F.roster.values[1][F.rc('T0')] = '2026-11-01T10:00:00';
+  const lg = F.run('surveyLogin')('hanako@example.com');
+  const sc = F.run('surveyStart')(lg.token, 'F0001', 'child');
+  const txt = (d, id) => (d.blocks.find(b => b.id === id) || {}).text;
+  t('お子様用(受講前): パートナー参加時に、「次郎さん」についての相互理解の6問が出る', txt(sc.def, 'RP1') === '次郎さんが何を大切にしているのか理解している。' && txt(sc.def, 'RP2') === '次郎さんは、太郎さんが何を大切にしているのか理解してくれていると思う。' && txt(sc.def, 'RP4') === '学校生活や将来について、次郎さんと話をすることがある。' && ['RP1', 'RP2', 'RP3', 'RP4', 'RP5', 'RP6'].every(i => txt(sc.def, i)) && sc.def.blocks.some(b => b.type === 'page' && /次郎さんとの相互理解/.test(b.title)));
+  t('お子様用の冒頭: 「あなたの許可なく、家族の人に見せたり共有したりすることはありません」。「鑑定をする人」の言い方は無い', /あなたの許可なく、家族の人に見せたり共有したりすることはありません/.test(sc.def.intro) && !/鑑定をする人/.test(sc.def.intro));
+  const solo = makeEnv('me@example.com'); solo.addFamily({}); solo.roster.values[1][solo.rc('T0')] = '2026-11-01T10:00:00';
+  const l2 = solo.run('surveyLogin')('hanako@example.com'); const s2 = solo.run('surveyStart')(l2.token, 'F0001', 'child');
+  t('お子様用: パートナーが参加しない家庭には、パートナーの設問は出ない', !s2.def.blocks.some(b => /^RP/.test(b.id || '')));
+  const defs = ['CT1', 'CT2', 'PT1', 'PP1'].map(k => F.run('surveyClientDef_')(k, { child: '山田 太郎', parent: '山田 花子', other: '山田 次郎', partner: true }));
+  t('受講後・3か月後: お子様用にパートナー設問(DP1〜DP3 / FP1・FP2)、満足度の理由(D1t・PD0t)、ご自身についての自由記述(PD10)が入る', ['DP1', 'DP2', 'DP3', 'D1t'].every(i => txt(defs[0], i)) && ['FP1', 'FP2'].every(i => txt(defs[1], i)) && txt(defs[0], 'D1t') === '満足度を選んだ理由を、教えてください。' && txt(defs[2], 'PD0') === '今回の本プログラムに、どの程度満足しましたか。' && txt(defs[2], 'PD0t') === '満足度を選んだ理由を、教えてください。' && /ご自身について/.test(txt(defs[2], 'PD10')) && !!txt(defs[3], 'PD0') && !!txt(defs[3], 'PD10') && !defs[2].blocks.find(b => b.id === 'PD0t').required && !defs[0].blocks.find(b => b.id === 'D1t').required && defs[2].blocks.find(b => b.id === 'PD0').required);
 }
 console.log('\n' + pass + ' passed / ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
