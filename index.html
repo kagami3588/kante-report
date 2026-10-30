@@ -45,7 +45,7 @@
   <div class="brand">KAGAMI</div>
   <h1>算命学の鑑定 お申込み</h1>
   <p class="plan">個人プラン</p>
-  <p style="text-align:center">必要事項を入力して、お申し込みください。<br>お申し込み後に、お振込先をご案内します。</p>
+  <p style="text-align:center">必要事項を入力して、お申し込みください。<br>「申し込む」を押すと公式LINEが開きます。送信すると、お振込先を自動でお送りします。</p>
 
   <div id="formWrap">
   <section>
@@ -139,7 +139,7 @@
         <tr><td id="extraLabel"></td><td id="extraFee"></td></tr>
         <tr class="total"><td>お支払い合計</td><td id="totalFee"></td></tr>
       </table>
-      <p class="note">お申し込み後に、お振込先をご案内します。</p>
+      <p class="note">お振込先は、お申し込み後に公式LINEでご案内します。</p>
     </section>
 
     <section>
@@ -156,11 +156,11 @@
   </div>
 
   <section id="done">
-    <h2>お申込み内容を受け付けました</h2>
+    <h2>あと一歩です</h2>
+    <p>公式LINEが開いたら、<strong>メッセージの送信ボタンを押して</strong>ください。送信されると、お振込先を自動でお送りします。</p>
     <p>お支払い合計：<strong id="doneTotal"></strong></p>
-    <p><strong>お振込先</strong></p>
-    <pre id="bank"></pre>
-    <p><strong>お申込み内容</strong></p>
+    <button type="button" id="openLine">公式LINEを開いて申し込む</button>
+    <p class="note">LINEが開かない場合は、上のボタンをもう一度押すか、下の内容をコピーして公式LINEに送ってください。</p>
     <pre id="summary"></pre>
     <button type="button" id="copy">内容をコピーする</button>
   </section>
@@ -175,7 +175,7 @@ const CONFIG = {
   extraFee: 10000,   // 追加1人あたり
   maxExtra: 20,
   relations: ['配偶者・パートナー','子ども','親','兄弟姉妹','友人','同僚・知人','その他'],
-  bank: '普通預金\n金融機関名：PayPay銀行\n支店名：005ビジネス営業部\n口座番号：7332659\n口座名義：エンリアライズハヤシリュウスケ',
+  lineId: '@634kjjhx',   // 公式LINEのID
 };
 
 const $ = id => document.getElementById(id);
@@ -241,7 +241,6 @@ $('count').addEventListener('input', () => {
 });
 
 $('perPerson').textContent = yen(CONFIG.extraFee);
-$('bank').textContent = CONFIG.bank;
 renderFees();
 
 $('form').addEventListener('submit', e => {
@@ -261,6 +260,7 @@ $('form').addEventListener('submit', e => {
 
   const g = id => $(id).value.trim() || '(未入力)';
   const lines = [
+    `申し込みました【申込コードP${String(n).padStart(2, '0')}】`,
     '【算命学の鑑定 個人プラン お申込み】',
     `名前：${g('name')}`,
     `性別：${document.querySelector('input[name=gender]:checked').value}`,
@@ -285,7 +285,12 @@ $('form').addEventListener('submit', e => {
   $('formWrap').style.display = 'none';
   $('done').style.display = 'block';
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  lineUrl = `https://line.me/R/oaMessage/${encodeURIComponent(CONFIG.lineId)}/?${encodeURIComponent(lines.join('\n'))}`;
+  location.href = lineUrl;
 });
+
+let lineUrl = '';
+$('openLine').addEventListener('click', () => { if (lineUrl) location.href = lineUrl; });
 
 $('copy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('summary').textContent); $('copy').textContent = 'コピーしました'; }
