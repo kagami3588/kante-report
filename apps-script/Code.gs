@@ -7,6 +7,13 @@ const SUBJECT = '鑑定お申し込み完了';
 const BASE_FEE = 30000;
 const EXTRA_FEE = 10000;
 const MAX_EXTRA = 10;
+const BANK = [
+  '普通預金',
+  '金融機関名：PayPay銀行',
+  '支店名：005ビジネス営業部',
+  '口座番号：7332659',
+  '口座名義：エンリアライズハヤシリュウスケ',
+];
 
 // フォームのページを表示する(ウェブアプリのURLを開くと申込フォームが出る)
 function doGet() {
@@ -56,6 +63,7 @@ function doPost(e) {
 function buildBody_(d, extras) {
   const n = extras.length;
   const total = BASE_FEE + n * EXTRA_FEE;
+  const code = '申込コードP' + (n < 10 ? '0' + n : String(n));
   const yen = v => v.toLocaleString('en-US') + '円';
   const v = x => String(x || '').trim() || '(未入力)';
   const lines = [
@@ -64,6 +72,10 @@ function buildBody_(d, extras) {
     'この度は、算命学の鑑定にお申し込みいただき、ありがとうございます。',
     'お申し込みを確認しました。',
     '今後のご連絡は、公式LINEにてお送りします。',
+    '',
+    '■申込コード',
+    code,
+    'まだ公式LINEに送っていない場合は、この申込コードを、そのまま公式LINEにお送りください。',
     '',
     '■お申し込み内容',
     `お名前：${v(d.name)}（${v(d.kana)}）`,
@@ -87,8 +99,11 @@ function buildBody_(d, extras) {
     `お支払い合計：${yen(total)}`,
     '',
     '■お振込先',
-    'お振込先は、公式LINEのトーク画面でご案内しています。',
-    'LINEに届いていない場合は、公式LINEからお知らせください。',
+  );
+  BANK.forEach(l => lines.push(l));
+  lines.push(
+    '',
+    'お振込み後、公式LINEに「振り込みました」とお送りください。',
     '',
     '■オンラインでの鑑定をご希望の方へ',
     '前日までに、個別LINEにてリンクを発行します。',
