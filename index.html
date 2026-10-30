@@ -45,6 +45,7 @@ window.addEventListener('error', function (e) {
   .note { font-size:.85rem; opacity:.8; }
   a { color:var(--accent); }
   #done { display:none; }
+  .steps { margin:8px 0; padding-left:1.4em; }
   pre { white-space:pre-wrap; border:1px solid var(--line); border-radius:8px; padding:12px; font:inherit; margin:8px 0; }
   footer { text-align:center; font-size:.8rem; opacity:.75; margin-top:24px; }
 </style>
@@ -160,15 +161,19 @@ window.addEventListener('error', function (e) {
 
   <section id="done">
     <h2>あと一歩です</h2>
-    <p>公式LINEが開いたら、<strong>メッセージの送信ボタンを押して</strong>ください。送信されると、お振込先を自動でお送りします。</p>
+    <p>お申し込みはまだ完了していません。<strong>下の文章を、そのまま公式LINEにお送りください。</strong><br>送信されると、鑑定料とお振込先を自動でお送りします。</p>
     <p>お支払い合計：<strong id="doneTotal"></strong></p>
-    <button type="button" id="openLine">公式LINEを開いて申し込む</button>
-    <p class="note">LINEのトーク画面が開かない場合は、上のボタンをもう一度押すか、下の内容をコピーして、この公式LINEに送ってください。</p>
+    <ol class="steps">
+      <li>「内容をコピーする」を押す</li>
+      <li>「公式LINEを開く」を押して、トーク画面に貼り付けて送信する</li>
+    </ol>
     <pre id="summary"></pre>
     <button type="button" id="copy">内容をコピーする</button>
+    <button type="button" id="openLine" style="margin-top:10px">公式LINEを開く</button>
+    <p class="note">※文章は、書き換えずにそのままお送りください(1行目の「申込コード」で、鑑定料を自動でお知らせします)。</p>
   </section>
 
-  <footer>運営：KAGAMI / 責任者：林 竜輔 / お問い合わせ：公式LINEのトーク画面から<br><span style="opacity:.5">v4</span></footer>
+  <footer>運営：KAGAMI / 責任者：林 竜輔 / お問い合わせ：公式LINEのトーク画面から<br><span style="opacity:.5">v5</span></footer>
 </main>
 
 <script>
@@ -383,7 +388,6 @@ $('form').addEventListener('submit', function (e) {
     } catch (err) {}
   }
   lineUrl = 'https://line.me/R/oaMessage/' + encodeURIComponent(CONFIG.lineId) + '/?' + encodeURIComponent(lines.join('\n'));
-  goLine();
 });
 
 $('openLine').addEventListener('click', goLine);
