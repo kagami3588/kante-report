@@ -51,13 +51,13 @@
     <h2>個人情報の取り扱い</h2>
     <div class="privacy">【個人情報の取り扱い】
 お預かりする個人情報(お名前、メールアドレス、生年月日、ご連絡先など)は、大切に取り扱います。
-・使う目的:鑑定をご提供するため(日程調整、ご連絡、鑑定書のお渡し)。
+・使う目的：鑑定をご提供するため(日程調整、ご連絡、鑑定書のお渡し)。
 ・ご本人の同意なく、第三者にお渡しすることはありません。
 ・削除をご希望の場合は、下の連絡先までお申し出ください。お申し出があれば、速やかに削除します。
 
-運営:KAGAMI
-責任者:林 竜輔
-連絡先:kagami.3588@gmail.com</div>
+運営：KAGAMI
+責任者：林 竜輔
+連絡先：kagami.3588@gmail.com</div>
   </section>
 
   <section>
@@ -78,7 +78,7 @@
         <label><input type="radio" name="gender" value="女性"> 女性</label>
       </div>
 
-      <label class="f req" for="birth">生年月日(例:20000218)</label>
+      <label class="f req" for="birth">生年月日(例：20000218)</label>
       <input type="text" id="birth" required inputmode="numeric" maxlength="8" placeholder="20000218">
       <span class="err" id="birthErr"></span>
 
@@ -122,7 +122,7 @@
       </div>
       <div id="countBox" hidden>
         <label class="f req" for="count">追加人数を教えてください</label>
-        <input type="number" id="count" min="1" max="20" inputmode="numeric" placeholder="例:2">
+        <input type="number" id="count" min="1" max="20" inputmode="numeric" placeholder="例：2">
         <span class="err" id="countErr"></span>
       </div>
       <div id="persons"></div>
@@ -153,7 +153,7 @@
 
   <section id="done">
     <h2>お申込み内容を受け付けました</h2>
-    <p>お支払い合計:<strong id="doneTotal"></strong></p>
+    <p>お支払い合計：<strong id="doneTotal"></strong></p>
     <p><strong>お振込先</strong></p>
     <pre id="bank"></pre>
     <p><strong>お申込み内容</strong></p>
@@ -161,7 +161,7 @@
     <button type="button" id="copy">内容をコピーする</button>
   </section>
 
-  <footer>運営: KAGAMI / 責任者: 林 竜輔 / お問い合わせ: kagami.3588@gmail.com</footer>
+  <footer>運営：KAGAMI / 責任者：林 竜輔 / お問い合わせ：kagami.3588@gmail.com</footer>
 </main>
 
 <script>
@@ -171,7 +171,7 @@ const CONFIG = {
   extraFee: 10000,   // 追加1人あたり
   maxExtra: 20,
   relations: ['配偶者・パートナー','子ども','親','兄弟姉妹','友人','同僚・知人','その他'],
-  bank: '普通預金\n金融機関名: PayPay銀行\n支店名: 005ビジネス営業部\n口座番号: 7332659\n口座名義: エンリアライズハヤシリュウスケ',
+  bank: '普通預金\n金融機関名：PayPay銀行\n支店名：005ビジネス営業部\n口座番号：7332659\n口座名義：エンリアライズハヤシリュウスケ',
 };
 
 const $ = id => document.getElementById(id);
@@ -213,7 +213,7 @@ function renderPersons() {
       <input type="text" data-k="name" value="${esc(v[0] || '')}" required>
       <label class="f req">性別</label>
       <select data-k="gender" required>${['', '男性', '女性'].map(o => `<option ${o === v[1] ? 'selected' : ''}>${o}</option>`).join('')}</select>
-      <label class="f req">生年月日(例:20000218)</label>
+      <label class="f req">生年月日(例：20000218)</label>
       <input type="text" data-k="birth" value="${esc(v[2] || '')}" inputmode="numeric" maxlength="8" placeholder="20000218" required>
       <label class="f req">お申込み者との関係性</label>
       <select data-k="rel" required>${['', ...CONFIG.relations].map(o => `<option ${o === v[3] ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
@@ -244,12 +244,12 @@ $('form').addEventListener('submit', e => {
   e.preventDefault();
   let ok = true;
   $('birthErr').textContent = $('emailErr').textContent = '';
-  if (!validBirth($('birth').value.trim())) { $('birthErr').textContent = '8桁の数字で入力してください(例:20000218)'; ok = false; }
+  if (!validBirth($('birth').value.trim())) { $('birthErr').textContent = '8桁の数字で入力してください(例：20000218)'; ok = false; }
   if ($('email').value.trim() !== $('email2').value.trim()) { $('emailErr').textContent = 'メールアドレスが一致しません'; ok = false; }
   const n = extraCount();
   if (document.querySelector('input[name=hasExtra]:checked').value === 'はい' && n < 1) { $('countErr').textContent = '1名以上で入力してください'; ok = false; }
   for (const el of document.querySelectorAll('.person [data-k=birth]')) {
-    if (!validBirth(el.value.trim())) { el.setCustomValidity('8桁の数字で入力してください(例:20000218)'); ok = false; }
+    if (!validBirth(el.value.trim())) { el.setCustomValidity('8桁の数字で入力してください(例：20000218)'); ok = false; }
     else el.setCustomValidity('');
   }
   if (!$('form').checkValidity()) { $('form').reportValidity(); return; }
@@ -258,24 +258,24 @@ $('form').addEventListener('submit', e => {
   const g = id => $(id).value.trim() || '(未入力)';
   const lines = [
     '【算命学の鑑定 個人プラン お申込み】',
-    `名前:${g('name')}`,
-    `性別:${document.querySelector('input[name=gender]:checked').value}`,
-    `生年月日:${g('birth')}`,
-    `メール:${g('email')}`,
-    `LINE検索ID:${g('lineId')}`,
-    `Instagram:${g('insta')}`,
-    `公式LINE追加:追加しました`,
-    `紹介者:${g('referrer')}`,
-    `ご希望の内容:${g('wish')}`,
-    `自由記入:${g('free')}`,
-    `追加人数:${n}名`,
+    `名前：${g('name')}`,
+    `性別：${document.querySelector('input[name=gender]:checked').value}`,
+    `生年月日：${g('birth')}`,
+    `メール：${g('email')}`,
+    `LINE検索ID：${g('lineId')}`,
+    `Instagram：${g('insta')}`,
+    `公式LINE追加：追加しました`,
+    `紹介者：${g('referrer')}`,
+    `ご希望の内容：${g('wish')}`,
+    `自由記入：${g('free')}`,
+    `追加人数：${n}名`,
   ];
   document.querySelectorAll('.person').forEach((p, i) => {
     const f = k => p.querySelector(`[data-k=${k}]`).value;
-    lines.push(`  追加${i + 1}:${f('name')} / ${f('gender')} / ${f('birth')} / ${f('rel')}`);
+    lines.push(`  追加${i + 1}：${f('name')} / ${f('gender')} / ${f('birth')} / ${f('rel')}`);
   });
   const total = CONFIG.baseFee + n * CONFIG.extraFee;
-  lines.push(`鑑定料合計:${yen(total)}(基本 ${yen(CONFIG.baseFee)} + 追加 ${n}名 ${yen(n * CONFIG.extraFee)})`);
+  lines.push(`鑑定料合計：${yen(total)}(基本 ${yen(CONFIG.baseFee)} + 追加 ${n}名 ${yen(n * CONFIG.extraFee)})`);
   $('summary').textContent = lines.join('\n');
   $('doneTotal').textContent = yen(total);
   $('formWrap').style.display = 'none';
