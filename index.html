@@ -166,6 +166,7 @@ const CONFIG = {
   maxExtra: 10,
   relations: ['配偶者・パートナー','子ども','親','兄弟姉妹','友人','同僚・知人','その他'],
   lineId: '@634kjjhx',   // 公式LINEのID
+  mailEndpoint: '',      // 申込完了メール用 Google Apps Script のウェブアプリURL(apps-script/README.md 参照)。空ならメールは送らない
 };
 
 const $ = id => document.getElementById(id);
@@ -273,6 +274,21 @@ $('form').addEventListener('submit', e => {
   $('formWrap').style.display = 'none';
   $('done').style.display = 'block';
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (CONFIG.mailEndpoint) {
+    const val = id => $(id).value.trim();
+    const payload = {
+      name: val('name'), gender: document.querySelector('input[name=gender]:checked').value,
+      birth: val('birth'), email: val('email'), insta: val('insta'), referrer: val('referrer'),
+      wish: val('wish'), free: val('free'),
+      extras: [...document.querySelectorAll('.person')].map(p => {
+        const f = k => p.querySelector(`[data-k=${k}]`).value;
+        return { name: f('name'), gender: f('gender'), birth: f('birth'), rel: f('rel') };
+      }),
+    };
+    // LINEへ移動しても送信が途切れないよう keepalive を付ける
+    fetch(CONFIG.mailEndpoint, { method: 'POST', mode: 'no-cors', keepalive: true,
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).catch(() => {});
+  }
   lineUrl = `https://line.me/R/oaMessage/${encodeURIComponent(CONFIG.lineId)}/?${encodeURIComponent(lines.join('\n'))}`;
   location.href = lineUrl;
 });
