@@ -161,19 +161,19 @@ window.addEventListener('error', function (e) {
 
   <section id="done">
     <h2>あと一歩です</h2>
-    <p>お申し込みはまだ完了していません。<strong>下の文章を、そのまま公式LINEにお送りください。</strong><br>送信されると、鑑定料とお振込先を自動でお送りします。</p>
+    <p>お申し込みはまだ完了していません。<strong>下の「申込コード」を、そのまま公式LINEにお送りください。</strong><br>送信されると、鑑定料とお振込先を自動でお送りします。</p>
     <p>お支払い合計：<strong id="doneTotal"></strong></p>
     <ol class="steps">
-      <li>「内容をコピーする」を押す</li>
+      <li>「申込コードをコピーする」を押す</li>
       <li>「公式LINEを開く」を押して、トーク画面に貼り付けて送信する</li>
     </ol>
     <pre id="summary"></pre>
-    <button type="button" id="copy">内容をコピーする</button>
+    <button type="button" id="copy">申込コードをコピーする</button>
     <button type="button" id="openLine" style="margin-top:10px">公式LINEを開く</button>
-    <p class="note">※文章は、書き換えずにそのままお送りください(1行目の「申込コード」で、鑑定料を自動でお知らせします)。</p>
+    <p class="note">※申込コードは、書き換えずにそのままお送りください。コードに合わせて、鑑定料をお知らせします。</p>
   </section>
 
-  <footer>運営：KAGAMI / 責任者：林 竜輔 / お問い合わせ：公式LINEのトーク画面から<br><span style="opacity:.5">v5</span></footer>
+  <footer>運営：KAGAMI / 責任者：林 竜輔 / お問い合わせ：公式LINEのトーク画面から<br><span style="opacity:.5">v6</span></footer>
 </main>
 
 <script>
@@ -340,25 +340,9 @@ $('form').addEventListener('submit', function (e) {
   var code = String(n);
   if (code.length < 2) code = '0' + code;
   var persons = all('.person');
-  var lines = [
-    '申し込みました【申込コードP' + code + '】',
-    '【算命学の鑑定 個人プラン お申込み】',
-    '名前：' + g('name') + '(' + g('kana') + ')',
-    '性別：' + checkedValue('gender'),
-    '生年月日：' + g('birth'),
-    'メール：' + g('email'),
-    'Instagram：' + g('insta'),
-    '紹介者：' + g('referrer'),
-    '鑑定で見てほしいこと：' + g('wish'),
-    '自由記入：' + g('free'),
-    '追加人数：' + n + '名'
-  ];
-  persons.forEach(function (p, i) {
-    lines.push('  追加' + (i + 1) + '：' + personValue(p, 'name') + '(' + personValue(p, 'kana') + ') / ' + personValue(p, 'gender') + ' / ' + personValue(p, 'birth') + ' / ' + personValue(p, 'rel'));
-  });
+  var message = '申込コードP' + code;
   var total = CONFIG.baseFee + n * CONFIG.extraFee;
-  lines.push('鑑定料合計：' + yen(total) + '(基本 ' + yen(CONFIG.baseFee) + ' + 追加 ' + n + '名 ' + yen(n * CONFIG.extraFee) + ')');
-  $('summary').textContent = lines.join('\n');
+  $('summary').textContent = message;
   $('doneTotal').textContent = yen(total);
   $('formWrap').style.display = 'none';
   $('done').style.display = 'block';
@@ -387,7 +371,7 @@ $('form').addEventListener('submit', function (e) {
       }).catch(function () {});
     } catch (err) {}
   }
-  lineUrl = 'https://line.me/R/oaMessage/' + encodeURIComponent(CONFIG.lineId) + '/?' + encodeURIComponent(lines.join('\n'));
+  lineUrl = 'https://line.me/R/oaMessage/' + encodeURIComponent(CONFIG.lineId) + '/?' + encodeURIComponent(message);
 });
 
 $('openLine').addEventListener('click', goLine);
