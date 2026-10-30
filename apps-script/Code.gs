@@ -24,11 +24,14 @@ function doPost(e) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !String(d.name || '').trim()) {
       return reply_({ ok: false, error: 'invalid' });
     }
-    // 同じアドレスへの連続送信を防ぐ(10分に1通)
+    // 同じアドレスへの連続送信を防ぐ(1分に1通。二重クリック対策)
     const cache = CacheService.getScriptCache();
     const key = 'sent:' + email.toLowerCase();
-    if (cache.get(key)) return reply_({ ok: true, skipped: true });
-    cache.put(key, '1', 600);
+    if (cache.get(key)) {
+      console.log('skipped (rate limit): ' + email);
+      return reply_({ ok: true, skipped: true });
+    }
+    cache.put(key, '1', 60);
 
     const body = buildBody_(d, extras);
     MailApp.sendEmail({
@@ -38,8 +41,14 @@ function doPost(e) {
       body: body,
       name: SENDER_NAME,
     });
+    console.log('sent: ' + email);
     return reply_({ ok: true });
   } catch (err) {
+    console.error('error: ' + err);
+    // 失敗に気づけるよう、林さんにもお知らせする
+    try {
+      MailApp.sendEmail(OWNER_EMAIL, '【申込メール送信エラー】', String(err) + '\n\n' + (e && e.postData ? e.postData.contents : ''));
+    } catch (err2) {}
     return reply_({ ok: false, error: String(err) });
   }
 }
