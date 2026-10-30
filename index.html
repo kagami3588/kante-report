@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>算命学 個人鑑定 お申し込みフォーム</title>
+<style>
+  :root { --bg:#faf7f2; --card:#fff; --ink:#2b2622; --accent:#8a5a2b; --line:#e2d8cb; --err:#b3261e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1d1a17; --card:#27231f; --ink:#f0e9df; --accent:#d9a066; --line:#443c34; --err:#ff8a80; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Hiragino Sans","Noto Sans JP",sans-serif; line-height:1.7; }
+  main { max-width:640px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:1.4rem; color:var(--accent); text-align:center; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin:16px 0; }
+  h2 { font-size:1.05rem; margin:0 0 12px; color:var(--accent); }
+  label.f { display:block; margin:12px 0 4px; font-weight:600; font-size:.92rem; }
+  .req::after { content:" 必須"; color:var(--err); font-size:.75rem; }
+  input[type=text], input[type=email], input[type=tel], input[type=date], input[type=time], input[type=number], select, textarea {
+    width:100%; padding:10px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:8px; }
+  .radio label { margin-right:16px; }
+  .person { border-top:1px dashed var(--line); margin-top:16px; padding-top:4px; }
+  .person h3 { margin:12px 0 0; font-size:.95rem; }
+  table { width:100%; border-collapse:collapse; }
+  td { padding:6px 0; } td:last-child { text-align:right; }
+  .total td { border-top:2px solid var(--line); font-weight:700; font-size:1.15rem; color:var(--accent); }
+  button { width:100%; padding:14px; font:inherit; font-weight:700; color:#fff; background:var(--accent); border:0; border-radius:10px; cursor:pointer; }
+  .note { font-size:.85rem; opacity:.8; }
+  .err { color:var(--err); font-size:.85rem; }
+  #result { display:none; }
+  pre { white-space:pre-wrap; background:transparent; border:1px solid var(--line); border-radius:8px; padding:12px; font:inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>算命学 個人鑑定<br>お申し込みフォーム</h1>
+
+  <form id="form" novalidate>
+    <section>
+      <h2>お申込者（ご本人）</h2>
+      <label class="f req" for="name">お名前</label>
+      <input type="text" id="name" required>
+      <label class="f req" for="kana">ふりがな</label>
+      <input type="text" id="kana" required>
+      <label class="f req">性別</label>
+      <div class="radio">
+        <label><input type="radio" name="gender" value="女性" required> 女性</label>
+        <label><input type="radio" name="gender" value="男性"> 男性</label>
+        <label><input type="radio" name="gender" value="その他"> その他</label>
+      </div>
+      <label class="f req" for="birth">生年月日</label>
+      <input type="date" id="birth" required>
+      <label class="f" for="btime">出生時間（わかる場合）</label>
+      <input type="time" id="btime">
+      <label class="f" for="bplace">出生地（わかる場合）</label>
+      <input type="text" id="bplace" placeholder="例：東京都">
+      <label class="f req" for="email">メールアドレス</label>
+      <input type="email" id="email" required>
+      <label class="f" for="tel">電話番号</label>
+      <input type="tel" id="tel">
+      <label class="f" for="consult">ご相談内容</label>
+      <textarea id="consult" rows="4" placeholder="仕事・恋愛・家族・転機など、気になっていること"></textarea>
+    </section>
+
+    <section>
+      <h2>追加で鑑定を希望される方</h2>
+      <label class="f req">追加人数はいますか？</label>
+      <div class="radio">
+        <label><input type="radio" name="hasExtra" value="はい"> はい</label>
+        <label><input type="radio" name="hasExtra" value="いいえ" checked> いいえ</label>
+      </div>
+      <p class="note">追加1人につき鑑定料が <span id="perPerson"></span> 加算されます。</p>
+
+      <div id="countBox" hidden>
+        <label class="f req" for="count">追加人数を教えてください</label>
+        <input type="number" id="count" min="1" max="20" inputmode="numeric" placeholder="例：2">
+        <span class="err" id="countErr"></span>
+      </div>
+      <div id="persons"></div>
+    </section>
+
+    <section>
+      <h2>鑑定料・お振込先</h2>
+      <table>
+        <tr><td>基本鑑定料（ご本人）</td><td id="baseFee"></td></tr>
+        <tr><td id="extraLabel">追加</td><td id="extraFee"></td></tr>
+        <tr class="total"><td>お支払い合計</td><td id="totalFee"></td></tr>
+      </table>
+      <p style="margin-bottom:4px"><strong>お振込先</strong></p>
+      <pre id="bank"></pre>
+      <p class="note">お振込手数料はお客様のご負担となります。</p>
+    </section>
+
+    <button type="submit">申し込み内容を確認する</button>
+  </form>
+
+  <section id="result">
+    <h2>お申し込み内容</h2>
+    <pre id="summary"></pre>
+    <button type="button" id="copy">内容をコピーする</button>
+    <p class="note">上記内容をコピーして、ご連絡先へお送りください。</p>
+  </section>
+</main>
+
+<script>
+// ▼ 設定（ここを実際の内容に書き換えてください）
+const CONFIG = {
+  baseFee: 30000,        // 基本鑑定料（円）※仮の金額
+  extraFee: 10000,       // 追加1人あたりの加算額（円）
+  maxExtra: 20,
+  relations: ['配偶者・パートナー','子ども','親','兄弟姉妹','友人','同僚・知人','その他'],
+  bank: '○○銀行　○○支店\n普通　0000000\nお名前（カナ）',  // ※仮の振込先
+};
+
+const $ = id => document.getElementById(id);
+const yen = n => '¥' + n.toLocaleString('ja-JP');
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function extraCount() {
+  const yes = document.querySelector('input[name=hasExtra]:checked').value === 'はい';
+  if (!yes) return 0;
+  const n = parseInt($('count').value, 10);
+  return Number.isInteger(n) ? Math.min(Math.max(n, 0), CONFIG.maxExtra) : 0;
+}
+
+function renderFees() {
+  const n = extraCount();
+  $('baseFee').textContent = yen(CONFIG.baseFee);
+  $('extraLabel').textContent = `追加 ${n}名 × ${yen(CONFIG.extraFee)}`;
+  $('extraFee').textContent = yen(n * CONFIG.extraFee);
+  $('totalFee').textContent = yen(CONFIG.baseFee + n * CONFIG.extraFee);
+}
+
+function renderPersons() {
+  const n = extraCount();
+  const box = $('persons');
+  // 入力済みの値を保持したまま人数分に増減させる
+  const saved = [...box.querySelectorAll('.person')].map(p => [...p.querySelectorAll('input,select')].map(e => e.value));
+  box.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const v = saved[i] || [];
+    const div = document.createElement('div');
+    div.className = 'person';
+    div.innerHTML = `
+      <h3>追加の方 ${i + 1}</h3>
+      <label class="f req">お名前</label>
+      <input type="text" data-k="name" value="${esc(v[0] || '')}" required>
+      <label class="f req">性別</label>
+      <select data-k="gender" required>
+        ${['', '女性', '男性', 'その他'].map(o => `<option ${o === v[1] ? 'selected' : ''}>${o}</option>`).join('')}
+      </select>
+      <label class="f req">生年月日</label>
+      <input type="date" data-k="birth" value="${esc(v[2] || '')}" required>
+      <label class="f req">ご本人との関係性</label>
+      <select data-k="rel" required>
+        ${['', ...CONFIG.relations].map(o => `<option ${o === v[3] ? 'selected' : ''}>${o}</option>`).join('')}
+      </select>`;
+    box.appendChild(div);
+  }
+  renderFees();
+}
+
+function onToggle() {
+  const yes = document.querySelector('input[name=hasExtra]:checked').value === 'はい';
+  $('countBox').hidden = !yes;
+  $('count').required = yes;
+  if (!yes) $('count').value = '';
+  renderPersons();
+}
+
+document.querySelectorAll('input[name=hasExtra]').forEach(r => r.addEventListener('change', onToggle));
+$('count').addEventListener('input', () => {
+  const n = parseInt($('count').value, 10);
+  $('countErr').textContent = n > CONFIG.maxExtra ? `${CONFIG.maxExtra}名までです` : '';
+  renderPersons();
+});
+
+$('perPerson').textContent = yen(CONFIG.extraFee);
+$('bank').textContent = CONFIG.bank;
+renderFees();
+
+$('form').addEventListener('submit', e => {
+  e.preventDefault();
+  const form = $('form');
+  if (!form.checkValidity()) { form.reportValidity(); return; }
+  const n = extraCount();
+  if (document.querySelector('input[name=hasExtra]:checked').value === 'はい' && n < 1) {
+    $('count').focus(); $('countErr').textContent = '1名以上で入力してください'; return;
+  }
+  const g = id => $(id).value || '（未入力）';
+  const lines = [
+    '【算命学 個人鑑定 お申し込み】',
+    `お名前：${g('name')}（${g('kana')}）`,
+    `性別：${document.querySelector('input[name=gender]:checked').value}`,
+    `生年月日：${g('birth')}`,
+    `出生時間：${g('btime')}`,
+    `出生地：${g('bplace')}`,
+    `メール：${g('email')}`,
+    `電話：${g('tel')}`,
+    `ご相談内容：${g('consult')}`,
+    `追加人数：${n}名`,
+  ];
+  document.querySelectorAll('.person').forEach((p, i) => {
+    const f = k => p.querySelector(`[data-k=${k}]`).value;
+    lines.push(`  追加${i + 1}：${f('name')} / ${f('gender')} / ${f('birth')} / ${f('rel')}`);
+  });
+  lines.push(`鑑定料合計：${yen(CONFIG.baseFee + n * CONFIG.extraFee)}（基本 ${yen(CONFIG.baseFee)} ＋ 追加 ${n}名 ${yen(n * CONFIG.extraFee)}）`);
+  $('summary').textContent = lines.join('\n');
+  $('result').style.display = 'block';
+  $('result').scrollIntoView({ behavior: 'smooth' });
+});
+
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('summary').textContent); $('copy').textContent = 'コピーしました'; }
+  catch { $('copy').textContent = '選択してコピーしてください'; }
+});
+</script>
+</body>
+</html>
