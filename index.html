@@ -31,6 +31,7 @@
   td { padding:6px 0; } td:last-child { text-align:right; }
   .total td { border-top:2px solid var(--line); font-weight:700; font-size:1.1rem; color:var(--accent); }
   button { width:100%; padding:14px; font:inherit; font-weight:700; color:#fff; background:var(--accent); border:0; border-radius:10px; cursor:pointer; }
+  .warn { margin:8px 0; padding:8px 12px; border-left:4px solid var(--err); background:rgba(179,38,30,.08); font-weight:700; font-size:.9rem; }
   .err { color:var(--err); font-size:.85rem; display:block; }
   .note { font-size:.85rem; opacity:.8; }
   a { color:var(--accent); }
@@ -115,7 +116,8 @@
 
     <section>
       <h2>追加で鑑定を希望される方</h2>
-      <p class="note" style="margin-top:0">追加の方はレポートを作成して、お申込み者にのみ、その方について聞きたいことをお答えします。追加の方との面談は行いません。</p>
+      <p class="note" style="margin-top:0">追加の方はレポートを作成して、お申込み者にのみ、その方について聞きたいことをお答えします。</p>
+      <p class="warn">※ご注意：追加の方との面談は行いません。</p>
       <label class="f req">追加で鑑定（レポートの作成）を希望する方はいらっしゃいますか？</label>
       <div class="radio">
         <label><input type="radio" name="hasExtra" value="はい"> はい</label>
