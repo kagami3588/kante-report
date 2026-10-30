@@ -290,11 +290,16 @@ $('form').addEventListener('submit', e => {
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).catch(() => {});
   }
   lineUrl = `https://line.me/R/oaMessage/${encodeURIComponent(CONFIG.lineId)}/?${encodeURIComponent(lines.join('\n'))}`;
-  location.href = lineUrl;
+  goLine();
 });
 
 let lineUrl = '';
-$('openLine').addEventListener('click', () => { if (lineUrl) location.href = lineUrl; });
+// Google Apps Script 上で表示されたときは iframe の中なので、いちばん上の画面でLINEを開く
+function goLine() {
+  if (!lineUrl) return;
+  try { window.top.location.href = lineUrl; } catch (e) { location.href = lineUrl; }
+}
+$('openLine').addEventListener('click', goLine);
 
 $('copy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('summary').textContent); $('copy').textContent = 'コピーしました'; }

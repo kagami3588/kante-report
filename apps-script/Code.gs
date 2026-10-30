@@ -8,6 +8,13 @@ const BASE_FEE = 30000;
 const EXTRA_FEE = 10000;
 const MAX_EXTRA = 10;
 
+// フォームのページを表示する(ウェブアプリのURLを開くと申込フォームが出る)
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setTitle('算命学の鑑定 お申込み')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
 function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
