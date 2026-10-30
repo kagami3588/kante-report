@@ -63,7 +63,7 @@ function buildBody_(d, extras) {
     `メールアドレス：${email_(d)}`,
     `Instagram：${v(d.insta)}`,
     `紹介者：${v(d.referrer)}`,
-    `ご希望の内容：${v(d.wish)}`,
+    `鑑定で見てほしいこと：${v(d.wish)}`,
     `自由記入：${v(d.free)}`,
     '',
     `■追加でレポートの作成を希望される方：${n}名`,

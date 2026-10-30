@@ -106,7 +106,7 @@ window.addEventListener('error', function (e) {
       <p class="hint">(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)</p>
       <input type="text" id="referrer" required>
 
-      <label class="f" for="wish">ご希望の内容(任意)</label>
+      <label class="f" for="wish">鑑定で見てほしいこと</label>
       <textarea id="wish" rows="3"></textarea>
 
       <label class="f" for="free">自由記入欄</label>
@@ -324,7 +324,7 @@ $('form').addEventListener('submit', function (e) {
     'メール：' + g('email'),
     'Instagram：' + g('insta'),
     '紹介者：' + g('referrer'),
-    'ご希望の内容：' + g('wish'),
+    '鑑定で見てほしいこと：' + g('wish'),
     '自由記入：' + g('free'),
     '追加人数：' + n + '名'
   ];
