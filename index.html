@@ -126,7 +126,7 @@
       </div>
       <div id="countBox" hidden>
         <label class="f req" for="count">追加人数を教えてください</label>
-        <input type="number" id="count" min="1" max="20" inputmode="numeric" placeholder="例：2">
+        <input type="number" id="count" min="1" max="10" inputmode="numeric" placeholder="例：2">
         <span class="err" id="countErr"></span>
       </div>
       <div id="persons"></div>
@@ -173,7 +173,7 @@
 const CONFIG = {
   baseFee: 30000,
   extraFee: 10000,   // 追加1人あたり
-  maxExtra: 20,
+  maxExtra: 10,
   relations: ['配偶者・パートナー','子ども','親','兄弟姉妹','友人','同僚・知人','その他'],
   lineId: '@634kjjhx',   // 公式LINEのID
 };
