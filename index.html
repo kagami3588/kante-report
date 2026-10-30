@@ -79,7 +79,7 @@ window.addEventListener('error', function (e) {
     <section>
       <h2>お申込み者の情報</h2>
 
-      <label class="f req" for="name">名前（漢字）</label>
+      <label class="f req" for="name">名前</label>
       <p class="hint">(例：山田 太郎)</p>
       <input type="text" id="name" required autocomplete="name">
 
@@ -265,7 +265,7 @@ function renderPersons() {
     var h = document.createElement('h3');
     h.textContent = '追加の方 ' + (i + 1);
     div.appendChild(h);
-    div.appendChild(makeLabel('名前（漢字）'));
+    div.appendChild(makeLabel('名前'));
     div.appendChild(makeInput('name', v[0], false, false));
     div.appendChild(makeLabel('フリガナ'));
     div.appendChild(makeInput('kana', v[1], false, true));
