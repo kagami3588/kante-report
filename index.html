@@ -79,8 +79,13 @@ window.addEventListener('error', function (e) {
     <section>
       <h2>お申込み者の情報</h2>
 
-      <label class="f req" for="name">名前(フルネーム)</label>
+      <label class="f req" for="name">名前(フルネーム・漢字)</label>
+      <p class="hint">(例：山田 太郎)</p>
       <input type="text" id="name" required autocomplete="name">
+
+      <label class="f req" for="kana">フリガナ(カタカナ)</label>
+      <p class="hint">(例：ヤマダ タロウ)</p>
+      <input type="text" id="kana" required pattern="[ァ-ヶー・ 　]+" title="カタカナで入力してください(例：ヤマダ タロウ)">
 
       <label class="f req">性別</label>
       <div class="radio">
@@ -164,7 +169,7 @@ window.addEventListener('error', function (e) {
     <button type="button" id="copy">内容をコピーする</button>
   </section>
 
-  <footer>運営：KAGAMI / 責任者：林 竜輔 / お問い合わせ：公式LINEのトーク画面から<br><span style="opacity:.5">v3</span></footer>
+  <footer>運営：KAGAMI / 責任者：林 竜輔 / お問い合わせ：公式LINEのトーク画面から<br><span style="opacity:.5">v4</span></footer>
 </main>
 
 <script>
@@ -227,12 +232,17 @@ function makeSelect(key, options, value) {
   return sel;
 }
 
-function makeInput(key, value, isBirth) {
+function makeInput(key, value, isBirth, isKana) {
   var inp = document.createElement('input');
   inp.type = 'text';
   inp.setAttribute('data-k', key);
   inp.required = true;
   inp.value = value || '';
+  if (isKana) {
+    inp.pattern = '[ァ-ヶー・ 　]+';
+    inp.title = 'カタカナで入力してください(例：ヤマダ タロウ)';
+    inp.placeholder = 'ヤマダ ハナコ';
+  }
   if (isBirth) {
     inp.setAttribute('inputmode', 'numeric');
     inp.maxLength = 8;
@@ -255,14 +265,16 @@ function renderPersons() {
     var h = document.createElement('h3');
     h.textContent = '追加の方 ' + (i + 1);
     div.appendChild(h);
-    div.appendChild(makeLabel('名前(フルネーム)'));
-    div.appendChild(makeInput('name', v[0], false));
+    div.appendChild(makeLabel('名前(フルネーム・漢字)'));
+    div.appendChild(makeInput('name', v[0], false, false));
+    div.appendChild(makeLabel('フリガナ(カタカナ)'));
+    div.appendChild(makeInput('kana', v[1], false, true));
     div.appendChild(makeLabel('性別'));
-    div.appendChild(makeSelect('gender', ['', '男性', '女性'], v[1]));
+    div.appendChild(makeSelect('gender', ['', '男性', '女性'], v[2]));
     div.appendChild(makeLabel('生年月日(例：20000218)'));
-    div.appendChild(makeInput('birth', v[2], true));
+    div.appendChild(makeInput('birth', v[3], true, false));
     div.appendChild(makeLabel('お申込み者との関係性'));
-    div.appendChild(makeSelect('rel', [''].concat(CONFIG.relations), v[3]));
+    div.appendChild(makeSelect('rel', [''].concat(CONFIG.relations), v[4]));
     box.appendChild(div);
   }
   renderFees();
@@ -293,6 +305,15 @@ function goLine() {
   try { window.top.location.href = lineUrl; } catch (e) { location.href = lineUrl; }
 }
 
+// ひらがなで入力されたら、カタカナに直す
+function toKatakana(str) {
+  return str.replace(/[ぁ-ゖ]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) + 96); });
+}
+document.addEventListener('change', function (ev) {
+  var t = ev.target;
+  if (t && (t.id === 'kana' || (t.getAttribute && t.getAttribute('data-k') === 'kana'))) t.value = toKatakana(t.value);
+});
+
 function personValue(p, k) { return p.querySelector('[data-k=' + k + ']').value; }
 
 $('form').addEventListener('submit', function (e) {
@@ -318,7 +339,7 @@ $('form').addEventListener('submit', function (e) {
   var lines = [
     '申し込みました【申込コードP' + code + '】',
     '【算命学の鑑定 個人プラン お申込み】',
-    '名前：' + g('name'),
+    '名前：' + g('name') + '(' + g('kana') + ')',
     '性別：' + checkedValue('gender'),
     '生年月日：' + g('birth'),
     'メール：' + g('email'),
@@ -329,7 +350,7 @@ $('form').addEventListener('submit', function (e) {
     '追加人数：' + n + '名'
   ];
   persons.forEach(function (p, i) {
-    lines.push('  追加' + (i + 1) + '：' + personValue(p, 'name') + ' / ' + personValue(p, 'gender') + ' / ' + personValue(p, 'birth') + ' / ' + personValue(p, 'rel'));
+    lines.push('  追加' + (i + 1) + '：' + personValue(p, 'name') + '(' + personValue(p, 'kana') + ') / ' + personValue(p, 'gender') + ' / ' + personValue(p, 'birth') + ' / ' + personValue(p, 'rel'));
   });
   var total = CONFIG.baseFee + n * CONFIG.extraFee;
   lines.push('鑑定料合計：' + yen(total) + '(基本 ' + yen(CONFIG.baseFee) + ' + 追加 ' + n + '名 ' + yen(n * CONFIG.extraFee) + ')');
@@ -342,6 +363,7 @@ $('form').addEventListener('submit', function (e) {
   if (CONFIG.mailEndpoint) {
     var payload = {
       name: $('name').value.trim(),
+      kana: $('kana').value.trim(),
       gender: checkedValue('gender'),
       birth: $('birth').value.trim(),
       email: $('email').value.trim(),
@@ -350,7 +372,7 @@ $('form').addEventListener('submit', function (e) {
       wish: $('wish').value.trim(),
       free: $('free').value.trim(),
       extras: persons.map(function (p) {
-        return { name: personValue(p, 'name'), gender: personValue(p, 'gender'), birth: personValue(p, 'birth'), rel: personValue(p, 'rel') };
+        return { name: personValue(p, 'name'), kana: personValue(p, 'kana'), gender: personValue(p, 'gender'), birth: personValue(p, 'birth'), rel: personValue(p, 'rel') };
       })
     };
     try {

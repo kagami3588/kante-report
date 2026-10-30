@@ -57,7 +57,7 @@ function buildBody_(d, extras) {
     '今後のご連絡は、公式LINEにてお送りします。',
     '',
     '■お申し込み内容',
-    `お名前：${v(d.name)}`,
+    `お名前：${v(d.name)}（${v(d.kana)}）`,
     `性別：${v(d.gender)}`,
     `生年月日：${v(d.birth)}`,
     `メールアドレス：${email_(d)}`,
@@ -69,7 +69,7 @@ function buildBody_(d, extras) {
     `■追加でレポートの作成を希望される方：${n}名`,
   ];
   extras.forEach((p, i) => {
-    lines.push(`追加${i + 1}：${v(p.name)} / ${v(p.gender)} / ${v(p.birth)} / ${v(p.rel)}`);
+    lines.push(`追加${i + 1}：${v(p.name)}（${v(p.kana)}） / ${v(p.gender)} / ${v(p.birth)} / ${v(p.rel)}`);
   });
   lines.push(
     '',
