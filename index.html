@@ -164,158 +164,214 @@ window.addEventListener('error', function (e) {
     <button type="button" id="copy">内容をコピーする</button>
   </section>
 
-  <footer>運営：KAGAMI / 責任者：林 竜輔 / お問い合わせ：公式LINEのトーク画面から</footer>
+  <footer>運営：KAGAMI / 責任者：林 竜輔 / お問い合わせ：公式LINEのトーク画面から<br><span style="opacity:.5">v3</span></footer>
 </main>
 
 <script>
 // ▼ 設定
-const CONFIG = {
+var CONFIG = {
   baseFee: 30000,
-  extraFee: 10000,   // 追加1人あたり
+  extraFee: 10000,
   maxExtra: 10,
-  relations: ['配偶者・パートナー','子ども','親','兄弟姉妹','友人','同僚・知人','その他'],
-  lineId: '@634kjjhx',   // 公式LINEのID
-  mailEndpoint: 'https://script.google.com/macros/s/AKfycbxHHCUmc7vprxTk6W4Mibh43z3yQW3A4jnoGkwEH4gAZD3OU7RySPWGbzdpGq8atu2W/exec',      // 申込完了メール用 Google Apps Script のウェブアプリURL(apps-script/README.md 参照)。空ならメールは送らない
+  relations: ['配偶者・パートナー', '子ども', '親', '兄弟姉妹', '友人', '同僚・知人', 'その他'],
+  lineId: '@634kjjhx',
+  mailEndpoint: 'https://script.google.com/macros/s/AKfycbxHHCUmc7vprxTk6W4Mibh43z3yQW3A4jnoGkwEH4gAZD3OU7RySPWGbzdpGq8atu2W/exec'
 };
 
-const $ = id => document.getElementById(id);
-const yen = n => '¥' + n.toLocaleString('ja-JP');
-const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const validBirth = s => {
-  if (!/^\d{8}$/.test(s)) return false;
-  const y = +s.slice(0,4), m = +s.slice(4,6), d = +s.slice(6,8);
-  const dt = new Date(y, m - 1, d);
+function $(id) { return document.getElementById(id); }
+function yen(n) { return '¥' + n.toLocaleString('ja-JP'); }
+function all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function checkedValue(name) { return document.querySelector('input[name=' + name + ']:checked').value; }
+
+function validBirth(s) {
+  if (!/^[0-9]{8}$/.test(s)) return false;
+  var y = +s.slice(0, 4), m = +s.slice(4, 6), d = +s.slice(6, 8);
+  var dt = new Date(y, m - 1, d);
   return y >= 1900 && dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d && dt <= new Date();
-};
+}
 
 function extraCount() {
-  if (document.querySelector('input[name=hasExtra]:checked').value !== 'はい') return 0;
-  const n = parseInt($('count').value, 10);
-  return Number.isInteger(n) ? Math.min(Math.max(n, 0), CONFIG.maxExtra) : 0;
+  if (checkedValue('hasExtra') !== 'はい') return 0;
+  var n = parseInt($('count').value, 10);
+  if (isNaN(n)) return 0;
+  return Math.min(Math.max(n, 0), CONFIG.maxExtra);
 }
 
 function renderFees() {
-  const n = extraCount(), total = CONFIG.baseFee + n * CONFIG.extraFee;
+  var n = extraCount();
+  var total = CONFIG.baseFee + n * CONFIG.extraFee;
   $('baseFee').textContent = yen(CONFIG.baseFee);
-  $('extraLabel').textContent = `追加 ${n}名 × ${yen(CONFIG.extraFee)}`;
+  $('extraLabel').textContent = '追加 ' + n + '名 × ' + yen(CONFIG.extraFee);
   $('extraFee').textContent = yen(n * CONFIG.extraFee);
   $('totalFee').textContent = yen(total);
-  $('priceTop').textContent = n ? `${yen(total)}(追加${n}名を含む)` : yen(total);
+  $('priceTop').textContent = n ? yen(total) + '(追加' + n + '名を含む)' : yen(total);
+}
+
+function makeLabel(text) {
+  var l = document.createElement('label');
+  l.className = 'f req';
+  l.textContent = text;
+  return l;
+}
+
+function makeSelect(key, options, value) {
+  var sel = document.createElement('select');
+  sel.setAttribute('data-k', key);
+  sel.required = true;
+  options.forEach(function (o) {
+    var op = document.createElement('option');
+    op.textContent = o;
+    if (o === value) op.selected = true;
+    sel.appendChild(op);
+  });
+  return sel;
+}
+
+function makeInput(key, value, isBirth) {
+  var inp = document.createElement('input');
+  inp.type = 'text';
+  inp.setAttribute('data-k', key);
+  inp.required = true;
+  inp.value = value || '';
+  if (isBirth) {
+    inp.setAttribute('inputmode', 'numeric');
+    inp.maxLength = 8;
+    inp.placeholder = '20000218';
+  }
+  return inp;
 }
 
 function renderPersons() {
-  const n = extraCount(), box = $('persons');
-  const saved = [...box.querySelectorAll('.person')].map(p => [...p.querySelectorAll('[data-k]')].map(e => e.value));
+  var n = extraCount();
+  var box = $('persons');
+  var saved = all('.person', box).map(function (p) {
+    return all('[data-k]', p).map(function (e) { return e.value; });
+  });
   box.innerHTML = '';
-  for (let i = 0; i < n; i++) {
-    const v = saved[i] || [];
-    const div = document.createElement('div');
+  for (var i = 0; i < n; i++) {
+    var v = saved[i] || [];
+    var div = document.createElement('div');
     div.className = 'person';
-    div.innerHTML = `
-      <h3>追加の方 ${i + 1}</h3>
-      <label class="f req">名前(フルネーム)</label>
-      <input type="text" data-k="name" value="${esc(v[0] || '')}" required>
-      <label class="f req">性別</label>
-      <select data-k="gender" required>${['', '男性', '女性'].map(o => `<option ${o === v[1] ? 'selected' : ''}>${o}</option>`).join('')}</select>
-      <label class="f req">生年月日(例：20000218)</label>
-      <input type="text" data-k="birth" value="${esc(v[2] || '')}" inputmode="numeric" maxlength="8" placeholder="20000218" required>
-      <label class="f req">お申込み者との関係性</label>
-      <select data-k="rel" required>${['', ...CONFIG.relations].map(o => `<option ${o === v[3] ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+    var h = document.createElement('h3');
+    h.textContent = '追加の方 ' + (i + 1);
+    div.appendChild(h);
+    div.appendChild(makeLabel('名前(フルネーム)'));
+    div.appendChild(makeInput('name', v[0], false));
+    div.appendChild(makeLabel('性別'));
+    div.appendChild(makeSelect('gender', ['', '男性', '女性'], v[1]));
+    div.appendChild(makeLabel('生年月日(例：20000218)'));
+    div.appendChild(makeInput('birth', v[2], true));
+    div.appendChild(makeLabel('お申込み者との関係性'));
+    div.appendChild(makeSelect('rel', [''].concat(CONFIG.relations), v[3]));
     box.appendChild(div);
   }
   renderFees();
 }
 
 function onToggle() {
-  const yes = document.querySelector('input[name=hasExtra]:checked').value === 'はい';
+  var yes = checkedValue('hasExtra') === 'はい';
   $('countBox').hidden = !yes;
   $('count').required = yes;
   if (!yes) { $('count').value = ''; $('countErr').textContent = ''; }
   renderPersons();
 }
-document.querySelectorAll('input[name=hasExtra]').forEach(r => r.addEventListener('change', onToggle));
-$('count').addEventListener('input', () => {
-  const n = parseInt($('count').value, 10);
-  $('countErr').textContent = n > CONFIG.maxExtra ? `${CONFIG.maxExtra}名までです` : '';
+
+all('input[name=hasExtra]').forEach(function (r) { r.addEventListener('change', onToggle); });
+$('count').addEventListener('input', function () {
+  var n = parseInt($('count').value, 10);
+  $('countErr').textContent = n > CONFIG.maxExtra ? CONFIG.maxExtra + '名までです' : '';
   renderPersons();
 });
 
 $('perPerson').textContent = yen(CONFIG.extraFee);
 renderFees();
 
-$('form').addEventListener('submit', e => {
-  e.preventDefault();
-  let ok = true;
-  $('birthErr').textContent = $('emailErr').textContent = '';
-  if (!validBirth($('birth').value.trim())) { $('birthErr').textContent = '8桁の数字で入力してください(例：20000218)'; ok = false; }
-  if ($('email').value.trim() !== $('email2').value.trim()) { $('emailErr').textContent = 'メールアドレスが一致しません'; ok = false; }
-  const n = extraCount();
-  if (document.querySelector('input[name=hasExtra]:checked').value === 'はい' && n < 1) { $('countErr').textContent = '1名以上で入力してください'; ok = false; }
-  for (const el of document.querySelectorAll('.person [data-k=birth]')) {
-    if (!validBirth(el.value.trim())) { el.setCustomValidity('8桁の数字で入力してください(例：20000218)'); ok = false; }
-    else el.setCustomValidity('');
-  }
-  if (!$('form').checkValidity()) { $('form').reportValidity(); return; }
-  if (!ok) { (document.querySelector('.err:not(:empty)') || $('form')).scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+var lineUrl = '';
 
-  const g = id => $(id).value.trim() || '(未入力)';
-  const lines = [
-    `申し込みました【申込コードP${String(n).padStart(2, '0')}】`,
-    '【算命学の鑑定 個人プラン お申込み】',
-    `名前：${g('name')}`,
-    `性別：${document.querySelector('input[name=gender]:checked').value}`,
-    `生年月日：${g('birth')}`,
-    `メール：${g('email')}`,
-    `Instagram：${g('insta')}`,
-    `紹介者：${g('referrer')}`,
-    `ご希望の内容：${g('wish')}`,
-    `自由記入：${g('free')}`,
-    `追加人数：${n}名`,
-  ];
-  document.querySelectorAll('.person').forEach((p, i) => {
-    const f = k => p.querySelector(`[data-k=${k}]`).value;
-    lines.push(`  追加${i + 1}：${f('name')} / ${f('gender')} / ${f('birth')} / ${f('rel')}`);
-  });
-  const total = CONFIG.baseFee + n * CONFIG.extraFee;
-  lines.push(`鑑定料合計：${yen(total)}(基本 ${yen(CONFIG.baseFee)} + 追加 ${n}名 ${yen(n * CONFIG.extraFee)})`);
-  $('summary').textContent = lines.join('\n');
-  $('doneTotal').textContent = yen(total);
-  $('formWrap').style.display = 'none';
-  $('done').style.display = 'block';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  if (CONFIG.mailEndpoint) {
-    const val = id => $(id).value.trim();
-    const payload = {
-      name: val('name'), gender: document.querySelector('input[name=gender]:checked').value,
-      birth: val('birth'), email: val('email'), insta: val('insta'), referrer: val('referrer'),
-      wish: val('wish'), free: val('free'),
-      extras: [...document.querySelectorAll('.person')].map(p => {
-        const f = k => p.querySelector(`[data-k=${k}]`).value;
-        return { name: f('name'), gender: f('gender'), birth: f('birth'), rel: f('rel') };
-      }),
-    };
-    // LINEへ移動しても送信が途切れないよう keepalive を付ける
-    fetch(CONFIG.mailEndpoint, { method: 'POST', mode: 'no-cors', keepalive: true,
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).catch(() => {});
-  }
-  lineUrl = `https://line.me/R/oaMessage/${encodeURIComponent(CONFIG.lineId)}/?${encodeURIComponent(lines.join('\n'))}`;
-  goLine();
-});
-
-let lineUrl = '';
-// Google Apps Script 上で表示されたときは iframe の中なので、いちばん上の画面でLINEを開く
 function goLine() {
   if (!lineUrl) return;
   try { window.top.location.href = lineUrl; } catch (e) { location.href = lineUrl; }
 }
+
+function personValue(p, k) { return p.querySelector('[data-k=' + k + ']').value; }
+
+$('form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var ok = true;
+  $('birthErr').textContent = '';
+  $('emailErr').textContent = '';
+  if (!validBirth($('birth').value.trim())) { $('birthErr').textContent = '8桁の数字で入力してください(例：20000218)'; ok = false; }
+  if ($('email').value.trim() !== $('email2').value.trim()) { $('emailErr').textContent = 'メールアドレスが一致しません'; ok = false; }
+  var n = extraCount();
+  if (checkedValue('hasExtra') === 'はい' && n < 1) { $('countErr').textContent = '1名以上で入力してください'; ok = false; }
+  all('.person [data-k=birth]').forEach(function (el) {
+    if (!validBirth(el.value.trim())) { el.setCustomValidity('8桁の数字で入力してください(例：20000218)'); ok = false; }
+    else el.setCustomValidity('');
+  });
+  if (!$('form').checkValidity()) { $('form').reportValidity(); return; }
+  if (!ok) { ($('form').querySelector('.err:not(:empty)') || $('form')).scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+
+  function g(id) { return $(id).value.trim() || '(未入力)'; }
+  var code = String(n);
+  if (code.length < 2) code = '0' + code;
+  var persons = all('.person');
+  var lines = [
+    '申し込みました【申込コードP' + code + '】',
+    '【算命学の鑑定 個人プラン お申込み】',
+    '名前：' + g('name'),
+    '性別：' + checkedValue('gender'),
+    '生年月日：' + g('birth'),
+    'メール：' + g('email'),
+    'Instagram：' + g('insta'),
+    '紹介者：' + g('referrer'),
+    'ご希望の内容：' + g('wish'),
+    '自由記入：' + g('free'),
+    '追加人数：' + n + '名'
+  ];
+  persons.forEach(function (p, i) {
+    lines.push('  追加' + (i + 1) + '：' + personValue(p, 'name') + ' / ' + personValue(p, 'gender') + ' / ' + personValue(p, 'birth') + ' / ' + personValue(p, 'rel'));
+  });
+  var total = CONFIG.baseFee + n * CONFIG.extraFee;
+  lines.push('鑑定料合計：' + yen(total) + '(基本 ' + yen(CONFIG.baseFee) + ' + 追加 ' + n + '名 ' + yen(n * CONFIG.extraFee) + ')');
+  $('summary').textContent = lines.join('\n');
+  $('doneTotal').textContent = yen(total);
+  $('formWrap').style.display = 'none';
+  $('done').style.display = 'block';
+  window.scrollTo(0, 0);
+
+  if (CONFIG.mailEndpoint) {
+    var payload = {
+      name: $('name').value.trim(),
+      gender: checkedValue('gender'),
+      birth: $('birth').value.trim(),
+      email: $('email').value.trim(),
+      insta: $('insta').value.trim(),
+      referrer: $('referrer').value.trim(),
+      wish: $('wish').value.trim(),
+      free: $('free').value.trim(),
+      extras: persons.map(function (p) {
+        return { name: personValue(p, 'name'), gender: personValue(p, 'gender'), birth: personValue(p, 'birth'), rel: personValue(p, 'rel') };
+      })
+    };
+    try {
+      fetch(CONFIG.mailEndpoint, {
+        method: 'POST', mode: 'no-cors', keepalive: true,
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      }).catch(function () {});
+    } catch (err) {}
+  }
+  lineUrl = 'https://line.me/R/oaMessage/' + encodeURIComponent(CONFIG.lineId) + '/?' + encodeURIComponent(lines.join('\n'));
+  goLine();
+});
+
 $('openLine').addEventListener('click', goLine);
 
-$('copy').addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText($('summary').textContent); $('copy').textContent = 'コピーしました'; }
-  catch { $('copy').textContent = '選択してコピーしてください'; }
+$('copy').addEventListener('click', function () {
+  var done = function () { $('copy').textContent = 'コピーしました'; };
+  var fail = function () { $('copy').textContent = '選択してコピーしてください'; };
+  try { navigator.clipboard.writeText($('summary').textContent).then(done, fail); } catch (err) { fail(); }
 });
-document.title = document.title + '';
-window.__formReady = true;
 </script>
 </body>
 </html>
