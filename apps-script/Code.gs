@@ -105,6 +105,23 @@ function appendRow_(d, extras, email) {
   }
 }
 
+// 宿命早見の意味文を、スプレッドシートの「早見の意味」シートから読み込む
+// シートの列: A=区分(日干 / 日支) B=キー(甲, 乙…/ 子, 丑…) C=意味
+function getMeanings() {
+  const out = {};
+  try {
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('早見の意味');
+    if (!sheet) return out;
+    sheet.getDataRange().getValues().forEach((r, i) => {
+      const kind = String(r[0]).trim(), key = String(r[1]).trim(), text = String(r[2]).trim();
+      if (i > 0 && kind && key && text) out[kind + ':' + key] = text;
+    });
+  } catch (err) {
+    console.error('meanings error: ' + err);
+  }
+  return out;
+}
+
 function buildBody_(d, extras) {
   const n = extras.length;
   const total = BASE_FEE + n * EXTRA_FEE;

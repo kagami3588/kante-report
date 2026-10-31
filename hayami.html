@@ -14,18 +14,23 @@
   main { max-width:640px; margin:0 auto; padding:24px 16px 64px; }
   .brand { text-align:center; letter-spacing:.3em; color:var(--accent); font-weight:700; }
   h1 { font-size:1.4rem; text-align:center; margin:4px 0 16px; }
+  h2 { font-size:1rem; color:var(--accent); margin:0 0 8px; text-align:center; }
   section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin:16px 0; }
   label { display:block; font-weight:600; font-size:.92rem; margin-bottom:4px; }
   input { width:100%; padding:10px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:8px; }
   button { width:100%; padding:14px; margin-top:12px; font:inherit; font-weight:700; color:#fff; background:var(--accent); border:0; border-radius:10px; cursor:pointer; }
-  .hint, .note { font-size:.85rem; opacity:.8; }
+  .note { font-size:.85rem; opacity:.8; }
   .err { color:var(--err); font-size:.85rem; min-height:1.2em; }
   #result { display:none; }
-  .pillar { text-align:center; font-size:2.6rem; font-weight:700; color:var(--accent); letter-spacing:.1em; margin:0; }
-  .yomi { text-align:center; margin:0 0 12px; opacity:.8; }
-  table { width:100%; border-collapse:collapse; }
-  th, td { padding:8px 4px; border-top:1px solid var(--line); text-align:left; }
-  th { width:30%; font-weight:600; }
+  .pillar { text-align:center; font-size:2.4rem; font-weight:700; color:var(--accent); letter-spacing:.1em; margin:0; }
+  .yomi { text-align:center; margin:0 0 4px; opacity:.8; }
+  .art { text-align:center; }
+  .art svg { width:150px; height:150px; border-radius:18px; border:1px solid var(--line); }
+  .big { text-align:center; font-size:1.6rem; font-weight:700; margin:8px 0 0; }
+  .sub { text-align:center; opacity:.8; margin:0; }
+  .tag { display:inline-block; padding:2px 14px; border-radius:999px; color:#fff; font-weight:700; font-size:1.2rem; }
+  .season { text-align:center; margin:8px 0 0; }
+  .meaning { margin:12px 0 0; padding:12px; border-left:4px solid var(--accent); background:rgba(138,90,43,.08); white-space:pre-wrap; display:none; }
 </style>
 </head>
 <body>
@@ -37,33 +42,80 @@
     <label for="birth">生年月日(例：20000218)</label>
     <input type="text" id="birth" inputmode="numeric" maxlength="8" placeholder="20000218">
     <span class="err" id="err"></span>
-    <button type="button" id="go">日干・日支を調べる</button>
+    <button type="button" id="go">調べる</button>
   </section>
 
-  <section id="result">
-    <p class="pillar" id="pillar"></p>
-    <p class="yomi" id="pillarYomi"></p>
-    <table>
-      <tr><th>日干</th><td id="kan"></td></tr>
-      <tr><th>日支</th><td id="shi"></td></tr>
-    </table>
+  <div id="result">
+    <section>
+      <p class="pillar" id="pillar"></p>
+      <p class="yomi" id="pillarYomi"></p>
+    </section>
+
+    <section>
+      <h2>あなたを自然に例えると</h2>
+      <div class="art" id="art"></div>
+      <p class="big" id="natureName"></p>
+      <p class="sub" id="kanName"></p>
+      <div class="meaning" id="kanMeaning"></div>
+    </section>
+
+    <section>
+      <h2>あなたの季節</h2>
+      <p class="season"><span class="tag" id="seasonTag"></span></p>
+      <p class="sub" id="shiName"></p>
+      <div class="meaning" id="shiMeaning"></div>
+    </section>
+
     <p class="note">日柱は、生年月日だけで決まります。日付は0時で切り替わる前提です。</p>
-  </section>
+  </div>
 </main>
 
 <script>
+// 日干(十干):文字, 読み, 五行, 陰陽, 自然のたとえ
 var KAN = [
-  ['甲', 'きのえ', '木', '陽'], ['乙', 'きのと', '木', '陰'],
-  ['丙', 'ひのえ', '火', '陽'], ['丁', 'ひのと', '火', '陰'],
-  ['戊', 'つちのえ', '土', '陽'], ['己', 'つちのと', '土', '陰'],
-  ['庚', 'かのえ', '金', '陽'], ['辛', 'かのと', '金', '陰'],
-  ['壬', 'みずのえ', '水', '陽'], ['癸', 'みずのと', '水', '陰']
+  ['甲', 'きのえ', '木', '陽', '大木'],
+  ['乙', 'きのと', '木', '陰', '草花'],
+  ['丙', 'ひのえ', '火', '陽', '太陽'],
+  ['丁', 'ひのと', '火', '陰', '灯火'],
+  ['戊', 'つちのえ', '土', '陽', '山'],
+  ['己', 'つちのと', '土', '陰', '田んぼ・土壌'],
+  ['庚', 'かのえ', '金', '陽', '剣'],
+  ['辛', 'かのと', '金', '陰', '宝石'],
+  ['壬', 'みずのえ', '水', '陽', '海'],
+  ['癸', 'みずのと', '水', '陰', '雨・小川']
 ];
+// 日支(十二支):文字, 読み, 季節の表現, 季節
 var SHI = [
-  ['子', 'ね', '水'], ['丑', 'うし', '土'], ['寅', 'とら', '木'], ['卯', 'う', '木'],
-  ['辰', 'たつ', '土'], ['巳', 'み', '火'], ['午', 'うま', '火'], ['未', 'ひつじ', '土'],
-  ['申', 'さる', '金'], ['酉', 'とり', '金'], ['戌', 'いぬ', '土'], ['亥', 'い', '水']
+  ['子', 'ね', '冬の真ん中', '冬'],
+  ['丑', 'うし', '冬の終わり', '冬'],
+  ['寅', 'とら', '春の初め', '春'],
+  ['卯', 'う', '春の真ん中', '春'],
+  ['辰', 'たつ', '春の終わり', '春'],
+  ['巳', 'み', '夏の初め', '夏'],
+  ['午', 'うま', '夏の真ん中', '夏'],
+  ['未', 'ひつじ', '夏の終わり', '夏'],
+  ['申', 'さる', '秋の初め', '秋'],
+  ['酉', 'とり', '秋の真ん中', '秋'],
+  ['戌', 'いぬ', '秋の終わり', '秋'],
+  ['亥', 'い', '冬の初め', '冬']
 ];
+var SEASON_COLOR = { '春': '#e879a8', '夏': '#e8a317', '秋': '#c2571a', '冬': '#3b82c4' };
+
+// 自然のイラスト(十干ごと)
+var ART = {
+  '甲': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#ecfccb"/><rect y="106" width="120" height="14" fill="#a3e635"/><path d="M52 110 L56 66 H64 L68 110Z" fill="#92400e"/><circle cx="60" cy="46" r="28" fill="#15803d"/><circle cx="38" cy="58" r="18" fill="#16a34a"/><circle cx="82" cy="58" r="18" fill="#16a34a"/><circle cx="60" cy="34" r="16" fill="#22c55e"/></svg>',
+  '乙': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#fdf2f8"/><rect y="104" width="120" height="16" fill="#86efac"/><path d="M20 106 L24 90 L28 106Z M92 106 L97 88 L101 106Z M30 106 L33 94 L37 106Z" fill="#22c55e"/><path d="M60 106 Q57 82 60 56" stroke="#16a34a" stroke-width="4" fill="none"/><path d="M60 90 Q42 88 38 74 Q56 72 60 90Z" fill="#22c55e"/><path d="M60 82 Q78 80 82 66 Q64 64 60 82Z" fill="#16a34a"/><circle cx="60" cy="33" r="10" fill="#f472b6"/><circle cx="74" cy="43" r="10" fill="#f472b6"/><circle cx="69" cy="58" r="10" fill="#f472b6"/><circle cx="51" cy="58" r="10" fill="#f472b6"/><circle cx="46" cy="43" r="10" fill="#f472b6"/><circle cx="60" cy="48" r="8" fill="#fde047"/></svg>',
+  '丙': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#fef3c7"/><g stroke="#f59e0b" stroke-width="5" stroke-linecap="round"><line x1="60" y1="10" x2="60" y2="24"/><line x1="60" y1="10" x2="60" y2="24" transform="rotate(30 60 60)"/><line x1="60" y1="10" x2="60" y2="24" transform="rotate(60 60 60)"/><line x1="60" y1="10" x2="60" y2="24" transform="rotate(90 60 60)"/><line x1="60" y1="10" x2="60" y2="24" transform="rotate(120 60 60)"/><line x1="60" y1="10" x2="60" y2="24" transform="rotate(150 60 60)"/><line x1="60" y1="10" x2="60" y2="24" transform="rotate(180 60 60)"/><line x1="60" y1="10" x2="60" y2="24" transform="rotate(210 60 60)"/><line x1="60" y1="10" x2="60" y2="24" transform="rotate(240 60 60)"/><line x1="60" y1="10" x2="60" y2="24" transform="rotate(270 60 60)"/><line x1="60" y1="10" x2="60" y2="24" transform="rotate(300 60 60)"/><line x1="60" y1="10" x2="60" y2="24" transform="rotate(330 60 60)"/></g><circle cx="60" cy="60" r="28" fill="#f97316"/><circle cx="60" cy="60" r="21" fill="#fb923c"/></svg>',
+  '丁': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#312e81"/><circle cx="60" cy="50" r="34" fill="#fbbf24" opacity=".25"/><rect x="50" y="68" width="20" height="38" rx="3" fill="#fef3c7"/><rect x="59" y="58" width="2" height="12" fill="#44403c"/><path d="M60 22 C74 38 76 54 60 64 C44 54 46 38 60 22Z" fill="#f97316"/><path d="M60 38 C68 48 68 56 60 62 C52 56 52 48 60 38Z" fill="#fde047"/><rect x="40" y="104" width="40" height="6" rx="3" fill="#a16207"/></svg>',
+  '戊': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#e0f2fe"/><path d="M-10 112 L38 42 L86 112Z" fill="#a8a29e"/><path d="M30 112 L80 28 L130 112Z" fill="#78716c"/><path d="M80 28 L68 50 L76 46 L82 54 L88 46 L96 50Z" fill="#fff"/><rect y="108" width="120" height="12" fill="#65a30d"/></svg>',
+  '己': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#bae6fd"/><path d="M0 50 Q30 36 60 48 T120 44 V58 H0Z" fill="#86efac"/><rect y="56" width="120" height="64" fill="#a16207"/><path d="M12 64 H108 L116 84 H4Z" fill="#7dd3fc"/><path d="M2 90 H118 L120 114 H0Z" fill="#7dd3fc"/><g stroke="#16a34a" stroke-width="2.5" stroke-linecap="round"><path d="M24 76 V70 M40 76 V70 M56 76 V70 M72 76 V70 M88 76 V70 M104 76 V70"/><path d="M14 106 V98 M34 106 V98 M54 106 V98 M74 106 V98 M94 106 V98 M110 106 V98"/></g></svg>',
+  '庚': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#f1f5f9"/><path d="M60 8 L68 26 V76 H52 V26Z" fill="#cbd5e1" stroke="#64748b" stroke-width="2"/><path d="M60 14 V76" stroke="#94a3b8" stroke-width="2"/><rect x="38" y="76" width="44" height="8" rx="3" fill="#d97706"/><rect x="55" y="84" width="10" height="20" rx="2" fill="#7c2d12"/><circle cx="60" cy="108" r="6" fill="#d97706"/><path d="M88 22 l2 6 l6 2 l-6 2 l-2 6 l-2-6 l-6-2 l6-2z" fill="#fde047"/></svg>',
+  '辛': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#faf5ff"/><path d="M48 28 L56 44 H36Z" fill="#c4b5fd"/><path d="M48 28 H72 L64 44 H56Z" fill="#ddd6fe"/><path d="M72 28 L84 44 H64Z" fill="#8b5cf6"/><path d="M36 44 H56 L60 94Z" fill="#8b5cf6"/><path d="M56 44 H64 L60 94Z" fill="#a78bfa"/><path d="M64 44 H84 L60 94Z" fill="#6d28d9"/><path d="M96 20 l3 8 l8 3 l-8 3 l-3 8 l-3-8 l-8-3 l8-3z" fill="#fde047"/><path d="M22 76 l2 5 l5 2 l-5 2 l-2 5 l-2-5 l-5-2 l5-2z" fill="#fde047"/></svg>',
+  '壬': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#e0f2fe"/><circle cx="92" cy="30" r="11" fill="#fde68a"/><path d="M0 62 Q15 50 30 62 T60 62 T90 62 T120 62 V120 H0Z" fill="#60a5fa"/><path d="M0 78 Q15 66 30 78 T60 78 T90 78 T120 78 V120 H0Z" fill="#3b82f6"/><path d="M0 94 Q15 82 30 94 T60 94 T90 94 T120 94 V120 H0Z" fill="#1d4ed8"/></svg>',
+  '癸': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#e8eef5"/><g fill="#94a3b8"><circle cx="44" cy="38" r="14"/><circle cx="62" cy="31" r="17"/><circle cx="79" cy="40" r="13"/><rect x="34" y="38" width="56" height="15" rx="7"/></g><g stroke="#3b82f6" stroke-width="3" stroke-linecap="round"><path d="M44 62 l-4 12"/><path d="M60 62 l-4 12"/><path d="M76 62 l-4 12"/><path d="M52 78 l-4 12"/><path d="M68 78 l-4 12"/></g><path d="M0 106 Q20 96 40 106 T80 106 T120 106 V120 H0Z" fill="#60a5fa"/></svg>'
+};
+
+var MEANINGS = {};
 
 function $(id) { return document.getElementById(id); }
 
@@ -83,6 +135,13 @@ function validBirth(s) {
   return y >= 1900 && dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
 }
 
+function showMeaning(id, key) {
+  var el = $(id);
+  var text = MEANINGS[key];
+  el.textContent = text || '';
+  el.style.display = text ? 'block' : 'none';
+}
+
 function run() {
   var s = $('birth').value.trim().replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 65248); });
   $('err').textContent = '';
@@ -92,13 +151,24 @@ function run() {
   var k = KAN[i % 10], z = SHI[i % 12];
   $('pillar').textContent = k[0] + z[0];
   $('pillarYomi').textContent = k[1] + ' ・ ' + z[1];
-  $('kan').textContent = k[0] + '(' + k[1] + ')　' + k[3] + 'の' + k[2];
-  $('shi').textContent = z[0] + '(' + z[1] + ')　' + z[2];
+  $('art').innerHTML = ART[k[0]];
+  $('natureName').textContent = k[4];
+  $('kanName').textContent = '日干　' + k[0] + '(' + k[1] + ')　' + k[3] + 'の' + k[2];
+  $('seasonTag').textContent = z[2];
+  $('seasonTag').style.background = SEASON_COLOR[z[3]];
+  $('shiName').textContent = '日支　' + z[0] + '(' + z[1] + ')';
+  showMeaning('kanMeaning', '日干:' + k[0]);
+  showMeaning('shiMeaning', '日支:' + z[0]);
   $('result').style.display = 'block';
 }
 
 $('go').addEventListener('click', run);
 $('birth').addEventListener('keydown', function (e) { if (e.key === 'Enter') run(); });
+
+// Apps Script上で開かれたときは、スプレッドシートの「早見の意味」シートから意味文を読み込む
+if (window.google && google.script && google.script.run) {
+  google.script.run.withSuccessHandler(function (m) { MEANINGS = m || {}; }).getMeanings();
+}
 </script>
 </body>
 </html>
