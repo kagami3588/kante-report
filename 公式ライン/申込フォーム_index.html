@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>算命学の鑑定 お申込み</title>
+<script>
+// 動作しないときに、原因を画面の上に表示する(診断用)
+window.addEventListener('error', function (e) {
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#b3261e;color:#fff;padding:8px;font-size:12px;z-index:9999';
+  d.textContent = 'エラー: ' + e.message + ' (' + (e.lineno || '') + ':' + (e.colno || '') + ')';
+  (document.body ? Promise.resolve() : new Promise(function (r) { document.addEventListener('DOMContentLoaded', r); })).then(function () { document.body.appendChild(d); });
+});
+</script>
+<style>
+  :root { --bg:#faf7f2; --card:#fff; --ink:#2b2622; --accent:#8a5a2b; --line:#e2d8cb; --err:#b3261e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1d1a17; --card:#27231f; --ink:#f0e9df; --accent:#d9a066; --line:#443c34; --err:#ff8a80; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Hiragino Sans","Noto Sans JP",sans-serif; line-height:1.7; }
+  main { max-width:640px; margin:0 auto; padding:24px 16px 64px; }
+  .brand { text-align:center; letter-spacing:.3em; color:var(--accent); font-weight:700; }
+  h1 { font-size:1.4rem; text-align:center; margin:4px 0; }
+  .plan { text-align:center; color:var(--accent); margin:0 0 8px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin:16px 0; }
+  h2 { font-size:1.05rem; margin:0 0 12px; color:var(--accent); }
+  label.f { display:block; margin:14px 0 4px; font-weight:600; font-size:.92rem; }
+  .req::after { content:" 必須"; color:var(--err); font-size:.75rem; }
+  .hint { font-size:.82rem; opacity:.75; margin:0 0 4px; }
+  input[type=text], input[type=email], input[type=number], select, textarea {
+    width:100%; padding:10px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:8px; }
+  .radio label, .check { margin-right:16px; display:inline-block; }
+  .privacy { font-size:.88rem; white-space:pre-line; }
+  .price { text-align:center; font-size:1.3rem; font-weight:700; color:var(--accent); }
+  .person { border-top:1px dashed var(--line); margin-top:16px; padding-top:4px; }
+  .person h3 { margin:12px 0 0; font-size:.95rem; }
+  table { width:100%; border-collapse:collapse; }
+  td { padding:6px 0; } td:last-child { text-align:right; }
+  .total td { border-top:2px solid var(--line); font-weight:700; font-size:1.1rem; color:var(--accent); }
+  button { width:100%; padding:14px; font:inherit; font-weight:700; color:#fff; background:var(--accent); border:0; border-radius:10px; cursor:pointer; }
+  .warn { margin:8px 0; padding:8px 12px; border-left:4px solid var(--err); background:rgba(179,38,30,.08); font-weight:700; font-size:.9rem; }
+  .err { color:var(--err); font-size:.85rem; display:block; }
+  .note { font-size:.85rem; opacity:.8; }
+  a { color:var(--accent); }
+  #done { display:none; }
+  .steps { margin:8px 0; padding-left:1.4em; }
+  pre { white-space:pre-wrap; border:1px solid var(--line); border-radius:8px; padding:12px; font:inherit; margin:8px 0; }
+  footer { text-align:center; font-size:.8rem; opacity:.75; margin-top:24px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">KAGAMI</div>
+  <h1>算命学の鑑定 お申込み</h1>
+  <p class="plan">個人プラン</p>
+  <p style="text-align:center">公式LINEからのお申込みです。必要事項を入力して、「申し込む」を押してください。<br>公式LINEのトーク画面が開くので、送信ボタンを押すと、お振込先を自動でお送りします。</p>
+
+  <div id="formWrap">
+  <section>
+    <h2>個人情報の取り扱い</h2>
+    <div class="privacy">【個人情報の取り扱い】
+お預かりする個人情報(お名前、生年月日、ご連絡先など)は、大切に取り扱います。
+・使う目的：鑑定をご提供するため(日程調整、ご連絡、鑑定書のお渡し)。
+・ご本人の同意なく、第三者にお渡しすることはありません。
+
+運営：KAGAMI
+責任者：林 竜輔
+連絡先：林 竜輔の公式LINE(このLINEのトーク画面からご連絡ください)</div>
+  </section>
+
+  <section>
+    <div class="price">鑑定料 <span id="priceTop"></span></div>
+    <p class="note" style="text-align:center;margin:0">追加でレポートの作成を希望される方は、1人につき <span id="perPerson"></span> 加算されます。</p>
+  </section>
+
+  <form id="form" novalidate>
+    <section>
+      <h2>お申込み者の情報</h2>
+
+      <label class="f req" for="name">名前</label>
+      <p class="hint">(例：山田 太郎)</p>
+      <input type="text" id="name" required autocomplete="name">
+
+      <label class="f req" for="kana">フリガナ</label>
+      <p class="hint">(例：ヤマダ タロウ)</p>
+      <input type="text" id="kana" required pattern="[ァ-ヶー・ 　]+" title="カタカナで入力してください(例：ヤマダ タロウ)">
+
+      <label class="f req">性別</label>
+      <div class="radio">
+        <label><input type="radio" name="gender" value="男性" required> 男性</label>
+        <label><input type="radio" name="gender" value="女性"> 女性</label>
+      </div>
+
+      <label class="f req" for="birth">生年月日(例：20000218)</label>
+      <input type="text" id="birth" required inputmode="numeric" maxlength="8" placeholder="20000218">
+      <span class="err" id="birthErr"></span>
+
+      <label class="f req" for="email">メールアドレス</label>
+      <input type="email" id="email" required autocomplete="email">
+
+      <label class="f req" for="email2">メールアドレス(確認のため、もう一度入力してください)</label>
+      <input type="email" id="email2" required autocomplete="off">
+      <span class="err" id="emailErr"></span>
+
+      <label class="f" for="insta">Instagramのアカウント(任意)</label>
+      <input type="text" id="insta">
+
+      <label class="f req" for="referrer">紹介者氏名</label>
+      <p class="hint">(カタカナ。いらっしゃらない場合は「ナシ」とご入力ください)</p>
+      <input type="text" id="referrer" required>
+
+      <label class="f" for="wish">鑑定で見てほしいこと</label>
+      <textarea id="wish" rows="3"></textarea>
+
+      <label class="f" for="free">自由記入欄</label>
+      <p class="hint">(質問がありましたら、内容をご記入ください)</p>
+      <textarea id="free" rows="3"></textarea>
+    </section>
+
+    <section>
+      <h2>追加で鑑定を希望される方</h2>
+      <p class="note" style="margin-top:0">追加の方はレポートを作成して、お申込み者にのみ、その方について聞きたいことをお答えします。</p>
+      <p class="warn">※ご注意：追加の方との面談は行いません。</p>
+      <label class="f req">追加で鑑定（レポートの作成）を希望する方はいらっしゃいますか？</label>
+      <div class="radio">
+        <label><input type="radio" name="hasExtra" value="はい"> はい</label>
+        <label><input type="radio" name="hasExtra" value="いいえ" checked> いいえ</label>
+      </div>
+      <div id="countBox" hidden>
+        <label class="f req" for="count">追加人数を教えてください</label>
+        <input type="number" id="count" min="1" max="10" inputmode="numeric" placeholder="例：2">
+        <span class="err" id="countErr"></span>
+      </div>
+      <div id="persons"></div>
+    </section>
+
+    <section>
+      <h2>鑑定料</h2>
+      <table>
+        <tr><td>鑑定料(お申込み者)</td><td id="baseFee"></td></tr>
+        <tr><td id="extraLabel"></td><td id="extraFee"></td></tr>
+        <tr class="total"><td>お支払い合計</td><td id="totalFee"></td></tr>
+      </table>
+      <p class="note">お振込先は、お申し込み後に公式LINEでご案内します。</p>
+    </section>
+
+    <section>
+      <h2>同意の確認</h2>
+      <p class="hint">前のページの【個人情報の取り扱い】と、同意いただく内容をお読みのうえ、一番下の項目にチェックをお願いします。チェックをいただいた場合に、お申込みできます。</p>
+      <div class="privacy">【同意いただく内容】
+① お名前・生年月日などを、鑑定のご提供(日程調整、ご連絡、鑑定書のお渡し)のために使うことに同意します。</div>
+      <label class="f req">上の内容について</label>
+      <label class="check"><input type="checkbox" id="consent" required> 全てに同意しました</label>
+    </section>
+
+    <button type="submit">申し込む</button>
+  </form>
+  </div>
+
+  <section id="done">
+    <h2>あと一歩です</h2>
+    <p>お申し込みはまだ完了していません。<strong>下の「申込コード」を、そのまま公式LINEにお送りください。</strong><br>送信されると、鑑定料とお振込先を自動でお送りします。</p>
+    <p>お支払い合計：<strong id="doneTotal"></strong></p>
+    <ol class="steps">
+      <li>「申込コードをコピーする」を押す</li>
+      <li>「公式LINEを開く」を押して、トーク画面に貼り付けて送信する</li>
+    </ol>
+    <pre id="summary"></pre>
+    <button type="button" id="copy">申込コードをコピーする</button>
+    <button type="button" id="openLine" style="margin-top:10px">公式LINEを開く</button>
+    <p class="note">※申込コードは、書き換えずにそのままお送りください。コードに合わせて、鑑定料をお知らせします。</p>
+  </section>
+
+  <footer>運営：KAGAMI / 責任者：林 竜輔 / お問い合わせ：公式LINEのトーク画面から<br><span style="opacity:.5">v6</span></footer>
+</main>
+
+<script>
+// ▼ 設定
+var CONFIG = {
+  baseFee: 30000,
+  extraFee: 10000,
+  maxExtra: 10,
+  relations: ['配偶者・パートナー', '子ども', '親', '兄弟姉妹', '友人', '同僚・知人', 'その他'],
+  lineId: '@634kjjhx',
+  mailEndpoint: 'https://script.google.com/macros/s/AKfycbxHHCUmc7vprxTk6W4Mibh43z3yQW3A4jnoGkwEH4gAZD3OU7RySPWGbzdpGq8atu2W/exec'
+};
+
+function $(id) { return document.getElementById(id); }
+function yen(n) { return '¥' + n.toLocaleString('ja-JP'); }
+function all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function checkedValue(name) { return document.querySelector('input[name=' + name + ']:checked').value; }
+
+function validBirth(s) {
+  if (!/^[0-9]{8}$/.test(s)) return false;
+  var y = +s.slice(0, 4), m = +s.slice(4, 6), d = +s.slice(6, 8);
+  var dt = new Date(y, m - 1, d);
+  return y >= 1900 && dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d && dt <= new Date();
+}
+
+function extraCount() {
+  if (checkedValue('hasExtra') !== 'はい') return 0;
+  var n = parseInt($('count').value, 10);
+  if (isNaN(n)) return 0;
+  return Math.min(Math.max(n, 0), CONFIG.maxExtra);
+}
+
+function renderFees() {
+  var n = extraCount();
+  var total = CONFIG.baseFee + n * CONFIG.extraFee;
+  $('baseFee').textContent = yen(CONFIG.baseFee);
+  $('extraLabel').textContent = '追加 ' + n + '名 × ' + yen(CONFIG.extraFee);
+  $('extraFee').textContent = yen(n * CONFIG.extraFee);
+  $('totalFee').textContent = yen(total);
+  $('priceTop').textContent = n ? yen(total) + '(追加' + n + '名を含む)' : yen(total);
+}
+
+function makeLabel(text) {
+  var l = document.createElement('label');
+  l.className = 'f req';
+  l.textContent = text;
+  return l;
+}
+
+function makeSelect(key, options, value) {
+  var sel = document.createElement('select');
+  sel.setAttribute('data-k', key);
+  sel.required = true;
+  options.forEach(function (o) {
+    var op = document.createElement('option');
+    op.textContent = o;
+    if (o === value) op.selected = true;
+    sel.appendChild(op);
+  });
+  return sel;
+}
+
+function makeInput(key, value, isBirth, isKana) {
+  var inp = document.createElement('input');
+  inp.type = 'text';
+  inp.setAttribute('data-k', key);
+  inp.required = true;
+  inp.value = value || '';
+  if (isKana) {
+    inp.pattern = '[ァ-ヶー・ 　]+';
+    inp.title = 'カタカナで入力してください(例：ヤマダ タロウ)';
+    inp.placeholder = 'ヤマダ ハナコ';
+  }
+  if (isBirth) {
+    inp.setAttribute('inputmode', 'numeric');
+    inp.maxLength = 8;
+    inp.placeholder = '20000218';
+  }
+  return inp;
+}
+
+function renderPersons() {
+  var n = extraCount();
+  var box = $('persons');
+  var saved = all('.person', box).map(function (p) {
+    return all('[data-k]', p).map(function (e) { return e.value; });
+  });
+  box.innerHTML = '';
+  for (var i = 0; i < n; i++) {
+    var v = saved[i] || [];
+    var div = document.createElement('div');
+    div.className = 'person';
+    var h = document.createElement('h3');
+    h.textContent = '追加の方 ' + (i + 1);
+    div.appendChild(h);
+    div.appendChild(makeLabel('名前'));
+    div.appendChild(makeInput('name', v[0], false, false));
+    div.appendChild(makeLabel('フリガナ'));
+    div.appendChild(makeInput('kana', v[1], false, true));
+    div.appendChild(makeLabel('性別'));
+    div.appendChild(makeSelect('gender', ['', '男性', '女性'], v[2]));
+    div.appendChild(makeLabel('生年月日(例：20000218)'));
+    div.appendChild(makeInput('birth', v[3], true, false));
+    div.appendChild(makeLabel('お申込み者との関係性'));
+    div.appendChild(makeSelect('rel', [''].concat(CONFIG.relations), v[4]));
+    box.appendChild(div);
+  }
+  renderFees();
+}
+
+function onToggle() {
+  var yes = checkedValue('hasExtra') === 'はい';
+  $('countBox').hidden = !yes;
+  $('count').required = yes;
+  if (!yes) { $('count').value = ''; $('countErr').textContent = ''; }
+  renderPersons();
+}
+
+all('input[name=hasExtra]').forEach(function (r) { r.addEventListener('change', onToggle); });
+$('count').addEventListener('input', function () {
+  var n = parseInt($('count').value, 10);
+  $('countErr').textContent = n > CONFIG.maxExtra ? CONFIG.maxExtra + '名までです' : '';
+  renderPersons();
+});
+
+$('perPerson').textContent = yen(CONFIG.extraFee);
+renderFees();
+
+var lineUrl = '';
+
+function goLine() {
+  if (!lineUrl) return;
+  try { window.top.location.href = lineUrl; } catch (e) { location.href = lineUrl; }
+}
+
+// ひらがなで入力されたら、カタカナに直す
+function toKatakana(str) {
+  return str.replace(/[ぁ-ゖ]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) + 96); });
+}
+document.addEventListener('change', function (ev) {
+  var t = ev.target;
+  if (t && (t.id === 'kana' || (t.getAttribute && t.getAttribute('data-k') === 'kana'))) t.value = toKatakana(t.value);
+});
+
+function personValue(p, k) { return p.querySelector('[data-k=' + k + ']').value; }
+
+$('form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var ok = true;
+  $('birthErr').textContent = '';
+  $('emailErr').textContent = '';
+  if (!validBirth($('birth').value.trim())) { $('birthErr').textContent = '8桁の数字で入力してください(例：20000218)'; ok = false; }
+  if ($('email').value.trim() !== $('email2').value.trim()) { $('emailErr').textContent = 'メールアドレスが一致しません'; ok = false; }
+  var n = extraCount();
+  if (checkedValue('hasExtra') === 'はい' && n < 1) { $('countErr').textContent = '1名以上で入力してください'; ok = false; }
+  all('.person [data-k=birth]').forEach(function (el) {
+    if (!validBirth(el.value.trim())) { el.setCustomValidity('8桁の数字で入力してください(例：20000218)'); ok = false; }
+    else el.setCustomValidity('');
+  });
+  if (!$('form').checkValidity()) { $('form').reportValidity(); return; }
+  if (!ok) { ($('form').querySelector('.err:not(:empty)') || $('form')).scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+
+  function g(id) { return $(id).value.trim() || '(未入力)'; }
+  var code = String(n);
+  if (code.length < 2) code = '0' + code;
+  var persons = all('.person');
+  var message = '申込コードP' + code;
+  var total = CONFIG.baseFee + n * CONFIG.extraFee;
+  $('summary').textContent = message;
+  $('doneTotal').textContent = yen(total);
+  $('formWrap').style.display = 'none';
+  $('done').style.display = 'block';
+  window.scrollTo(0, 0);
+
+  if (CONFIG.mailEndpoint) {
+    var payload = {
+      name: $('name').value.trim(),
+      kana: $('kana').value.trim(),
+      gender: checkedValue('gender'),
+      birth: $('birth').value.trim(),
+      email: $('email').value.trim(),
+      insta: $('insta').value.trim(),
+      referrer: $('referrer').value.trim(),
+      wish: $('wish').value.trim(),
+      free: $('free').value.trim(),
+      extras: persons.map(function (p) {
+        return { name: personValue(p, 'name'), kana: personValue(p, 'kana'), gender: personValue(p, 'gender'), birth: personValue(p, 'birth'), rel: personValue(p, 'rel') };
+      })
+    };
+    try {
+      fetch(CONFIG.mailEndpoint, {
+        method: 'POST', mode: 'no-cors', keepalive: true,
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      }).catch(function () {});
+    } catch (err) {}
+  }
+  lineUrl = 'https://line.me/R/oaMessage/' + encodeURIComponent(CONFIG.lineId) + '/?' + encodeURIComponent(message);
+});
+
+$('openLine').addEventListener('click', goLine);
+
+$('copy').addEventListener('click', function () {
+  var done = function () { $('copy').textContent = 'コピーしました'; };
+  var fail = function () { $('copy').textContent = '選択してコピーしてください'; };
+  try { navigator.clipboard.writeText($('summary').textContent).then(done, fail); } catch (err) { fail(); }
+});
+</script>
+</body>
+</html>
