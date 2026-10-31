@@ -7,6 +7,9 @@ const SUBJECT = '鑑定お申し込み完了';
 const BASE_FEE = 30000;
 const EXTRA_FEE = 10000;
 const MAX_EXTRA = 10;
+const SHEET_ID = '17ZT9FAZiVv2hxrQzhTxWKu6RDysLiVgkoJQMc2peNJI';   // 申込内容を記録するスプレッドシート
+const HEADERS = ['受付日時', '申込コード', '名前', 'フリガナ', '性別', '生年月日', 'メールアドレス', 'Instagram',
+  '紹介者', '鑑定で見てほしいこと', '自由記入', '追加人数', '追加の方', '鑑定料合計', '入金確認', '鑑定日', 'メモ'];
 const BANK = [
   '普通預金',
   '金融機関名：PayPay銀行',
@@ -40,6 +43,9 @@ function doPost(e) {
     }
     cache.put(key, '1', 60);
 
+    // 申込内容を記録する(失敗してもメールは送る)
+    try { appendRow_(d, extras, email); } catch (errSheet) { console.error('sheet error: ' + errSheet); }
+
     const body = buildBody_(d, extras);
     MailApp.sendEmail({
       to: email,
@@ -57,6 +63,43 @@ function doPost(e) {
       MailApp.sendEmail(OWNER_EMAIL, '【申込メール送信エラー】', String(err) + '\n\n' + (e && e.postData ? e.postData.contents : ''));
     } catch (err2) {}
     return reply_({ ok: false, error: String(err) });
+  }
+}
+
+// 初回に1度、エディタから実行して、権限の承認と見出し行の作成をする
+function setup() {
+  getSheet_();
+}
+
+function getSheet_() {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    // 生年月日などが数値や日付に変わらないよう、文字列の形式にする
+    sheet.getRange(1, 1, sheet.getMaxRows(), HEADERS.length).setNumberFormat('@');
+  }
+  return sheet;
+}
+
+function appendRow_(d, extras, email) {
+  const n = extras.length;
+  const v = x => String(x || '').trim();
+  const people = extras.map((p, i) =>
+    `${i + 1}. ${v(p.name)}(${v(p.kana)}) / ${v(p.gender)} / ${v(p.birth)} / ${v(p.rel)}`).join('\n');
+  const row = [
+    Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss'),
+    '申込コードP' + (n < 10 ? '0' + n : String(n)),
+    v(d.name), v(d.kana), v(d.gender), v(d.birth), email, v(d.insta),
+    v(d.referrer), v(d.wish), v(d.free), n + '名', people,
+    (BASE_FEE + n * EXTRA_FEE) + '円', '', '', '',
+  ];
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    getSheet_().appendRow(row);
+  } finally {
+    lock.releaseLock();
   }
 }
 
