@@ -105,17 +105,40 @@ function appendRow_(d, extras, email) {
   }
 }
 
-// 宿命早見の意味文を、スプレッドシートの「早見の意味」シートから読み込む
-// シートの列: A=区分(日干 / 日支) B=キー(甲, 乙…/ 子, 丑…) C=意味
+// 宿命早見の意味文を、スプレッドシートの「算命学」シートの「陰占」の表から読み込む
+// 表の列: A=日干 C=自然のたとえ D=日干の解説 E=日支 F=季節 G=日支の解説
+//         H〜Q=日柱の短い言葉(甲〜癸の順) S〜AB=日柱の解説(甲〜癸の順)
+const MEANING_SHEET_ID = '1HJnogxS84SmhqpdotjZkBTLXYB5IjVNHedXCJ0czUy0';
+const MEANING_SHEET_NAME = '算命学';
+const STEMS = '甲乙丙丁戊己庚辛壬癸';
+
 function getMeanings() {
-  const out = {};
+  const out = { kan: {}, shi: {}, pillar: {} };
   try {
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('早見の意味');
+    const sheet = SpreadsheetApp.openById(MEANING_SHEET_ID).getSheetByName(MEANING_SHEET_NAME);
     if (!sheet) return out;
-    sheet.getDataRange().getValues().forEach((r, i) => {
-      const kind = String(r[0]).trim(), key = String(r[1]).trim(), text = String(r[2]).trim();
-      if (i > 0 && kind && key && text) out[kind + ':' + key] = text;
-    });
+    const rows = sheet.getDataRange().getValues();
+    const s = x => String(x === undefined || x === null ? '' : x).trim();
+    let start = -1;
+    for (let i = 0; i < rows.length; i++) {
+      if (s(rows[i][0]) === '陰占') { start = i + 1; break; }
+    }
+    if (start < 0) return out;
+    for (let i = start; i < rows.length; i++) {
+      const r = rows[i];
+      const stem = s(r[0]), branch = s(r[4]);
+      if (!stem && !branch) break;
+      if (STEMS.indexOf(stem) >= 0 && stem.length === 1) {
+        out.kan[stem] = { nature: s(r[2]), text: s(r[3]) };
+      }
+      if (branch) {
+        out.shi[branch] = { season: s(r[5]), text: s(r[6]) };
+        for (let k = 0; k < 10; k++) {
+          const label = s(r[7 + k]), text = s(r[18 + k]);
+          if (label || text) out.pillar[STEMS.charAt(k) + branch] = { label: label, text: text };
+        }
+      }
+    }
   } catch (err) {
     console.error('meanings error: ' + err);
   }

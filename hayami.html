@@ -49,6 +49,7 @@
     <section>
       <p class="pillar" id="pillar"></p>
       <p class="yomi" id="pillarYomi"></p>
+      <p class="sub" id="pillarLabel"></p>
     </section>
 
     <section>
@@ -64,6 +65,11 @@
       <p class="season"><span class="tag" id="seasonTag"></span></p>
       <p class="sub" id="shiName"></p>
       <div class="meaning" id="shiMeaning"></div>
+    </section>
+
+    <section id="pillarBox" style="display:none">
+      <h2>あなたの日柱について</h2>
+      <div class="meaning" id="pillarMeaning" style="display:block"></div>
     </section>
 
     <p class="note">日柱は、生年月日だけで決まります。日付は0時で切り替わる前提です。</p>
@@ -115,7 +121,8 @@ var ART = {
   '癸': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#e8eef5"/><g fill="#94a3b8"><circle cx="44" cy="38" r="14"/><circle cx="62" cy="31" r="17"/><circle cx="79" cy="40" r="13"/><rect x="34" y="38" width="56" height="15" rx="7"/></g><g stroke="#3b82f6" stroke-width="3" stroke-linecap="round"><path d="M44 62 l-4 12"/><path d="M60 62 l-4 12"/><path d="M76 62 l-4 12"/><path d="M52 78 l-4 12"/><path d="M68 78 l-4 12"/></g><path d="M0 106 Q20 96 40 106 T80 106 T120 106 V120 H0Z" fill="#60a5fa"/></svg>'
 };
 
-var MEANINGS = {};
+var MEANINGS = { kan: {}, shi: {}, pillar: {} };
+var current = null;
 
 function $(id) { return document.getElementById(id); }
 
@@ -135,9 +142,8 @@ function validBirth(s) {
   return y >= 1900 && dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
 }
 
-function showMeaning(id, key) {
+function showText(id, text) {
   var el = $(id);
-  var text = MEANINGS[key];
   el.textContent = text || '';
   el.style.display = text ? 'block' : 'none';
 }
@@ -157,17 +163,30 @@ function run() {
   $('seasonTag').textContent = z[2];
   $('seasonTag').style.background = SEASON_COLOR[z[3]];
   $('shiName').textContent = '日支　' + z[0] + '(' + z[1] + ')';
-  showMeaning('kanMeaning', '日干:' + k[0]);
-  showMeaning('shiMeaning', '日支:' + z[0]);
+  current = { k: k, z: z };
+  renderMeanings();
   $('result').style.display = 'block';
+}
+
+// スプレッドシートから読み込んだ意味文を、画面に出す
+function renderMeanings() {
+  if (!current) return;
+  var kd = MEANINGS.kan[current.k[0]], sd = MEANINGS.shi[current.z[0]], pd = MEANINGS.pillar[current.k[0] + current.z[0]];
+  showText('kanMeaning', kd && kd.text);
+  showText('shiMeaning', sd && sd.text);
+  $('pillarLabel').textContent = (pd && pd.label) ? pd.label : '';
+  $('pillarBox').style.display = (pd && pd.text) ? 'block' : 'none';
+  $('pillarMeaning').textContent = (pd && pd.text) ? pd.text : '';
 }
 
 $('go').addEventListener('click', run);
 $('birth').addEventListener('keydown', function (e) { if (e.key === 'Enter') run(); });
 
-// Apps Script上で開かれたときは、スプレッドシートの「早見の意味」シートから意味文を読み込む
+// Apps Script上で開かれたときは、スプレッドシートから意味文を読み込む
 if (window.google && google.script && google.script.run) {
-  google.script.run.withSuccessHandler(function (m) { MEANINGS = m || {}; }).getMeanings();
+  google.script.run.withSuccessHandler(function (m) {
+    if (m) { MEANINGS = m; renderMeanings(); }
+  }).getMeanings();
 }
 </script>
 </body>
