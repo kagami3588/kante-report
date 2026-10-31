@@ -121,7 +121,21 @@ var ART = {
   '癸': '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="120" fill="#e8eef5"/><g fill="#94a3b8"><circle cx="44" cy="38" r="14"/><circle cx="62" cy="31" r="17"/><circle cx="79" cy="40" r="13"/><rect x="34" y="38" width="56" height="15" rx="7"/></g><g stroke="#3b82f6" stroke-width="3" stroke-linecap="round"><path d="M44 62 l-4 12"/><path d="M60 62 l-4 12"/><path d="M76 62 l-4 12"/><path d="M52 78 l-4 12"/><path d="M68 78 l-4 12"/></g><path d="M0 106 Q20 96 40 106 T80 106 T120 106 V120 H0Z" fill="#60a5fa"/></svg>'
 };
 
+// 日干の意味(スプレッドシートを読めないときの予備。読み込めたら、シートの内容が優先される)
+var KAN_TEXT = {
+  '甲': '甲→樹木（甲木は一本松とかのイメージだから1人でやっていけるが、折れたり、倒れたら立ち直るのに時間がかかるのであまり倒れることなくやっていった方が良い）\n長い年月をかけて、ゆっくりとまっすぐに伸びる大樹。\nストレート。頑固。スローテンポ。',
+  '乙': '乙→草木、草花（草や花は何回踏まれてもアスファルトからでも出てくる。外は弱いけど、実は中はしっかり芯がある）\n優しさと美しさ。その魅力を集団の中で発揮する人。\n柔軟性。粘り強さ。外柔内剛。',
+  '丙': '丙→太陽（太陽みたいな人が多い）\n明るさや暖かさなどを与えることが喜びになる。\n根が明るい人。奉仕。楽天的。おおらか。',
+  '丁': '丁→灯火（夜行性の人が多い）\nろうそくの火や勢いがある焚き火。照明。\n情熱的。明るさ。デリケート。直観。',
+  '戊': '戊→山（どんとしている）\n大きく高くそびえる山岳のイメージ。\n不動。受け身。現実的。守備。',
+  '己': '己→田、畑（人を育てるのが得意）\n大地。平地。畑。田んぼ。植物や農作物をはぐくむ大地。\n豊かな魅力と才能。庶民性。広大。育成。',
+  '庚': '庚→刃物、鉄\n鉄でできた大きな刃物。\n斧。刀。硬くて強いもの。\n意志堅固。正直。爽やかで行動力のある猪突猛進型。攻撃。たくましさ。勇敢。',
+  '辛': '辛→宝石（キラキラしている)\n原石から研磨された宝石。貴金属。\nプライド。品格。純粋。美意識。繊細。きらびやか。',
+  '壬': '壬→海（濁りもあるし、綺麗もあり、色んな物を受け止める。変な人も良い人も受け止める。）\n果てしなく広がる大きな海。湖。大きな川。\n冷静。大胆。柔軟性。流動。変動。自由。',
+  '癸': '癸→雨、小川\n生きるために欠かすことができない水。\n母性愛豊か。知性。理性。集まる。教育。実用的な知恵。'
+};
 var MEANINGS = { kan: {}, shi: {}, pillar: {} };
+Object.keys(KAN_TEXT).forEach(function (k) { MEANINGS.kan[k] = { text: KAN_TEXT[k] }; });
 var current = null;
 
 function $(id) { return document.getElementById(id); }
@@ -185,7 +199,12 @@ $('birth').addEventListener('keydown', function (e) { if (e.key === 'Enter') run
 // Apps Script上で開かれたときは、スプレッドシートから意味文を読み込む
 if (window.google && google.script && google.script.run) {
   google.script.run.withSuccessHandler(function (m) {
-    if (m) { MEANINGS = m; renderMeanings(); }
+    if (m) {
+      var kan = MEANINGS.kan;
+      Object.keys(m.kan || {}).forEach(function (k) { if (m.kan[k].text) kan[k] = m.kan[k]; });
+      MEANINGS = { kan: kan, shi: m.shi || {}, pillar: m.pillar || {} };
+      renderMeanings();
+    }
   }).getMeanings();
 }
 </script>
