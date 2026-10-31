@@ -19,9 +19,11 @@ const BANK = [
 ];
 
 // フォームのページを表示する(ウェブアプリのURLを開くと申込フォームが出る)
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('index')
-    .setTitle('算命学の鑑定 お申込み')
+// ?page=hayami を付けると、宿命早見のページを表示する
+function doGet(e) {
+  const hayami = e && e.parameter && e.parameter.page === 'hayami';
+  return HtmlService.createHtmlOutputFromFile(hayami ? 'hayami' : 'index')
+    .setTitle(hayami ? '宿命早見' : '算命学の鑑定 お申込み')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 

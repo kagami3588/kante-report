@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>宿命早見</title>
+<style>
+  :root { --bg:#faf7f2; --card:#fff; --ink:#2b2622; --accent:#8a5a2b; --line:#e2d8cb; --err:#b3261e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1d1a17; --card:#27231f; --ink:#f0e9df; --accent:#d9a066; --line:#443c34; --err:#ff8a80; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Hiragino Sans","Noto Sans JP",sans-serif; line-height:1.7; }
+  main { max-width:640px; margin:0 auto; padding:24px 16px 64px; }
+  .brand { text-align:center; letter-spacing:.3em; color:var(--accent); font-weight:700; }
+  h1 { font-size:1.4rem; text-align:center; margin:4px 0 16px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin:16px 0; }
+  label { display:block; font-weight:600; font-size:.92rem; margin-bottom:4px; }
+  input { width:100%; padding:10px; font:inherit; color:inherit; background:transparent; border:1px solid var(--line); border-radius:8px; }
+  button { width:100%; padding:14px; margin-top:12px; font:inherit; font-weight:700; color:#fff; background:var(--accent); border:0; border-radius:10px; cursor:pointer; }
+  .hint, .note { font-size:.85rem; opacity:.8; }
+  .err { color:var(--err); font-size:.85rem; min-height:1.2em; }
+  #result { display:none; }
+  .pillar { text-align:center; font-size:2.6rem; font-weight:700; color:var(--accent); letter-spacing:.1em; margin:0; }
+  .yomi { text-align:center; margin:0 0 12px; opacity:.8; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { padding:8px 4px; border-top:1px solid var(--line); text-align:left; }
+  th { width:30%; font-weight:600; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">KAGAMI</div>
+  <h1>宿命早見</h1>
+
+  <section>
+    <label for="birth">生年月日(例：20000218)</label>
+    <input type="text" id="birth" inputmode="numeric" maxlength="8" placeholder="20000218">
+    <span class="err" id="err"></span>
+    <button type="button" id="go">日干・日支を調べる</button>
+  </section>
+
+  <section id="result">
+    <p class="pillar" id="pillar"></p>
+    <p class="yomi" id="pillarYomi"></p>
+    <table>
+      <tr><th>日干</th><td id="kan"></td></tr>
+      <tr><th>日支</th><td id="shi"></td></tr>
+    </table>
+    <p class="note">日柱は、生年月日だけで決まります。日付は0時で切り替わる前提です。</p>
+  </section>
+</main>
+
+<script>
+var KAN = [
+  ['甲', 'きのえ', '木', '陽'], ['乙', 'きのと', '木', '陰'],
+  ['丙', 'ひのえ', '火', '陽'], ['丁', 'ひのと', '火', '陰'],
+  ['戊', 'つちのえ', '土', '陽'], ['己', 'つちのと', '土', '陰'],
+  ['庚', 'かのえ', '金', '陽'], ['辛', 'かのと', '金', '陰'],
+  ['壬', 'みずのえ', '水', '陽'], ['癸', 'みずのと', '水', '陰']
+];
+var SHI = [
+  ['子', 'ね', '水'], ['丑', 'うし', '土'], ['寅', 'とら', '木'], ['卯', 'う', '木'],
+  ['辰', 'たつ', '土'], ['巳', 'み', '火'], ['午', 'うま', '火'], ['未', 'ひつじ', '土'],
+  ['申', 'さる', '金'], ['酉', 'とり', '金'], ['戌', 'いぬ', '土'], ['亥', 'い', '水']
+];
+
+function $(id) { return document.getElementById(id); }
+
+// 日付(グレゴリオ暦)からユリウス日を求め、60で割った余りから日柱を出す
+function dayIndex(y, m, d) {
+  var a = Math.floor((14 - m) / 12);
+  var yy = y + 4800 - a;
+  var mm = m + 12 * a - 3;
+  var jdn = d + Math.floor((153 * mm + 2) / 5) + 365 * yy + Math.floor(yy / 4) - Math.floor(yy / 100) + Math.floor(yy / 400) - 32045;
+  return (((jdn - 11) % 60) + 60) % 60;
+}
+
+function validBirth(s) {
+  if (!/^[0-9]{8}$/.test(s)) return false;
+  var y = +s.slice(0, 4), m = +s.slice(4, 6), d = +s.slice(6, 8);
+  var dt = new Date(y, m - 1, d);
+  return y >= 1900 && dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+}
+
+function run() {
+  var s = $('birth').value.trim().replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 65248); });
+  $('err').textContent = '';
+  $('result').style.display = 'none';
+  if (!validBirth(s)) { $('err').textContent = '8桁の数字で入力してください(例：20000218)'; return; }
+  var i = dayIndex(+s.slice(0, 4), +s.slice(4, 6), +s.slice(6, 8));
+  var k = KAN[i % 10], z = SHI[i % 12];
+  $('pillar').textContent = k[0] + z[0];
+  $('pillarYomi').textContent = k[1] + ' ・ ' + z[1];
+  $('kan').textContent = k[0] + '(' + k[1] + ')　' + k[3] + 'の' + k[2];
+  $('shi').textContent = z[0] + '(' + z[1] + ')　' + z[2];
+  $('result').style.display = 'block';
+}
+
+$('go').addEventListener('click', run);
+$('birth').addEventListener('keydown', function (e) { if (e.key === 'Enter') run(); });
+</script>
+</body>
+</html>
