@@ -30,6 +30,9 @@
   .sub { text-align:center; opacity:.8; margin:0; }
   .tag { display:inline-block; padding:2px 14px; border-radius:999px; color:#fff; font-weight:700; font-size:1.2rem; }
   .season { text-align:center; margin:8px 0 0; }
+  .tbl { width:100%; border-collapse:collapse; margin-top:12px; }
+  .tbl th, .tbl td { padding:8px 4px; border-top:1px solid var(--line); text-align:left; vertical-align:top; font-size:.92rem; }
+  .tbl th { width:32%; color:var(--accent); font-weight:600; }
   .meaning { margin:12px 0 0; padding:12px; border-left:4px solid var(--accent); background:rgba(138,90,43,.08); white-space:pre-wrap; display:none; }
 </style>
 </head>
@@ -65,6 +68,13 @@
       <p class="season"><span class="tag" id="seasonTag"></span></p>
       <p class="sub" id="shiName"></p>
       <div class="meaning" id="shiMeaning"></div>
+    </section>
+
+    <section id="ikashiBox" style="display:none">
+      <h2>あなたの活かし方</h2>
+      <p class="big" id="ikashiPhrase"></p>
+      <div class="meaning" id="ikashiText" style="display:block"></div>
+      <table class="tbl" id="ikashiTable"></table>
     </section>
 
     <section id="pillarBox" style="display:none">
@@ -134,6 +144,9 @@ var KAN_TEXT = {
   '壬': '壬→海（濁りもあるし、綺麗もあり、色んな物を受け止める。変な人も良い人も受け止める。）\n果てしなく広がる大きな海。湖。大きな川。\n冷静。大胆。柔軟性。流動。変動。自由。',
   '癸': '癸→雨、小川\n生きるために欠かすことができない水。\n母性愛豊か。知性。理性。集まる。教育。実用的な知恵。'
 };
+// 活かし方の予備データ(スプレッドシート「活かし方_日干」「活かし方_日支」と同じ内容。読み込めたら、シートが優先される)
+var IKASHI = {"kan": {"甲": {"nature": "大木", "core": "まっすぐ伸びる軸の強さ", "strength": "長い年月をかけて、ゆっくりとまっすぐに育つ力があります。ぶれない軸が、周りの安心感になります。", "work": "目標を一つに絞って、長い目で積み上げる仕事で力を発揮します。", "relation": "頼られやすい存在です。自分のペースを守りつつ、相手の話を最後まで聞くと、信頼が深まります。", "caution": "頑固になりやすく、折れたときは立て直しに時間がかかります。無理を重ねないことが大切です。", "step": "今月の目標を一つだけ決めて、毎日少しずつ進めてみましょう。"}, "乙": {"nature": "草花", "core": "しなやかで粘り強い優しさ", "strength": "踏まれても立ち上がる、しなやかさと粘り強さがあります。外は柔らかく、中にはしっかりした芯があります。", "work": "人の輪の中で魅力が活きます。調整役やサポート、細やかな気配りが必要な仕事に向いています。", "relation": "相手に合わせる柔軟さが強みです。本音も少しずつ伝えると、関係がより楽になります。", "caution": "我慢を重ねすぎる傾向があります。内側は強情なところもあるので、頑なになっていないか振り返りましょう。", "step": "「本当はどうしたいか」を、一日一回、自分に聞いてみましょう。"}, "丙": {"nature": "太陽", "core": "あたたかく周りを明るくする力", "strength": "根が明るく、周りを元気にする力があります。見返りを求めず与えるおおらかさが、人を引きつけます。", "work": "場を明るくする役や、人を巻き込む仕事で力を発揮します。人前に立つ、教える、まとめる仕事も向いています。", "relation": "惜しみなく与えることで、人が自然に集まります。", "caution": "与えすぎて疲れてしまうことがあります。自分を満たす時間も大切にしましょう。", "step": "今日、誰かにあたたかい言葉を一言かけて、自分にも休む時間をつくりましょう。"}, "丁": {"nature": "灯火", "core": "繊細で情熱的な、心を照らす力", "strength": "情熱と繊細さを併せ持ち、身近な人の心をそっと照らします。直観にも優れています。", "work": "一人ひとりと深く向き合う仕事に向いています。静かな時間に集中すると力が出ます。", "relation": "少人数との深い関係が得意です。相手の気持ちに気づく力が、安心感を生みます。", "caution": "感情の波が大きくなりやすく、考えすぎて気持ちが揺れることがあります。", "step": "夜の静かな時間に、気持ちを紙に書き出してみましょう。"}, "戊": {"nature": "山", "core": "どっしりと動じない安心感", "strength": "どっしりと構えて、周りに安心感を与えます。守ること、まとめることが得意です。", "work": "土台をつくる仕事や、守る・まとめる仕事で信頼されます。責任のある役割が向いています。", "relation": "受け止める力があります。自分から話し出すのは苦手でも、一言添えると距離が縮まります。", "caution": "変化への腰が重くなりやすく、動き出しが遅れがちです。", "step": "小さな新しいことを、一つだけ試してみましょう。"}, "己": {"nature": "田んぼ・土壌", "core": "人や才能を育てる包容力", "strength": "人や才能を育てる力があります。庶民的で、豊かな魅力と広い包容力を持っています。", "work": "育てる・支える・世話をする仕事で力を発揮します。コツコツ育てる仕事にも向いています。", "relation": "相手の良いところを見つけて伸ばせます。", "caution": "引き受けすぎて、自分のことが後回しになりやすい傾向があります。", "step": "頼まれごとを受ける前に、一呼吸おいて、自分の時間を先に確保しましょう。"}, "庚": {"nature": "剣", "core": "決断力と、まっすぐな行動力", "strength": "決断力と行動力があり、正直でさっぱりした気質です。迷いを断ち切る力が、周りを導きます。", "work": "決める・切り開く・立て直す仕事で力を発揮します。スピード感が求められる場面でも頼られます。", "relation": "率直な物言いが信頼につながります。言い方をやわらかくすると、より伝わります。", "caution": "強さが相手に鋭く届いてしまうことがあります。", "step": "伝える前に、「ありがとう」を一言添えてみましょう。"}, "辛": {"nature": "宝石", "core": "磨かれた品格と、細やかな美意識", "strength": "繊細で品があり、美意識に優れています。磨くほど輝く力があります。", "work": "質や細部、美しさが求められる仕事に向いています。専門性を磨くと、強みになります。", "relation": "少数の深い信頼関係を築きます。率直な言い方が鋭く伝わらないよう、気を配りましょう。", "caution": "プライドが高く、傷つきやすい面があります。完璧を求めすぎないことが大切です。", "step": "自分の「好き」と「こだわり」を一つ、言葉にしてみましょう。"}, "壬": {"nature": "海", "core": "大きく受け止める柔軟さ", "strength": "大きく受け止める度量と、自由で柔軟な発想があります。スケールの大きさが魅力です。", "work": "広い視野で流れを読み、人や情報をつなぐ仕事で力を発揮します。", "relation": "懐の深さで、いろいろな人を受け止められます。", "caution": "流されやすく、あれこれ手を広げて散らかりやすい傾向があります。", "step": "取り組むことを三つまでに絞ってみましょう。"}, "癸": {"nature": "雨・小川", "core": "やさしさと、実用的な知恵", "strength": "やさしさと知性があり、周りを潤す力があります。実用的な知恵が、人の役に立ちます。", "work": "教える・育てる・調べる・整える仕事に向いています。", "relation": "相手の「足りないもの」に気づいて、そっと満たせます。", "caution": "気持ちが沈みやすく、物事を小さく考えすぎることがあります。", "step": "気になることを一つだけ調べて、小さく行動に移してみましょう。"}}, "shi": {"子": {"season": "真冬", "rhythm": "知恵を温めてから、一気に行動に移す", "timing": "静かに力を蓄えた後に動くと、成果が大きくなります。", "tidy": "休息と準備を大切にして、心と体を温めましょう。", "caution": "運気の波が大きいので、調子に任せた無理に注意しましょう。", "step": "今日は、温かい飲み物をゆっくり味わう時間をつくりましょう。"}, "丑": {"season": "冬の終わり", "rhythm": "焦らず、じっくり準備して、遅咲きを楽しむ", "timing": "春を待つ時期です。焦らず準備を重ねるほど、あとで花開きます。", "tidy": "慎重さを活かして、基礎を固めましょう。", "caution": "慎重になりすぎて、動き出しが遅れることがあります。", "step": "小さな準備を一つ進めてみましょう。"}, "寅": {"season": "春のはじめ", "rhythm": "新しいことを始め、前へ進める", "timing": "始める力が強い時期です。出発や開拓に向いています。", "tidy": "体を動かして、新しい環境や人に触れましょう。", "caution": "始めたことを広げすぎると、つまずいたときに立て直しに時間がかかります。", "step": "新しい一歩を、今日一つだけ踏み出しましょう。"}, "卯": {"season": "春のなか", "rhythm": "人と調和しながら、輪を広げる", "timing": "人と協力しながら、組織や場づくりをすると活きます。", "tidy": "人との交流を増やして、和を整えましょう。", "caution": "周りに合わせすぎて、本音が隠れることがあります。", "step": "会いたい人に、一言メッセージを送ってみましょう。"}, "辰": {"season": "春の終わり", "rhythm": "内に溜めた思いを、少しずつ形にする", "timing": "思いを形にして、成果に変えていく時期です。", "tidy": "気持ちと現実のバランスを整えましょう。", "caution": "内面と外面のギャップで、気持ちが揺れやすくなります。", "step": "思っていることを、紙に書いて整理しましょう。"}, "巳": {"season": "夏のはじめ", "rhythm": "感性と理性を両立させて、表現する", "timing": "感性を活かして、表現や発信をすると力が出ます。", "tidy": "感じたことを言葉や形にして、外に出しましょう。", "caution": "感性と理性がぶつかって、気持ちが不安定になることがあります。", "step": "心が動いたことを、一つ記録に残しましょう。"}, "午": {"season": "真夏", "rhythm": "情熱を素直に出し、全力で取り組む", "timing": "エネルギーが高まる時期です。思い切った行動が実を結びます。", "tidy": "熱がこもりすぎないよう、休息もはさみましょう。", "caution": "直情的な言動が、誤解を招くことがあります。", "step": "言葉にする前に、一呼吸おきましょう。"}, "未": {"season": "夏の終わり", "rhythm": "粘り強く続けて、実らせる", "timing": "積み重ねたことが、実りに向かう時期です。", "tidy": "続けてきたことを見直して、整えましょう。", "caution": "あれこれ手を出して、一つに絞りにくくなることがあります。", "step": "続けることを一つ決めて、続ける仕組みをつくりましょう。"}, "申": {"season": "秋のはじめ", "rhythm": "素早く動き、いろいろと試して整える", "timing": "フットワーク軽く、いろいろと試して形にすると活きます。", "tidy": "動いたあとに、振り返る時間を入れましょう。", "caution": "動きが早すぎて、締めくくりが甘くなることがあります。", "step": "やりかけのことを一つ、最後までやり切りましょう。"}, "酉": {"season": "秋のなか", "rhythm": "気品と誇りを持って、質を磨く", "timing": "質を高めることに力を注ぐと、評価されます。", "tidy": "身の回りを整えて、品格を磨きましょう。", "caution": "プライドが高く、人に頼りにくくなることがあります。", "step": "誰かに一つ、頼ってみましょう。"}, "戌": {"season": "秋の終わり", "rhythm": "培った才能と人脈を、蓄えて収穫する", "timing": "これまでの経験と縁を、実りに変える時期です。", "tidy": "人とのつながりを整理して、大切にしましょう。", "caution": "自信が強く出て、頑固に見えることがあります。", "step": "相手の意見を、最後まで聞いてみましょう。"}, "亥": {"season": "冬のはじめ", "rhythm": "知恵と工夫で、計画を練る", "timing": "考えをまとめ、計画を練るのに向いています。", "tidy": "情報を整理して、次の計画を描きましょう。", "caution": "考えすぎて、行動に移すまで時間がかかることがあります。", "step": "計画の最初の一歩だけ、今日実行しましょう。"}}};
+var IKASHI_SHEET = { kan: {}, shi: {}, pillar: {} };
 var MEANINGS = { kan: {}, shi: {}, pillar: {} };
 Object.keys(KAN_TEXT).forEach(function (k) { MEANINGS.kan[k] = { text: KAN_TEXT[k] }; });
 var current = null;
@@ -183,6 +196,44 @@ function run() {
 }
 
 // スプレッドシートから読み込んだ意味文を、画面に出す
+// 日柱の活かし方を、日干と日支の文章から組み立てる(シートの「活かし方_日柱」と同じ組み立て方)
+function composePillar(kc, zc) {
+  var k = IKASHI.kan[kc], z = IKASHI.shi[zc];
+  if (!k || !z) return null;
+  return {
+    phrase: z.season + 'の' + k.nature,
+    text: k.nature + 'のあなたは、' + k.core + 'が強みです。' + z.season + 'のリズムに合わせて、「' + z.rhythm + '」と、持ち味がいっそう活きます。' + z.timing,
+    caution: k.caution + 'また、' + z.caution,
+    step: k.step
+  };
+}
+
+function addRow(table, label, text) {
+  if (!text) return;
+  var tr = document.createElement('tr');
+  var th = document.createElement('th'); th.textContent = label;
+  var td = document.createElement('td'); td.textContent = text;
+  tr.appendChild(th); tr.appendChild(td); table.appendChild(tr);
+}
+
+function renderIkashi() {
+  var kc = current.k[0], zc = current.z[0];
+  var kd = (IKASHI_SHEET.kan[kc]) || IKASHI.kan[kc] || {};
+  var sd = (IKASHI_SHEET.shi[zc]) || IKASHI.shi[zc] || {};
+  var pd = IKASHI_SHEET.pillar[kc + zc] || composePillar(kc, zc);
+  if (!pd) { $('ikashiBox').style.display = 'none'; return; }
+  $('ikashiPhrase').textContent = pd.phrase || '';
+  $('ikashiText').textContent = pd.text || '';
+  var t = $('ikashiTable'); t.innerHTML = '';
+  addRow(t, '仕事で活かす', kd.work);
+  addRow(t, '人間関係で活かす', kd.relation);
+  addRow(t, '整えること', sd.tidy);
+  addRow(t, '気をつけたいこと', pd.caution);
+  addRow(t, '今日からの一歩', pd.step);
+  $('ikashiBox').style.display = 'block';
+  if (!$('pillarLabel').textContent) $('pillarLabel').textContent = pd.phrase || '';
+}
+
 function renderMeanings() {
   if (!current) return;
   var kd = MEANINGS.kan[current.k[0]], sd = MEANINGS.shi[current.z[0]], pd = MEANINGS.pillar[current.k[0] + current.z[0]];
@@ -191,6 +242,7 @@ function renderMeanings() {
   $('pillarLabel').textContent = (pd && pd.label) ? pd.label : '';
   $('pillarBox').style.display = (pd && pd.text) ? 'block' : 'none';
   $('pillarMeaning').textContent = (pd && pd.text) ? pd.text : '';
+  renderIkashi();
 }
 
 $('go').addEventListener('click', run);
@@ -203,6 +255,7 @@ if (window.google && google.script && google.script.run) {
       var kan = MEANINGS.kan;
       Object.keys(m.kan || {}).forEach(function (k) { if (m.kan[k].text) kan[k] = m.kan[k]; });
       MEANINGS = { kan: kan, shi: m.shi || {}, pillar: m.pillar || {} };
+      if (m.ikashi) IKASHI_SHEET = { kan: m.ikashi.kan || {}, shi: m.ikashi.shi || {}, pillar: m.ikashi.pillar || {} };
       renderMeanings();
     }
   }).getMeanings();

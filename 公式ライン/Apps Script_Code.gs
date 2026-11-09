@@ -113,7 +113,7 @@ const MEANING_SHEET_NAME = '算命学';
 const STEMS = '甲乙丙丁戊己庚辛壬癸';
 
 function getMeanings() {
-  const out = { kan: {}, shi: {}, pillar: {} };
+  const out = { kan: {}, shi: {}, pillar: {}, ikashi: { kan: {}, shi: {}, pillar: {} } };
   try {
     const sheet = SpreadsheetApp.openById(MEANING_SHEET_ID).getSheetByName(MEANING_SHEET_NAME);
     if (!sheet) return out;
@@ -142,7 +142,24 @@ function getMeanings() {
   } catch (err) {
     console.error('meanings error: ' + err);
   }
+  try { readIkashi_(out.ikashi); } catch (err) { console.error('ikashi error: ' + err); }
   return out;
+}
+
+// 「活かし方_日干」「活かし方_日支」「活かし方_日柱」の3シートを読み込む(数式の結果も、そのまま読める)
+function readIkashi_(o) {
+  const ss = SpreadsheetApp.openById(MEANING_SHEET_ID);
+  const s = x => String(x === undefined || x === null ? '' : x).trim();
+  const rows = name => { const sh = ss.getSheetByName(name); return sh ? sh.getDataRange().getValues().slice(1) : []; };
+  rows('活かし方_日干').forEach(r => {
+    if (s(r[0])) o.kan[s(r[0])] = { nature: s(r[2]), core: s(r[3]), strength: s(r[4]), work: s(r[5]), relation: s(r[6]), caution: s(r[7]), step: s(r[8]) };
+  });
+  rows('活かし方_日支').forEach(r => {
+    if (s(r[0])) o.shi[s(r[0])] = { season: s(r[3]), rhythm: s(r[4]), timing: s(r[5]), tidy: s(r[6]), caution: s(r[7]), step: s(r[8]) };
+  });
+  rows('活かし方_日柱').forEach(r => {
+    if (s(r[0])) o.pillar[s(r[0])] = { phrase: s(r[2]), text: s(r[3]), caution: s(r[4]), step: s(r[5]) };
+  });
 }
 
 function buildBody_(d, extras) {
