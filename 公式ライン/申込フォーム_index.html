@@ -46,6 +46,7 @@ window.addEventListener('error', function (e) {
   a { color:var(--accent); }
   #done { display:none; }
   .steps { margin:8px 0; padding-left:1.4em; }
+  .steps li { margin:6px 0; }
   pre { white-space:pre-wrap; border:1px solid var(--line); border-radius:8px; padding:12px; font:inherit; margin:8px 0; }
   footer { text-align:center; font-size:.8rem; opacity:.75; margin-top:24px; }
 </style>
@@ -55,7 +56,17 @@ window.addEventListener('error', function (e) {
   <div class="brand">KAGAMI</div>
   <h1>算命学の鑑定 お申込み</h1>
   <p class="plan">個人プラン</p>
-  <p style="text-align:center">公式LINEからのお申込みです。必要事項を入力して、「申し込む」を押してください。<br>公式LINEのトーク画面が開くので、送信ボタンを押すと、お振込先を自動でお送りします。</p>
+  <p style="text-align:center">個人鑑定のお申込フォームです。鑑定料は30,000円、追加レポートは1人につき10,000円です（追加の方との面談はありません）。<br>フォームを送信した後、完了画面の申込コードを公式LINEに送ると受付が進み、料金・振込先の案内が届きます。</p>
+
+  <section aria-label="お申し込みの流れ">
+    <h2>お申し込みの流れ</h2>
+    <ol class="steps">
+      <li><strong>必要事項と鑑定内容を確認してフォームを送信</strong></li>
+      <li><strong>完了画面の申込コードを公式LINEへ送信</strong></li>
+      <li><strong>LINEで届く料金・振込先の案内を確認</strong></li>
+    </ol>
+    <p class="note">フォーム送信だけでは手続きは完了しません。完了画面を閉じる前に、申込コードを公式LINEへお送りください。</p>
+  </section>
 
   <div id="formWrap">
   <section>
@@ -63,6 +74,7 @@ window.addEventListener('error', function (e) {
     <div class="privacy">【個人情報の取り扱い】
 お預かりする個人情報(お名前、生年月日、ご連絡先など)は、大切に取り扱います。
 ・使う目的：鑑定をご提供するため(日程調整、ご連絡、鑑定書のお渡し)。
+・性別は、詳細な宿命の算出と、公式LINEでお届けする内容の分類にも使用します。
 ・ご本人の同意なく、第三者にお渡しすることはありません。
 
 運営：KAGAMI
@@ -161,7 +173,7 @@ window.addEventListener('error', function (e) {
 
   <section id="done">
     <h2>あと一歩です</h2>
-    <p>お申し込みはまだ完了していません。<strong>下の「申込コード」を、そのまま公式LINEにお送りください。</strong><br>送信されると、鑑定料とお振込先を自動でお送りします。</p>
+    <p>お申し込みはまだ完了していません。<strong>下の「申込コード」を、そのまま公式LINEにお送りください。</strong><br>送信されると、鑑定料とお振込先をお送りします。</p>
     <p>お支払い合計：<strong id="doneTotal"></strong></p>
     <ol class="steps">
       <li>「申込コードをコピーする」を押す</li>
@@ -325,12 +337,12 @@ $('form').addEventListener('submit', function (e) {
   var ok = true;
   $('birthErr').textContent = '';
   $('emailErr').textContent = '';
-  if (!validBirth($('birth').value.trim())) { $('birthErr').textContent = '8桁の数字で入力してください(例：20000218)'; ok = false; }
+  if (!validBirth($('birth').value.trim())) { $('birthErr').textContent = '1900年以降の有効な生年月日を8桁で入力してください(未来の日付は入力できません。例：20000218)'; ok = false; }
   if ($('email').value.trim() !== $('email2').value.trim()) { $('emailErr').textContent = 'メールアドレスが一致しません'; ok = false; }
   var n = extraCount();
   if (checkedValue('hasExtra') === 'はい' && n < 1) { $('countErr').textContent = '1名以上で入力してください'; ok = false; }
   all('.person [data-k=birth]').forEach(function (el) {
-    if (!validBirth(el.value.trim())) { el.setCustomValidity('8桁の数字で入力してください(例：20000218)'); ok = false; }
+    if (!validBirth(el.value.trim())) { el.setCustomValidity('1900年以降の有効な生年月日を8桁で入力してください(未来の日付は入力できません。例：20000218)'); ok = false; }
     else el.setCustomValidity('');
   });
   if (!$('form').checkValidity()) { $('form').reportValidity(); return; }
